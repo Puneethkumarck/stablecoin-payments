@@ -11,8 +11,8 @@ plugins {
 
 sonarqube {
     properties {
-        property("sonar.projectKey", "Puneethkumarck_stablecoin-payments")
-        property("sonar.organization", "puneethkumarck")
+        property("sonar.projectKey", "stablecoin-payments")
+        property("sonar.organization", "ranganathasoftware")
         property("sonar.host.url", "https://sonarcloud.io")
         property("sonar.sourceEncoding", "UTF-8")
         property("sonar.java.binaries", "**/build/classes")
