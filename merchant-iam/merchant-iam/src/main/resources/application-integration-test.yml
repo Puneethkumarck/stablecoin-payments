@@ -1,0 +1,28 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+  flyway:
+    enabled: true
+    clean-disabled: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+
+logging:
+  level:
+    com.stablecoin.payments: DEBUG
+    org.springframework.security: DEBUG

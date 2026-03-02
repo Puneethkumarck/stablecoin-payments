@@ -1,0 +1,89 @@
+spring:
+  application:
+    name: merchant-iam
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/s13_merchant_iam}
+    username: ${DB_USER:sp_user}
+    password: ${DB_PASS:sp_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_schema: public
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+    schemas: public
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: merchant-iam
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+          auto-create-topics: false
+      bindings:
+        merchant-user-invited-out-0:
+          destination: merchant.user.invited
+        merchant-user-activated-out-0:
+          destination: merchant.user.activated
+        merchant-user-deactivated-out-0:
+          destination: merchant.user.deactivated
+        merchant-user-role-changed-out-0:
+          destination: merchant.user.role.changed
+
+outbox:
+  relay:
+    fixed-delay-ms: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      service: merchant-iam
+
+server:
+  port: ${SERVER_PORT:8083}
+  shutdown: graceful
+
+logging:
+  level:
+    com.stablecoin.payments: INFO
+    org.springframework.security: WARN
