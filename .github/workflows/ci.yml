@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history required for SonarCloud blame data
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          gradle-home-cache-cleanup: true
+
+      - name: Spotless check
+        run: ./gradlew spotlessCheck --build-cache
+
+      - name: Unit tests
+        run: ./gradlew :merchant-onboarding:merchant-onboarding:test :merchant-onboarding:merchant-onboarding:jacocoTestReport --build-cache
+
+      - name: Integration tests
+        run: ./gradlew :merchant-onboarding:merchant-onboarding:integrationTest --build-cache
+
+      - name: Business tests
+        run: ./gradlew :merchant-onboarding:merchant-onboarding:businessTest --build-cache
+
+      # Switch to Java 21 for Sonar — BouncyCastle multi-release JAR used by the
+      # SonarQube plugin is not compatible with Java 25 instrumentation
+      - name: Set up JDK 21 for SonarCloud
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew classes sonar --build-cache -Dsonar.token="$SONAR_TOKEN" -Dsonar.branch.name=${{ github.ref_name }}

@@ -2,14 +2,10 @@ package com.stablecoin.payments.merchant.onboarding.infrastructure.document;
 
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.DocumentStore;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 @Slf4j
-@Component
-@Profile({"local", "test", "integration-test"})
 public class MockDocumentStoreAdapter implements DocumentStore {
 
     @Override

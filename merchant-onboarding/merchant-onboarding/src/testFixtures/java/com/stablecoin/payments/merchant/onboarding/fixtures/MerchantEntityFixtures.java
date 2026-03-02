@@ -1,13 +1,13 @@
 package com.stablecoin.payments.merchant.onboarding.fixtures;
 
-import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.ApprovedCorridorEntity;
-import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantEntity;
-import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantEntity.AddressJson;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RiskTier;
+import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.ApprovedCorridorEntity;
+import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantEntity;
+import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantEntity.AddressJson;
 
 import java.math.BigDecimal;
 import java.time.Instant;

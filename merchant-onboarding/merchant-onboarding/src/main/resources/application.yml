@@ -30,6 +30,17 @@ spring:
     locations: classpath:db/migration
     schemas: public
 
+  temporal:
+    namespace: ${TEMPORAL_NAMESPACE:default}
+    connection:
+      target: ${TEMPORAL_HOST:localhost}:${TEMPORAL_PORT:7233}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
   cloud:
     stream:
       kafka:

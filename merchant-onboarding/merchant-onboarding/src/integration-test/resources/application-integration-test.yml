@@ -1,4 +1,6 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
   jpa:
     hibernate:
       ddl-auto: validate
@@ -12,23 +14,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-  cloud:
-    stream:
-      bindings:
-        merchant-activated-out-0:
-          destination: merchant.activated
-        merchant-applied-out-0:
-          destination: merchant.applied
-        merchant-suspended-out-0:
-          destination: merchant.suspended
-        merchant-closed-out-0:
-          destination: merchant.closed
-        merchant-kyb-passed-out-0:
-          destination: merchant.kyb.passed
-        merchant-kyb-failed-out-0:
-          destination: merchant.kyb.failed
-        merchant-corridor-approved-out-0:
-          destination: merchant.corridor.approved
+  temporal:
+    workers:
+      enabled: false
+
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
   autoconfigure:
     exclude:

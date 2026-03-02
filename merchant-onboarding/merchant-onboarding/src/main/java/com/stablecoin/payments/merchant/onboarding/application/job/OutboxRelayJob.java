@@ -1,6 +1,5 @@
 package com.stablecoin.payments.merchant.onboarding.application.job;
 
-import com.stablecoin.payments.merchant.onboarding.infrastructure.messaging.OutboxEvent;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.messaging.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

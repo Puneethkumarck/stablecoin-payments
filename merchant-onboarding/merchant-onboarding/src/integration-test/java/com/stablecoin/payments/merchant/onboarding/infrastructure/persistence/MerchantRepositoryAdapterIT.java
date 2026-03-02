@@ -6,7 +6,6 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Ky
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.fixtures.MerchantEntityFixtures;
-import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantEntity;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;

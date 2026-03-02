@@ -1,6 +1,5 @@
 package com.stablecoin.payments.merchant.onboarding.domain.merchant;
 
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.ApprovedCorridor;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.BeneficialOwner;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.BusinessAddress;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
@@ -10,8 +9,8 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Ra
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RiskTier;
 import com.stablecoin.payments.merchant.onboarding.domain.statemachine.StateMachine;
 import com.stablecoin.payments.merchant.onboarding.domain.statemachine.StateTransition;
-import lombok.AllArgsConstructor;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 

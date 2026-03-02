@@ -1,0 +1,47 @@
+# Sandbox profile — real external sandbox APIs, local infrastructure
+# Run: ./gradlew :merchant-onboarding:merchant-onboarding:bootRun --args='--spring.profiles.active=sandbox'
+# Requires: ONFIDO_SANDBOX_TOKEN, COMPANIES_HOUSE_API_KEY env vars
+# Webhooks: ngrok http 8081 → register URL in Onfido dashboard
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/s11_merchant_onboarding
+    username: sp_user
+    password: sp_pass
+
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+# Onfido Sandbox — deterministic test results:
+#   last_name "Consider" → consider result
+#   any other last_name  → clear result
+onfido:
+  api-token: ${ONFIDO_SANDBOX_TOKEN:api_sandbox.placeholder}
+  base-url: https://api.eu.onfido.com/v3.6
+  webhook-secret: ${ONFIDO_WEBHOOK_SECRET:sandbox-webhook-secret}
+  region: EU
+
+# Companies House — free API, real UK company data
+companies-house:
+  api-key: ${COMPANIES_HOUSE_API_KEY:placeholder}
+  base-url: https://api.company-information.service.gov.uk
+
+# SEC EDGAR — free, no key needed (just User-Agent)
+sec-edgar:
+  base-url: https://data.sec.gov
+  user-agent: "StablecoinPayments/1.0 (dev@stablecoin.payments)"
+
+logging:
+  level:
+    com.stablecoin.payments: DEBUG
+    com.stablecoin.payments.merchant.onboarding.infrastructure.kyb: DEBUG
+    org.springframework.web.client: DEBUG

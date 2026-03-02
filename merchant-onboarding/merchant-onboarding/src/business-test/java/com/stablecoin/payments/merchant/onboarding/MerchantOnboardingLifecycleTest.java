@@ -1,8 +1,9 @@
 package com.stablecoin.payments.merchant.onboarding;
 
+import com.jayway.jsonpath.JsonPath;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.messaging.OutboxEventRepository;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantJpaRepository;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -13,14 +14,12 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.jayway.jsonpath.JsonPath;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.Matchers.is;
 
 @Tag("business")
 @DisplayName("Merchant Onboarding Lifecycle")

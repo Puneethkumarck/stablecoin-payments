@@ -94,12 +94,13 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
+    testImplementation("io.temporal:temporal-testing:$temporalVersion")
     "integrationTestImplementation"(testFixtures(project))
     "integrationTestImplementation"("org.testcontainers:postgresql:$testcontainersVersion")
+    "integrationTestImplementation"("org.testcontainers:kafka:$testcontainersVersion")
     "integrationTestImplementation"("org.testcontainers:junit-jupiter:$testcontainersVersion")
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:$wiremockVersion")
     "integrationTestImplementation"("org.springframework.security:spring-security-test")
-    "integrationTestImplementation"("org.springframework.cloud:spring-cloud-stream-test-binder")
 }
 
 tasks.withType<JavaCompile> {
@@ -122,8 +123,24 @@ tasks.withType<Test> {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.13"
 }
+
+tasks.test {
+    configure<JacocoTaskExtension> {
+        excludes = listOf("sun.*", "jdk.*", "com.sun.*", "java.*", "javax.*")
+    }
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+val jacocoExclusions = listOf(
+    "**/entity/**",
+    "**/mapper/**",
+    "**/config/**",
+    "**/*Application*",
+    "**/generated/**",
+    "**/*MapperImpl*"
+)
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
@@ -132,19 +149,28 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
     classDirectories.setFrom(files(classDirectories.files.map {
-        fileTree(it) {
-            exclude(
-                "**/entity/*Entity*",
-                "**/mapper/*Mapper*",
-                "**/config/*Config*",
-                "**/*Application*"
-            )
-        }
+        fileTree(it) { exclude(jacocoExclusions) }
     }))
 }
 
-tasks.register("testCoverage") {
-    dependsOn(tasks.test, tasks.named("integrationTest"), tasks.jacocoTestReport)
-    group = "verification"
-    description = "Runs all tests and generates coverage report"
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.50".toBigDecimal()
+            }
+        }
+    }
+    classDirectories.setFrom(files(classDirectories.files.map {
+        fileTree(it) { exclude(jacocoExclusions) }
+    }))
+}
+
+tasks.named("check") {
+    dependsOn(
+        tasks.named("integrationTest"),
+        tasks.named("businessTest"),
+        tasks.jacocoTestCoverageVerification
+    )
 }

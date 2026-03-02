@@ -5,8 +5,6 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Do
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybVerification;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.List;
@@ -16,8 +14,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
-@Component
-@Profile({"local", "test", "integration-test"})
 public class MockKybAdapter implements KybProvider {
 
     private final Map<String, KybVerification> store = new ConcurrentHashMap<>();
