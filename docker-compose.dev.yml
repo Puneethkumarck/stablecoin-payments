@@ -4,7 +4,7 @@ services:
   # PostgreSQL — per-service databases
   # ─────────────────────────────────────────────
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: sp-postgres
     ports:
       - "5432:5432"
