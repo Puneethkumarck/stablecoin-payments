@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0  # Full history required for SonarCloud blame data
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           java-version: "25"
           distribution: "temurin"
@@ -51,7 +51,7 @@ jobs:
       # Switch to Java 21 for Sonar — BouncyCastle multi-release JAR used by the
       # SonarQube plugin is not compatible with Java 25 instrumentation
       - name: Set up JDK 21 for SonarCloud
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
