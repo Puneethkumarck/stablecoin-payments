@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history required for SonarCloud blame data
 
       - uses: actions/setup-java@v4
         with:
@@ -38,10 +40,16 @@ jobs:
         run: ./gradlew spotlessCheck --build-cache
 
       - name: Unit tests
-        run: ./gradlew :merchant-onboarding:merchant-onboarding:test --build-cache
+        run: ./gradlew :merchant-onboarding:merchant-onboarding:test jacocoTestReport --build-cache
 
       - name: Integration tests
         run: ./gradlew :merchant-onboarding:merchant-onboarding:integrationTest --build-cache
 
       - name: Business tests
         run: ./gradlew :merchant-onboarding:merchant-onboarding:businessTest --build-cache
+
+      - name: SonarCloud analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew sonar --build-cache

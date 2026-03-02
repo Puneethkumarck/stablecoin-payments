@@ -5,7 +5,25 @@ plugins {
     id("org.springframework.boot") version "3.4.5" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     id("com.diffplug.spotless") version "7.0.2" apply false
+    id("org.sonarqube") version "6.0.1.5171"
     java
+}
+
+sonarqube {
+    properties {
+        property("sonar.projectKey", "Puneethkumarck_stablecoin-payments")
+        property("sonar.organization", "puneethkumarck")
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.coverage.jacoco.xmlReportPaths",
+            "**/build/reports/jacoco/test/jacocoTestReport.xml")
+        property("sonar.exclusions", listOf(
+            "**/entity/*Entity*",
+            "**/mapper/*Mapper*",
+            "**/*Application*",
+            "**/config/*Config*",
+            "**/fixtures/**"
+        ).joinToString(","))
+    }
 }
 
 subprojects {
