@@ -1,6 +1,5 @@
 package com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,7 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -39,7 +39,7 @@ public class ApprovedCorridorEntity {
     @Column(name = "target_country", nullable = false, length = 2)
     private String targetCountry;
 
-    @Type(JsonType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "currencies", columnDefinition = "jsonb", nullable = false)
     private List<String> currencies;
 

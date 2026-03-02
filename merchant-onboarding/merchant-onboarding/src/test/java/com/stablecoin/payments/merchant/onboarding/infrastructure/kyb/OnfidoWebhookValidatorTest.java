@@ -1,8 +1,8 @@
 package com.stablecoin.payments.merchant.onboarding.infrastructure.kyb;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HexFormat;
@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class OnfidoWebhookValidatorTest {
 
   private static final String REAL_SECRET = "my-real-webhook-secret";
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final JsonMapper OBJECT_MAPPER = JsonMapper.builder().build();
 
   @Test
   @DisplayName("should accept valid HMAC signature")

@@ -5,7 +5,6 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Ky
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RiskTier;
-import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,7 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
@@ -89,19 +87,19 @@ public class MerchantEntity {
     @Column(name = "onboarded_by")
     private UUID onboardedBy;
 
-    @Type(JsonType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "registered_address", columnDefinition = "jsonb")
     private AddressJson registeredAddress;
 
-    @Type(JsonType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "beneficial_owners", columnDefinition = "jsonb")
     private List<BeneficialOwnerJson> beneficialOwners;
 
-    @Type(JsonType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "requested_corridors", columnDefinition = "jsonb")
     private List<String> requestedCorridors;
 
-    @Type(JsonType.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "allowed_scopes", columnDefinition = "jsonb")
     private List<String> allowedScopes;
 

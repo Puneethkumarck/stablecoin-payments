@@ -1,13 +1,13 @@
 package com.stablecoin.payments.merchant.onboarding.infrastructure.messaging;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablecoin.payments.merchant.onboarding.domain.EventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -53,7 +53,7 @@ public class OutboxMerchantEventPublisher implements EventPublisher<Object> {
     private String serialize(Object event) {
         try {
             return objectMapper.writeValueAsString(event);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Cannot serialize event: " + event.getClass().getName(), e);
         }
     }

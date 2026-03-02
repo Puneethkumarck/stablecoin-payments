@@ -1,7 +1,5 @@
 package com.stablecoin.payments.merchant.onboarding.infrastructure.temporal.workflow;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.temporal.activity.KafkaEventActivities;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.temporal.activity.MerchantOnboardingActivities;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.temporal.signal.DocumentUploadedSignal;
@@ -10,6 +8,8 @@ import com.stablecoin.payments.merchant.onboarding.infrastructure.temporal.signa
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.util.Map;
@@ -181,8 +181,8 @@ public class MerchantOnboardingWorkflowImpl implements MerchantOnboardingWorkflo
 
   private String toJson(Object obj) {
     try {
-      return new ObjectMapper().writeValueAsString(obj);
-    } catch (JsonProcessingException e) {
+      return JsonMapper.builder().build().writeValueAsString(obj);
+    } catch (JacksonException e) {
       throw new RuntimeException("Failed to serialize event payload", e);
     }
   }

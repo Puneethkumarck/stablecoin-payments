@@ -2,8 +2,8 @@ package com.stablecoin.payments.merchant.onboarding;
 
 import com.stablecoin.payments.merchant.onboarding.config.TestSecurityConfig;
 import com.stablecoin.payments.merchant.onboarding.config.TestTemporalConfig;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;

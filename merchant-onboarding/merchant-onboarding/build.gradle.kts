@@ -49,7 +49,6 @@ val lombokMapstructBindingVersion: String by project
 val resilience4jVersion: String by project
 val temporalVersion: String by project
 val flywayVersion: String by project
-val hypersistenceVersion: String by project
 val archunitVersion: String by project
 val testcontainersVersion: String by project
 val wiremockVersion: String by project
@@ -86,9 +85,9 @@ dependencies {
 
     // Database
     runtimeOnly("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
-    implementation("io.hypersistence:hypersistence-utils-hibernate-63:$hypersistenceVersion")
+    // hypersistence-utils removed: using native Hibernate 7 @JdbcTypeCode(SqlTypes.JSON) for JSONB
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -100,7 +99,8 @@ dependencies {
     "integrationTestImplementation"("org.testcontainers:kafka:$testcontainersVersion")
     "integrationTestImplementation"("org.testcontainers:junit-jupiter:$testcontainersVersion")
     "integrationTestImplementation"("org.wiremock:wiremock-standalone:$wiremockVersion")
-    "integrationTestImplementation"("org.springframework.security:spring-security-test")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-security-test")
 }
 
 tasks.withType<JavaCompile> {
