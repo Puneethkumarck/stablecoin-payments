@@ -86,6 +86,9 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     // hypersistence-utils removed: using native Hibernate 7 @JdbcTypeCode(SqlTypes.JSON) for JSONB
 
+    // Outbox (namastack)
+    implementation("io.namastack:namastack-outbox-starter-jdbc:1.0.0")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
