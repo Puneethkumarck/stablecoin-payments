@@ -2,7 +2,7 @@
 -- Prefix: gatewayiam_
 
 CREATE TABLE gatewayiam_outbox_record (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id              VARCHAR(255) PRIMARY KEY,
     status          VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     record_key      VARCHAR(255),
     record_type     VARCHAR(255) NOT NULL,

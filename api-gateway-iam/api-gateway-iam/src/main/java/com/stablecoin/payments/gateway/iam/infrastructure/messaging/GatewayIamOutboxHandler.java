@@ -1,0 +1,42 @@
+package com.stablecoin.payments.gateway.iam.infrastructure.messaging;
+
+import io.namastack.outbox.annotation.OutboxHandler;
+import io.namastack.outbox.handler.OutboxRecordMetadata;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.TimeUnit;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class GatewayIamOutboxHandler {
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    @OutboxHandler
+    public void handle(Object event, OutboxRecordMetadata metadata) {
+        var topic = resolveField(event, "TOPIC");
+        var key = metadata.getKey();
+        try {
+            kafkaTemplate.send(topic, key, event).get(10, TimeUnit.SECONDS);
+            log.debug("Published outbox event type={} topic={} key={}",
+                    event.getClass().getSimpleName(), topic, key);
+        } catch (Exception e) {
+            log.error("Failed to publish event type={} topic={}: {}",
+                    event.getClass().getSimpleName(), topic, e.getMessage());
+            throw new RuntimeException("Kafka send failed for event " + event.getClass().getSimpleName(), e);
+        }
+    }
+
+    private String resolveField(Object event, String fieldName) {
+        try {
+            return (String) event.getClass().getField(fieldName).get(null);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalArgumentException(
+                    "Event class missing static " + fieldName + " field: " + event.getClass().getName(), e);
+        }
+    }
+}

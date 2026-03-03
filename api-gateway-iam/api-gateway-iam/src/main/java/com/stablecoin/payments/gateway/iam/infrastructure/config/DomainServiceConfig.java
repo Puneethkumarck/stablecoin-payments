@@ -42,13 +42,14 @@ public class DomainServiceConfig {
                 tokenIssuer, clientSecretHasher, tokenRevocationCache, ttl);
     }
 
+    @SuppressWarnings("unchecked")
     @Bean
     public ApiKeyService apiKeyService(ApiKeyRepository apiKeyRepository,
                                        MerchantRepository merchantRepository,
                                        ApiKeyGenerator apiKeyGenerator,
                                        ApiKeyHasher apiKeyHasher,
-                                       EventPublisher<ApiKeyRevokedEvent> eventPublisher) {
+                                       EventPublisher<?> eventPublisher) {
         return new ApiKeyService(apiKeyRepository, merchantRepository,
-                apiKeyGenerator, apiKeyHasher, eventPublisher);
+                apiKeyGenerator, apiKeyHasher, (EventPublisher<ApiKeyRevokedEvent>) eventPublisher);
     }
 }
