@@ -1,0 +1,104 @@
+spring:
+  application:
+    name: api-gateway-iam
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/s10_api_gateway_iam}
+    username: ${DB_USER:sp_user}
+    password: ${DB_PASS:sp_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_schema: public
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+    schemas: public
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: api-gateway-iam
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: ${KAFKA_BROKERS:localhost:9092}
+          auto-create-topics: false
+
+api-gateway-iam:
+  jwt:
+    private-key-base64: ${JWT_PRIVATE_KEY_BASE64:}
+    issuer: ${JWT_ISSUER:https://gateway.stablecoin-payments.dev}
+    audience: ${JWT_AUDIENCE:payment-platform}
+    access-token-ttl-seconds: ${JWT_ACCESS_TTL:3600}
+  rate-limit:
+    default-tier: STARTER
+  jobs:
+    expired-token-cleanup:
+      fixed-delay-ms: ${TOKEN_CLEANUP_JOB_DELAY_MS:900000}
+
+namastack:
+  outbox:
+    poll-interval: 2000
+    batch-size: 20
+    jdbc:
+      table-prefix: "gatewayiam_"
+      schema-initialization:
+        enabled: false
+    retry:
+      policy: exponential
+      max-retries: 5
+      exponential:
+        initial-delay: 1000
+        max-delay: 60000
+        multiplier: 2.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      service: api-gateway-iam
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+logging:
+  level:
+    com.stablecoin.payments: INFO
+    org.springframework.security: WARN
