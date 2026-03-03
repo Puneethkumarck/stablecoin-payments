@@ -18,16 +18,21 @@ public class AuditLogRepositoryAdapter implements AuditLogRepository {
 
     @Override
     public AuditLogEntry save(AuditLogEntry entry) {
+        var logId = entry.getLogId() != null ? entry.getLogId() : UUID.randomUUID();
+        var occurredAt = entry.getOccurredAt() != null ? entry.getOccurredAt() : Instant.now();
         var entity = AuditLogEntity.builder()
-                .logId(entry.getLogId() != null ? entry.getLogId() : UUID.randomUUID())
+                .logId(logId)
                 .merchantId(entry.getMerchantId())
                 .action(entry.getAction())
                 .resource(entry.getResource())
                 .sourceIp(entry.getSourceIp())
                 .detail(entry.getDetail())
-                .occurredAt(entry.getOccurredAt() != null ? entry.getOccurredAt() : Instant.now())
+                .occurredAt(occurredAt)
                 .build();
         jpa.save(entity);
-        return entry;
+        return entry.toBuilder()
+                .logId(logId)
+                .occurredAt(occurredAt)
+                .build();
     }
 }

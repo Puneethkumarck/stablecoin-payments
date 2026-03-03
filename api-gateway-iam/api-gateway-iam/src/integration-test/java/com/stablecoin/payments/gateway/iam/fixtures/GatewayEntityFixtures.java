@@ -13,6 +13,7 @@ import java.util.UUID;
 
 public final class GatewayEntityFixtures {
 
+    private static final Instant BASE_TIME = Instant.parse("2026-01-01T00:00:00Z");
     private static final UUID DEFAULT_MERCHANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID DEFAULT_EXTERNAL_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
 
@@ -33,8 +34,8 @@ public final class GatewayEntityFixtures {
                 .status("ACTIVE")
                 .kybStatus("VERIFIED")
                 .rateLimitTier("STARTER")
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(BASE_TIME)
+                .updatedAt(BASE_TIME)
                 .build();
     }
 
@@ -49,8 +50,8 @@ public final class GatewayEntityFixtures {
                 .status("PENDING")
                 .kybStatus("PENDING")
                 .rateLimitTier("STARTER")
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(BASE_TIME)
+                .updatedAt(BASE_TIME)
                 .build();
     }
 
@@ -69,9 +70,9 @@ public final class GatewayEntityFixtures {
                 .scopes(new String[]{"payments:read"})
                 .allowedIps(new String[]{"192.168.1.1"})
                 .active(true)
-                .expiresAt(Instant.now().plusSeconds(86400))
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .expiresAt(BASE_TIME.plusSeconds(86400))
+                .createdAt(BASE_TIME)
+                .updatedAt(BASE_TIME)
                 .build();
     }
 
@@ -88,8 +89,8 @@ public final class GatewayEntityFixtures {
                 .scopes(new String[]{"payments:read", "payments:write"})
                 .grantTypes(new String[]{"client_credentials"})
                 .active(true)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(BASE_TIME)
+                .updatedAt(BASE_TIME)
                 .build();
     }
 
@@ -99,8 +100,8 @@ public final class GatewayEntityFixtures {
                 .merchantId(merchantId)
                 .clientId(clientId)
                 .scopes(new String[]{"payments:read"})
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
+                .issuedAt(BASE_TIME)
+                .expiresAt(BASE_TIME.plusSeconds(3600))
                 .revoked(false)
                 .build();
     }
@@ -108,7 +109,7 @@ public final class GatewayEntityFixtures {
     public static RateLimitEventEntity aRateLimitEvent(UUID merchantId) {
         return RateLimitEventEntity.builder()
                 .eventId(UUID.randomUUID())
-                .occurredAt(Instant.now())
+                .occurredAt(BASE_TIME)
                 .merchantId(merchantId)
                 .endpoint("/v1/payments")
                 .tier("STARTER")
@@ -121,7 +122,7 @@ public final class GatewayEntityFixtures {
     public static AuditLogEntity anAuditLogEntry(UUID merchantId) {
         return AuditLogEntity.builder()
                 .logId(UUID.randomUUID())
-                .occurredAt(Instant.now())
+                .occurredAt(BASE_TIME)
                 .merchantId(merchantId)
                 .action("TOKEN_ISSUED")
                 .resource("/v1/auth/token")

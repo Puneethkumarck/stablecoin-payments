@@ -2,6 +2,7 @@ package com.stablecoin.payments.gateway.iam.infrastructure.persistence;
 
 import com.stablecoin.payments.gateway.iam.AbstractIntegrationTest;
 import com.stablecoin.payments.gateway.iam.fixtures.GatewayEntityFixtures;
+import com.stablecoin.payments.gateway.iam.infrastructure.persistence.entity.ApiKeyEntity;
 import com.stablecoin.payments.gateway.iam.infrastructure.persistence.repository.ApiKeyJpaRepository;
 import com.stablecoin.payments.gateway.iam.infrastructure.persistence.repository.MerchantJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,17 +74,27 @@ class ApiKeyJpaRepositoryIT extends AbstractIntegrationTest {
 
     @Test
     @Transactional
-    @DisplayName("should deactivate all keys by merchant id")
+    @DisplayName("should deactivate all keys by merchant id and not affect other merchants")
     void shouldDeactivateAllByMerchantId() {
         var key1 = GatewayEntityFixtures.anActiveApiKey(merchantId);
         var key2 = GatewayEntityFixtures.anActiveApiKey(merchantId);
         apiKeyRepository.save(key1);
         apiKeyRepository.save(key2);
 
+        // Create key for another merchant
+        var otherMerchant = GatewayEntityFixtures.aPendingMerchant();
+        merchantRepository.save(otherMerchant);
+        var otherKey = GatewayEntityFixtures.anActiveApiKey(otherMerchant.getMerchantId());
+        apiKeyRepository.save(otherKey);
+
         int deactivated = apiKeyRepository.deactivateAllByMerchantId(merchantId);
 
         assertThat(deactivated).isEqualTo(2);
         assertThat(apiKeyRepository.findByMerchantIdAndActiveTrue(merchantId)).isEmpty();
+        assertThat(apiKeyRepository.findByMerchantIdAndActiveTrue(otherMerchant.getMerchantId()))
+                .hasSize(1)
+                .extracting(ApiKeyEntity::getKeyId)
+                .containsExactly(otherKey.getKeyId());
     }
 
     @Test

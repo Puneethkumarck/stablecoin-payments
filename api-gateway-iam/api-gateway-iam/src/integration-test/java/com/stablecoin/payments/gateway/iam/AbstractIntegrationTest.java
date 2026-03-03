@@ -46,12 +46,16 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbcTemplate.execute("DELETE FROM access_tokens");
-        jdbcTemplate.execute("DELETE FROM api_keys");
-        jdbcTemplate.execute("DELETE FROM oauth_clients");
-        jdbcTemplate.execute("DELETE FROM rate_limit_events");
-        jdbcTemplate.execute("DELETE FROM gateway_audit_log");
-        jdbcTemplate.execute("DELETE FROM merchants");
+        jdbcTemplate.execute("""
+                TRUNCATE TABLE
+                    access_tokens,
+                    api_keys,
+                    oauth_clients,
+                    rate_limit_events,
+                    gateway_audit_log,
+                    merchants
+                CASCADE
+                """);
     }
 
     @DynamicPropertySource

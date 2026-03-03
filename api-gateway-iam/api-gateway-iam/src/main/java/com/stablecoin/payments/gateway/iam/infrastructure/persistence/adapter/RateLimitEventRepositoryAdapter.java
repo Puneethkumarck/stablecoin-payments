@@ -18,17 +18,22 @@ public class RateLimitEventRepositoryAdapter implements RateLimitEventRepository
 
     @Override
     public RateLimitEvent save(RateLimitEvent event) {
+        var eventId = event.getEventId() != null ? event.getEventId() : UUID.randomUUID();
+        var occurredAt = event.getOccurredAt() != null ? event.getOccurredAt() : Instant.now();
         var entity = RateLimitEventEntity.builder()
-                .eventId(event.getEventId() != null ? event.getEventId() : UUID.randomUUID())
+                .eventId(eventId)
                 .merchantId(event.getMerchantId())
                 .endpoint(event.getEndpoint())
                 .tier(event.getTier().name())
                 .requestCount(event.getRequestCount())
                 .limitValue(event.getLimitValue())
                 .breached(event.isBreached())
-                .occurredAt(event.getOccurredAt() != null ? event.getOccurredAt() : Instant.now())
+                .occurredAt(occurredAt)
                 .build();
         jpa.save(entity);
-        return event;
+        return event.toBuilder()
+                .eventId(eventId)
+                .occurredAt(occurredAt)
+                .build();
     }
 }

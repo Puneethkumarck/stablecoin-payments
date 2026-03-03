@@ -71,16 +71,25 @@ class OAuthClientJpaRepositoryIT extends AbstractIntegrationTest {
 
     @Test
     @Transactional
-    @DisplayName("should deactivate all clients by merchant id")
+    @DisplayName("should deactivate all clients by merchant id and not affect other merchants")
     void shouldDeactivateAllByMerchantId() {
         var client1 = GatewayEntityFixtures.anActiveOAuthClient(merchantId);
         var client2 = GatewayEntityFixtures.anActiveOAuthClient(merchantId);
         clientRepository.save(client1);
         clientRepository.save(client2);
 
+        // Create client for another merchant
+        var otherMerchant = GatewayEntityFixtures.aPendingMerchant();
+        merchantRepository.save(otherMerchant);
+        var otherClient = GatewayEntityFixtures.anActiveOAuthClient(otherMerchant.getMerchantId());
+        clientRepository.save(otherClient);
+
         int deactivated = clientRepository.deactivateAllByMerchantId(merchantId);
 
         assertThat(deactivated).isEqualTo(2);
+        assertThat(clientRepository.findByClientIdAndActiveTrue(client1.getClientId())).isEmpty();
+        assertThat(clientRepository.findByClientIdAndActiveTrue(client2.getClientId())).isEmpty();
+        assertThat(clientRepository.findByClientIdAndActiveTrue(otherClient.getClientId())).isPresent();
     }
 
     @Test
