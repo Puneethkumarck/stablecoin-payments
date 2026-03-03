@@ -1,12 +1,12 @@
 package com.stablecoin.payments.gateway.iam.domain.model;
 
+import lombok.Builder;
+import lombok.Getter;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
-import lombok.Builder;
-import lombok.Getter;
 
 @Getter
 @Builder(toBuilder = true)

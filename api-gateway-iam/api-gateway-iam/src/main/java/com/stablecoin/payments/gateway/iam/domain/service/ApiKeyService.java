@@ -1,9 +1,5 @@
 package com.stablecoin.payments.gateway.iam.domain.service;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
 import com.stablecoin.payments.gateway.iam.domain.event.ApiKeyRevokedEvent;
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyExpiredException;
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundException;
@@ -19,6 +15,10 @@ import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyHasher;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.EventPublisher;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 public class ApiKeyService {
 

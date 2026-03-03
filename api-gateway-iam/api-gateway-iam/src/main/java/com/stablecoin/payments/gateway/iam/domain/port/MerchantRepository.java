@@ -1,9 +1,9 @@
 package com.stablecoin.payments.gateway.iam.domain.port;
 
+import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
+
 import java.util.Optional;
 import java.util.UUID;
-
-import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
 
 public interface MerchantRepository {
 

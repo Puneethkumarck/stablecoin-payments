@@ -1,8 +1,8 @@
 package com.stablecoin.payments.gateway.iam.domain.port;
 
-import java.util.UUID;
-
 import com.stablecoin.payments.gateway.iam.domain.model.RateLimitPolicy;
+
+import java.util.UUID;
 
 public interface RateLimiter {
 

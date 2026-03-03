@@ -1,9 +1,9 @@
 package com.stablecoin.payments.gateway.iam.domain.port;
 
+import com.stablecoin.payments.gateway.iam.domain.model.AccessToken;
+
 import java.util.Optional;
 import java.util.UUID;
-
-import com.stablecoin.payments.gateway.iam.domain.model.AccessToken;
 
 public interface AccessTokenRepository {
 

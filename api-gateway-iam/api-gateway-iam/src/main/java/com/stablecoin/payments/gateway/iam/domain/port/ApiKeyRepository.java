@@ -1,10 +1,10 @@
 package com.stablecoin.payments.gateway.iam.domain.port;
 
+import com.stablecoin.payments.gateway.iam.domain.model.ApiKey;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import com.stablecoin.payments.gateway.iam.domain.model.ApiKey;
 
 public interface ApiKeyRepository {
 

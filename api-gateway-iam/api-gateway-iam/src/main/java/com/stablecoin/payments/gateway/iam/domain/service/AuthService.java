@@ -1,10 +1,5 @@
 package com.stablecoin.payments.gateway.iam.domain.service;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
 import com.stablecoin.payments.gateway.iam.domain.exception.InvalidClientCredentialsException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotActiveException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
@@ -17,6 +12,11 @@ import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.OAuthClientRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 public class AuthService {
 

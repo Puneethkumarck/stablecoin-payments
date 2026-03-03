@@ -1,9 +1,5 @@
 package com.stablecoin.payments.gateway.iam.domain.service;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
-
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.model.Corridor;
 import com.stablecoin.payments.gateway.iam.domain.model.KybStatus;
@@ -14,6 +10,10 @@ import com.stablecoin.payments.gateway.iam.domain.port.AccessTokenRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.OAuthClientRepository;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 public class MerchantService {
 
