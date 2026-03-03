@@ -7,9 +7,12 @@ CREATE TABLE access_tokens (
     client_id       UUID NOT NULL REFERENCES oauth_clients(client_id),
     scopes          TEXT[] NOT NULL DEFAULT '{}',
     issued_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at      TIMESTAMPTZ NOT NULL,
+    expires_at      TIMESTAMPTZ NOT NULL
+                    CHECK (expires_at > issued_at),
     revoked         BOOLEAN NOT NULL DEFAULT FALSE,
     revoked_at      TIMESTAMPTZ
+                    CHECK (revoked_at IS NULL OR revoked_at >= issued_at),
+    CHECK ((revoked = TRUE AND revoked_at IS NOT NULL) OR (revoked = FALSE AND revoked_at IS NULL))
 );
 
 CREATE INDEX idx_access_tokens_merchant ON access_tokens (merchant_id);

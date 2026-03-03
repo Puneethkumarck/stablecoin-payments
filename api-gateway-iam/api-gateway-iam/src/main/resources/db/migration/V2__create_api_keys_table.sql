@@ -12,8 +12,10 @@ CREATE TABLE api_keys (
     scopes          TEXT[] NOT NULL DEFAULT '{}',
     allowed_ips     TEXT[] NOT NULL DEFAULT '{}',
     active          BOOLEAN NOT NULL DEFAULT TRUE,
-    expires_at      TIMESTAMPTZ,
-    revoked_at      TIMESTAMPTZ,
+    expires_at      TIMESTAMPTZ
+                    CHECK (expires_at IS NULL OR expires_at > created_at),
+    revoked_at      TIMESTAMPTZ
+                    CHECK (revoked_at IS NULL OR revoked_at >= created_at),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     version         BIGINT NOT NULL DEFAULT 0

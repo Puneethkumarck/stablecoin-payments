@@ -20,6 +20,5 @@ CREATE TABLE merchants (
 );
 
 CREATE INDEX idx_merchants_status ON merchants (status) WHERE status = 'ACTIVE';
-CREATE INDEX idx_merchants_external_id ON merchants (external_id);
 
 COMMENT ON TABLE merchants IS 'Platform-level merchant registry for API Gateway access control';

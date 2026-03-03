@@ -7,7 +7,8 @@ CREATE TABLE oauth_clients (
     client_secret_hash  VARCHAR(255) NOT NULL,
     name                VARCHAR(255) NOT NULL,
     scopes              TEXT[] NOT NULL DEFAULT '{}',
-    grant_types         TEXT[] NOT NULL DEFAULT '{client_credentials}',
+    grant_types         TEXT[] NOT NULL DEFAULT '{client_credentials}'
+                        CHECK (grant_types <@ ARRAY['client_credentials']::TEXT[]),
     active              BOOLEAN NOT NULL DEFAULT TRUE,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     api(project(":api-gateway-iam:api-gateway-iam-api"))
-    api("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
 
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.assertj:assertj-core")

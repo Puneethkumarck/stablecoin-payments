@@ -5,9 +5,10 @@ CREATE TABLE rate_limit_events (
     event_id        UUID NOT NULL DEFAULT gen_random_uuid(),
     merchant_id     UUID NOT NULL,
     endpoint        VARCHAR(255) NOT NULL,
-    tier            VARCHAR(20) NOT NULL,
-    request_count   INTEGER NOT NULL,
-    limit_value     INTEGER NOT NULL,
+    tier            VARCHAR(20) NOT NULL
+                    CHECK (tier IN ('STARTER', 'GROWTH', 'ENTERPRISE', 'UNLIMITED')),
+    request_count   INTEGER NOT NULL CHECK (request_count > 0),
+    limit_value     INTEGER NOT NULL CHECK (limit_value > 0),
     breached        BOOLEAN NOT NULL DEFAULT FALSE,
     occurred_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (event_id, occurred_at)

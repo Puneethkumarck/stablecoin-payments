@@ -18,11 +18,12 @@ CREATE TABLE gateway_audit_log_default PARTITION OF gateway_audit_log DEFAULT;
 CREATE INDEX idx_audit_log_merchant ON gateway_audit_log (merchant_id, occurred_at);
 CREATE INDEX idx_audit_log_action ON gateway_audit_log (action, occurred_at);
 
--- Append-only: revoke UPDATE and DELETE from application role
+-- Append-only: revoke UPDATE and DELETE from application role (parent + partitions)
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sp_user') THEN
         REVOKE UPDATE, DELETE ON gateway_audit_log FROM sp_user;
+        REVOKE UPDATE, DELETE ON gateway_audit_log_default FROM sp_user;
     END IF;
 END $$;
 
