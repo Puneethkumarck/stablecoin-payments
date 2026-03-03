@@ -1,0 +1,177 @@
+plugins {
+    id("org.springframework.boot")
+    java
+    `java-test-fixtures`
+    jacoco
+}
+
+val integrationTestSourceSet: SourceSet = sourceSets.create("integrationTest") {
+    java.srcDir("src/integration-test/java")
+    resources.srcDir("src/integration-test/resources")
+    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+}
+
+configurations {
+    named("integrationTestImplementation") { extendsFrom(configurations.testImplementation.get()) }
+    named("integrationTestRuntimeOnly") { extendsFrom(configurations.testRuntimeOnly.get()) }
+}
+
+tasks.register<Test>("integrationTest") {
+    testClassesDirs = integrationTestSourceSet.output.classesDirs
+    classpath = integrationTestSourceSet.runtimeClasspath
+    shouldRunAfter(tasks.test)
+    configure<JacocoTaskExtension> { isEnabled = false }
+}
+
+val businessTestSourceSet: SourceSet = sourceSets.create("businessTest") {
+    java.srcDir("src/business-test/java")
+    resources.srcDir("src/business-test/resources")
+    compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output + integrationTestSourceSet.output
+    runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output + integrationTestSourceSet.output
+}
+
+configurations {
+    named("businessTestImplementation") { extendsFrom(configurations.named("integrationTestImplementation").get()) }
+    named("businessTestRuntimeOnly") { extendsFrom(configurations.named("integrationTestRuntimeOnly").get()) }
+}
+
+tasks.register<Test>("businessTest") {
+    testClassesDirs = businessTestSourceSet.output.classesDirs
+    classpath = businessTestSourceSet.runtimeClasspath
+    shouldRunAfter(tasks.named("integrationTest"))
+    configure<JacocoTaskExtension> { isEnabled = false }
+}
+
+val lombokVersion: String by project
+val mapstructVersion: String by project
+val lombokMapstructBindingVersion: String by project
+val resilience4jVersion: String by project
+val flywayVersion: String by project
+val archunitVersion: String by project
+val testcontainersVersion: String by project
+val wiremockVersion: String by project
+
+dependencies {
+    implementation(project(":api-gateway-iam:api-gateway-iam-api"))
+
+    // Spring Boot
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
+    // Kafka via Spring Cloud Stream
+    implementation("org.springframework.cloud:spring-cloud-stream")
+    implementation("org.springframework.cloud:spring-cloud-stream-binder-kafka")
+    implementation("org.springframework.kafka:spring-kafka")
+
+    // Feign
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+
+    // Resilience4j
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:$resilience4jVersion")
+
+    // MapStruct
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$lombokMapstructBindingVersion")
+
+    // Auth — JWT ES256 (Nimbus, BOM-managed via oauth2-jose)
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+
+    // Database
+    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+
+    // Outbox (namastack)
+    implementation("io.namastack:namastack-outbox-starter-jdbc:1.0.0")
+
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
+    testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
+    "integrationTestImplementation"(testFixtures(project))
+    "integrationTestImplementation"("org.testcontainers:postgresql:$testcontainersVersion")
+    "integrationTestImplementation"("org.testcontainers:kafka:$testcontainersVersion")
+    "integrationTestImplementation"("org.testcontainers:junit-jupiter:$testcontainersVersion")
+    "integrationTestImplementation"("org.wiremock:wiremock-standalone:$wiremockVersion")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-webmvc-test")
+    "integrationTestImplementation"("org.springframework.boot:spring-boot-starter-security-test")
+}
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.addAll(listOf(
+        "-Amapstruct.defaultComponentModel=spring",
+        "-Amapstruct.unmappedTargetPolicy=IGNORE"
+    ))
+}
+
+tasks.withType<Test> {
+    jvmArgs("-Dnet.bytebuddy.experimental=true")
+    useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.test {
+    configure<JacocoTaskExtension> {
+        excludes = listOf("sun.*", "jdk.*", "com.sun.*", "java.*", "javax.*")
+    }
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+val jacocoExclusions = listOf(
+    "**/entity/**",
+    "**/mapper/**",
+    "**/config/**",
+    "**/*Application*",
+    "**/generated/**",
+    "**/*MapperImpl*"
+)
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+    classDirectories.setFrom(files(classDirectories.files.map {
+        fileTree(it) { exclude(jacocoExclusions) }
+    }))
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.45".toBigDecimal()
+            }
+        }
+    }
+    classDirectories.setFrom(files(classDirectories.files.map {
+        fileTree(it) { exclude(jacocoExclusions) }
+    }))
+}
+
+tasks.named("check") {
+    dependsOn(
+        tasks.named("integrationTest"),
+        tasks.named("businessTest"),
+        tasks.jacocoTestCoverageVerification
+    )
+}
