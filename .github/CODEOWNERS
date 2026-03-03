@@ -1,0 +1,37 @@
+# CODEOWNERS
+# Defines who is automatically requested for review when a PR touches certain paths.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Order matters — the LAST matching rule wins.
+
+# --- Default owner for everything ---
+*                                           @Puneethkumarck
+
+# --- CI/CD & GitHub configuration ---
+# Any change to workflows, Renovate, or Dependabot config requires owner review
+.github/                                    @Puneethkumarck
+renovate.json                               @Puneethkumarck
+
+# --- Merchant Onboarding service ---
+merchant-onboarding/                        @Puneethkumarck
+
+# --- Merchant IAM service ---
+merchant-iam/                               @Puneethkumarck
+
+# --- Infrastructure (Docker Compose, local infra) ---
+infra/                                      @Puneethkumarck
+docker-compose*.yml                         @Puneethkumarck
+
+# --- Build configuration ---
+# Changes to Gradle build files affect the whole project — require careful review
+build.gradle.kts                            @Puneethkumarck
+settings.gradle.kts                         @Puneethkumarck
+gradle.properties                           @Puneethkumarck
+gradle/                                     @Puneethkumarck
+
+# --- Security-sensitive files ---
+# These files should ALWAYS require owner review, regardless of other rules
+SECURITY.md                                 @Puneethkumarck
+**/SecurityConfig*                          @Puneethkumarck
+**/JwtFilter*                               @Puneethkumarck
+**/Auth*                                    @Puneethkumarck
