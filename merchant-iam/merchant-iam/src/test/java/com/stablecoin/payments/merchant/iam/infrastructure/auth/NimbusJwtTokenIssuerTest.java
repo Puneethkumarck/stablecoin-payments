@@ -175,4 +175,51 @@ class NimbusJwtTokenIssuerTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    class ParseRefreshToken {
+
+        @Test
+        void shouldParseIssuedRefreshToken() {
+            var sessionId = UUID.randomUUID();
+            var token = issuer.issueRefreshToken(userId, sessionId);
+            var parsed = issuer.parseRefreshToken(token);
+
+            assertThat(parsed.userId()).isEqualTo(userId);
+            assertThat(parsed.sessionId()).isEqualTo(sessionId);
+            assertThat(parsed.jti()).isNotNull();
+            assertThat(parsed.expiresAtEpochSecond()).isGreaterThan(0);
+        }
+
+        @Test
+        void shouldRejectAccessTokenAsRefreshToken() {
+            var token = issuer.issueAccessToken(buildUser(), buildRole(), false);
+
+            assertThatThrownBy(() -> issuer.parseRefreshToken(token))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("not a refresh token");
+        }
+
+        @Test
+        void shouldRejectExpiredRefreshToken() throws Exception {
+            var expiredProps = new JwtProperties(null, "test", "test", 3600, 0);
+            var expiredIssuer = new NimbusJwtTokenIssuer(expiredProps);
+            expiredIssuer.init();
+
+            var token = expiredIssuer.issueRefreshToken(userId, UUID.randomUUID());
+
+            assertThatThrownBy(() -> expiredIssuer.parseRefreshToken(token))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("expired");
+        }
+
+        @Test
+        void shouldRejectTamperedRefreshToken() {
+            var token = issuer.issueRefreshToken(userId, UUID.randomUUID());
+            var tampered = token.substring(0, token.length() - 4) + "XXXX";
+
+            assertThatThrownBy(() -> issuer.parseRefreshToken(tampered))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
 }

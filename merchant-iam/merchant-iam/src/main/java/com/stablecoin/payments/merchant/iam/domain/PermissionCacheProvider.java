@@ -7,11 +7,11 @@ import java.util.UUID;
 
 public interface PermissionCacheProvider {
 
-    Optional<PermissionSet> getPermissions(UUID userId);
+    Optional<PermissionSet> getPermissions(UUID merchantId, UUID userId);
 
-    void putPermissions(UUID userId, PermissionSet permissions);
+    void putPermissions(UUID merchantId, UUID userId, PermissionSet permissions);
 
-    void evict(UUID userId);
+    void evict(UUID merchantId, UUID userId);
 
     void evictAll(UUID merchantId);
 }

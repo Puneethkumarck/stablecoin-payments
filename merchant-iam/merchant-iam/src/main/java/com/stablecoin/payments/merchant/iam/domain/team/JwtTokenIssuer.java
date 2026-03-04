@@ -31,9 +31,23 @@ public interface JwtTokenIssuer {
     ParsedAccessToken parseAndVerify(String token);
 
     /**
+     * Parses and verifies a JWT refresh token. Returns the extracted claims.
+     *
+     * @throws IllegalArgumentException if the token is invalid, expired, or not a refresh token
+     */
+    ParsedRefreshToken parseRefreshToken(String token);
+
+    /**
      * Returns the public key set in JWK Set JSON format for the JWKS endpoint.
      */
     String jwksJson();
+
+    record ParsedRefreshToken(
+            UUID jti,
+            UUID userId,
+            UUID sessionId,
+            long expiresAtEpochSecond
+    ) {}
 
     record ParsedAccessToken(
             UUID jti,
