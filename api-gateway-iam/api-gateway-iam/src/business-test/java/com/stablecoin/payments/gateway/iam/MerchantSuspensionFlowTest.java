@@ -52,6 +52,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Step 1: Register and activate merchant
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -73,6 +74,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Step 2: Create API key
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -147,6 +149,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Step 9: API key creation should fail — merchant not active
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -166,6 +169,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Register and activate merchant
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -187,6 +191,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Create API key
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -221,6 +226,7 @@ class MerchantSuspensionFlowTest extends AbstractIntegrationTest {
         // Register and activate merchant
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",

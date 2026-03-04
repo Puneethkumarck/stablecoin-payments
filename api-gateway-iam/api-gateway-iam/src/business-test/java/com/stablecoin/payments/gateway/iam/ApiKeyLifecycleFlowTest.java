@@ -40,6 +40,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Step 1: Register and activate merchant
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -61,6 +62,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Step 2: Create API key
         var createKeyResult = mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -87,7 +89,8 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         assertThat(savedKey.get().isActive()).isTrue();
 
         // Step 3: Revoke API key
-        mockMvc.perform(delete("/v1/api-keys/" + keyId))
+        mockMvc.perform(delete("/v1/api-keys/" + keyId)
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isNoContent());
 
         // Step 4: Verify key is revoked in DB
@@ -105,6 +108,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Register merchant (stays PENDING)
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -121,6 +125,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // API key creation should fail — merchant not active
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -140,6 +145,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Register and activate merchant
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -160,6 +166,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Create LIVE key
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -174,6 +181,7 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
         // Create TEST key
         mockMvc.perform(post("/v1/api-keys")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "merchantId": "%s",
@@ -193,7 +201,8 @@ class ApiKeyLifecycleFlowTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("should return 404 when revoking non-existent key")
     void shouldReturn404ForNonExistentKey() throws Exception {
-        mockMvc.perform(delete("/v1/api-keys/" + UUID.randomUUID()))
+        mockMvc.perform(delete("/v1/api-keys/" + UUID.randomUUID())
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isNotFound());
     }
 }

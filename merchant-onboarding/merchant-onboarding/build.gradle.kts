@@ -83,6 +83,9 @@ dependencies {
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$lombokMapstructBindingVersion")
 
+    // Outbox (namastack)
+    implementation("io.namastack:namastack-outbox-starter-jdbc:1.0.0")
+
     // Database
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
