@@ -3,6 +3,7 @@ package com.stablecoin.payments.merchant.iam.domain.team;
 import com.stablecoin.payments.merchant.iam.domain.team.model.MerchantUser;
 import com.stablecoin.payments.merchant.iam.domain.team.model.Role;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,7 +24,25 @@ public interface JwtTokenIssuer {
     String issueRefreshToken(UUID userId, UUID sessionId);
 
     /**
+     * Parses and verifies a JWT access token. Returns the extracted claims.
+     *
+     * @throws IllegalArgumentException if the token is invalid, expired, or tampered
+     */
+    ParsedAccessToken parseAndVerify(String token);
+
+    /**
      * Returns the public key set in JWK Set JSON format for the JWKS endpoint.
      */
     String jwksJson();
+
+    record ParsedAccessToken(
+            UUID jti,
+            UUID userId,
+            UUID merchantId,
+            UUID roleId,
+            String role,
+            List<String> permissions,
+            boolean mfaVerified,
+            long expiresAtEpochSecond
+    ) {}
 }

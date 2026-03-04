@@ -6,11 +6,13 @@ import com.stablecoin.payments.merchant.iam.api.response.DataResponse;
 import com.stablecoin.payments.merchant.iam.api.response.PageResponse;
 import com.stablecoin.payments.merchant.iam.api.response.RoleResponse;
 import com.stablecoin.payments.merchant.iam.application.controller.mapper.IamResponseMapper;
+import com.stablecoin.payments.merchant.iam.application.security.UserAuthentication;
 import com.stablecoin.payments.merchant.iam.domain.team.MerchantTeamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -83,8 +85,11 @@ public class RolesController {
         merchantTeamService.deleteRole(merchantId, roleId);
     }
 
-    // TODO: replace with JWT principal extraction once M-4 is implemented
     private UUID resolveCallerId() {
-        return UUID.fromString("00000000-0000-0000-0000-000000000001");
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof UserAuthentication userAuth) {
+            return userAuth.userId();
+        }
+        throw new IllegalStateException("No authenticated user in SecurityContext");
     }
 }
