@@ -1,6 +1,7 @@
 package com.stablecoin.payments.merchant.onboarding.domain.merchant;
 
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RiskTier;
+import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import java.util.Map;
  * Score > 50 = HIGH risk (disqualifies activation).
  * Score 25–50 = MEDIUM, below 25 = LOW.
  */
+@Service
 public class RiskTierCalculator {
 
     private static final int HIGH_RISK_THRESHOLD = 50;
