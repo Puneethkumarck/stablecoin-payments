@@ -8,5 +8,6 @@ public interface RateLimiter {
 
     RateLimitResult check(UUID merchantId, String endpoint, RateLimitPolicy policy);
 
-    record RateLimitResult(boolean allowed, int currentCount, int limit, String window) {}
+    record RateLimitResult(boolean allowed, int currentCount, int limit, String window,
+                           int retryAfterSeconds) {}
 }
