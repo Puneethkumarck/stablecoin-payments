@@ -60,6 +60,11 @@ api-gateway-iam:
     issuer: ${JWT_ISSUER:https://gateway.stablecoin-payments.dev}
     audience: ${JWT_AUDIENCE:payment-platform}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL:3600}
+  merchant-iam:
+    base-url: ${MERCHANT_IAM_BASE_URL:http://localhost:8083}
+    issuer: ${MERCHANT_IAM_ISSUER:https://api.stablecoin-payments.dev}
+    audience: ${MERCHANT_IAM_AUDIENCE:payment-platform}
+    jwks-cache-ttl-hours: ${MERCHANT_IAM_JWKS_CACHE_TTL_HOURS:24}
   rate-limit:
     default-tier: STARTER
   jobs:
