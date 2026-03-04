@@ -45,6 +45,7 @@ class MerchantOnboardingFlowTest extends AbstractIntegrationTest {
         // Step 1: Register merchant via API
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",
@@ -127,6 +128,7 @@ class MerchantOnboardingFlowTest extends AbstractIntegrationTest {
         // Register merchant (stays PENDING)
         var registerResult = mockMvc.perform(post("/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "externalId": "%s",

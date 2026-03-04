@@ -39,7 +39,7 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
   cloud:
     stream:
@@ -63,9 +63,21 @@ spring:
         merchant-corridor-approved-out-0:
           destination: merchant.corridor.approved
 
-outbox:
-  relay:
-    fixed-delay-ms: 100
+namastack:
+  outbox:
+    poll-interval: 2000
+    batch-size: 20
+    jdbc:
+      table-prefix: "onboarding_"
+      schema-initialization:
+        enabled: false
+    retry:
+      policy: exponential
+      max-retries: 5
+      exponential:
+        initial-delay: 1000
+        max-delay: 60000
+        multiplier: 2.0
 
 management:
   endpoints:

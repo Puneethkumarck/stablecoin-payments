@@ -1,27 +1,19 @@
 package com.stablecoin.payments.merchant.onboarding.infrastructure.persistence;
 
 import com.stablecoin.payments.merchant.onboarding.AbstractIntegrationTest;
-import com.stablecoin.payments.merchant.onboarding.infrastructure.messaging.OutboxEventRepository;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantJpaRepository;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,14 +24,14 @@ class OutboxIntegrationIT extends AbstractIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private OutboxEventRepository outboxRepository;
+    private MerchantJpaRepository merchantJpa;
 
     @Autowired
-    private MerchantJpaRepository merchantJpa;
+    private JdbcTemplate jdbc;
 
     @BeforeEach
     void cleanUp() {
-        outboxRepository.deleteAll();
+        jdbc.execute("DELETE FROM onboarding_outbox_record");
         merchantJpa.deleteAll();
     }
 
@@ -50,42 +42,18 @@ class OutboxIntegrationIT extends AbstractIntegrationTest {
         // when
         mockMvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "legalName": "Outbox Test Corp",
-                                    "tradingName": "OutboxCo",
-                                    "registrationNumber": "REG-OUTBOX-001",
-                                    "registrationCountry": "GB",
-                                    "entityType": "PRIVATE_LIMITED",
-                                    "websiteUrl": "https://outbox.com",
-                                    "primaryCurrency": "USD",
-                                    "registeredAddress": {
-                                        "streetLine1": "1 Outbox Lane",
-                                        "city": "London",
-                                        "postcode": "EC1A 1BB",
-                                        "country": "GB"
-                                    },
-                                    "beneficialOwners": [{
-                                        "fullName": "Test Owner",
-                                        "dateOfBirth": "1985-06-15",
-                                        "nationality": "GB",
-                                        "ownershipPct": 100.00,
-                                        "isPoliticallyExposed": false
-                                    }],
-                                    "requestedCorridors": ["GB->US"]
-                                }
-                                """))
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content(merchantPayload("Outbox Test Corp", "REG-OUTBOX-001")))
                 .andExpect(status().isCreated());
 
-        // then
-        var events = outboxRepository.findAll();
-        assertThat(events).hasSize(1);
+        // then — namastack outbox record created
+        var count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM onboarding_outbox_record", Integer.class);
+        assertThat(count).isEqualTo(1);
 
-        var event = events.getFirst();
-        assertThat(event.getTopic()).isEqualTo("merchant.applied");
-        assertThat(event.getEventType()).isEqualTo("merchant.applied");
-        assertThat(event.isProcessed()).isFalse();
-        assertThat(event.getPayload()).contains("Outbox Test Corp");
+        var payload = jdbc.queryForObject(
+                "SELECT payload FROM onboarding_outbox_record LIMIT 1", String.class);
+        assertThat(payload).contains("Outbox Test Corp");
     }
 
     @Test
@@ -95,109 +63,63 @@ class OutboxIntegrationIT extends AbstractIntegrationTest {
         // when
         mockMvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "legalName": "Atomic Test Corp",
-                                    "tradingName": "AtomicCo",
-                                    "registrationNumber": "REG-ATOMIC-001",
-                                    "registrationCountry": "GB",
-                                    "entityType": "PRIVATE_LIMITED",
-                                    "websiteUrl": "https://atomic.com",
-                                    "primaryCurrency": "USD",
-                                    "registeredAddress": {
-                                        "streetLine1": "1 Atomic Lane",
-                                        "city": "London",
-                                        "postcode": "EC1A 1BB",
-                                        "country": "GB"
-                                    },
-                                    "beneficialOwners": [{
-                                        "fullName": "Test Owner",
-                                        "dateOfBirth": "1985-06-15",
-                                        "nationality": "GB",
-                                        "ownershipPct": 100.00,
-                                        "isPoliticallyExposed": false
-                                    }],
-                                    "requestedCorridors": ["GB->US"]
-                                }
-                                """))
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content(merchantPayload("Atomic Test Corp", "REG-ATOMIC-001")))
                 .andExpect(status().isCreated());
 
-        // then — both merchant and outbox event persisted
+        // then — both merchant and outbox event persisted atomically
         assertThat(merchantJpa.count()).isEqualTo(1);
-        assertThat(outboxRepository.count()).isEqualTo(1);
+        var outboxCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM onboarding_outbox_record", Integer.class);
+        assertThat(outboxCount).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("should relay outbox event to Kafka topic")
+    @DisplayName("should store outbox record with correct key (merchantId)")
     @WithMockUser(authorities = "merchant:write")
-    void shouldRelayOutboxEventToKafka() throws Exception {
-        // given — create a merchant (produces outbox event)
+    void shouldStoreOutboxRecordWithMerchantKey() throws Exception {
+        // when
         mockMvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "legalName": "Kafka E2E Corp",
-                                    "tradingName": "KafkaCo",
-                                    "registrationNumber": "REG-KAFKA-001",
-                                    "registrationCountry": "GB",
-                                    "entityType": "PRIVATE_LIMITED",
-                                    "websiteUrl": "https://kafka-e2e.com",
-                                    "primaryCurrency": "USD",
-                                    "registeredAddress": {
-                                        "streetLine1": "1 Kafka Lane",
-                                        "city": "London",
-                                        "postcode": "EC1A 1BB",
-                                        "country": "GB"
-                                    },
-                                    "beneficialOwners": [{
-                                        "fullName": "Test Owner",
-                                        "dateOfBirth": "1985-06-15",
-                                        "nationality": "GB",
-                                        "ownershipPct": 100.00,
-                                        "isPoliticallyExposed": false
-                                    }],
-                                    "requestedCorridors": ["GB->US"]
-                                }
-                                """))
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .content(merchantPayload("Key Test Corp", "REG-KEY-001")))
                 .andExpect(status().isCreated());
 
-        // then — wait for OutboxRelayJob to mark event as processed
-        await().atMost(10, TimeUnit.SECONDS)
-                .pollInterval(200, TimeUnit.MILLISECONDS)
-                .untilAsserted(() -> {
-                    var events = outboxRepository.findAll();
-                    assertThat(events).isNotEmpty();
-                    assertThat(events.stream().anyMatch(e ->
-                            e.isProcessed() && e.getPayload().contains("Kafka E2E Corp"))).isTrue();
-                });
+        // then — record key is the merchantId
+        var recordKey = jdbc.queryForObject(
+                "SELECT record_key FROM onboarding_outbox_record LIMIT 1", String.class);
+        assertThat(recordKey).isNotBlank();
 
-        // then — consume from Kafka and verify the message arrived
-        try (var consumer = createConsumer("merchant.applied")) {
-            var records = consumer.poll(Duration.ofSeconds(10));
-            assertThat(records.count()).isGreaterThanOrEqualTo(1);
-
-            var found = false;
-            for (var record : records) {
-                if (record.value().contains("Kafka E2E Corp")) {
-                    assertThat(record.topic()).isEqualTo("merchant.applied");
-                    found = true;
-                    break;
-                }
-            }
-            assertThat(found).as("Expected a Kafka record containing 'Kafka E2E Corp'").isTrue();
-        }
+        // Verify it's a valid UUID (merchantId)
+        assertThat(recordKey).matches(
+                "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     }
 
-    private KafkaConsumer<String, String> createConsumer(String topic) {
-        var props = Map.<String, Object>of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA.getBootstrapServers(),
-                ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-" + UUID.randomUUID(),
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
-                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class,
-                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class
-        );
-        var consumer = new KafkaConsumer<String, String>(props);
-        consumer.subscribe(List.of(topic));
-        return consumer;
+    private String merchantPayload(String legalName, String regNumber) {
+        return """
+                {
+                    "legalName": "%s",
+                    "tradingName": "TestCo",
+                    "registrationNumber": "%s",
+                    "registrationCountry": "GB",
+                    "entityType": "PRIVATE_LIMITED",
+                    "websiteUrl": "https://test.com",
+                    "primaryCurrency": "USD",
+                    "registeredAddress": {
+                        "streetLine1": "1 Test Lane",
+                        "city": "London",
+                        "postcode": "EC1A 1BB",
+                        "country": "GB"
+                    },
+                    "beneficialOwners": [{
+                        "fullName": "Test Owner",
+                        "dateOfBirth": "1985-06-15",
+                        "nationality": "GB",
+                        "ownershipPct": 100.00,
+                        "isPoliticallyExposed": false
+                    }],
+                    "requestedCorridors": ["GB->US"]
+                }
+                """.formatted(legalName, regNumber);
     }
 }

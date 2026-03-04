@@ -48,6 +48,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
         void shouldCreateMerchant() throws Exception {
             mockMvc.perform(post(BASE_PATH)
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {
                                         "legalName": "Test Corp",
@@ -86,6 +87,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
         void shouldReturn400WhenFieldsMissing() throws Exception {
             mockMvc.perform(post(BASE_PATH)
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {
                                         "legalName": "",
@@ -105,6 +107,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(post(BASE_PATH)
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {
                                         "legalName": "Duplicate Corp",
@@ -174,6 +177,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(post(BASE_PATH + "/" + entity.getMerchantId() + "/suspend")
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {"reason": "compliance review"}
                                     """))
@@ -194,6 +198,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(post(BASE_PATH + "/" + entity.getMerchantId() + "/close")
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {"reason": "business closure"}
                                     """))
@@ -214,6 +219,7 @@ class MerchantControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(patch(BASE_PATH + "/" + entity.getMerchantId() + "/rate-limit-tier")
                             .contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", UUID.randomUUID().toString())
                             .content("""
                                     {"newTier": "ENTERPRISE", "updatedBy": "00000000-0000-0000-0000-000000000001"}
                                     """))

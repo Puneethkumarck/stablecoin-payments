@@ -2,7 +2,6 @@ package com.stablecoin.payments.merchant.onboarding;
 
 import com.jayway.jsonpath.JsonPath;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
-import com.stablecoin.payments.merchant.onboarding.infrastructure.messaging.OutboxEventRepository;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -10,9 +9,12 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -32,11 +34,11 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
     private MerchantJpaRepository merchantJpa;
 
     @Autowired
-    private OutboxEventRepository outboxRepository;
+    private JdbcTemplate jdbc;
 
     @BeforeEach
     void cleanUp() {
-        outboxRepository.deleteAll();
+        jdbc.execute("DELETE FROM onboarding_outbox_record");
         merchantJpa.deleteAll();
     }
 
@@ -47,6 +49,7 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         // Step 1: Apply
         MvcResult applyResult = mockMvc.perform(post("/api/v1/merchants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {
                                     "legalName": "Lifecycle Corp",
@@ -83,8 +86,9 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         assertThat(appliedMerchant.getStatus()).isEqualTo(MerchantStatus.APPLIED);
 
         // Verify outbox event
-        assertThat(outboxRepository.findAll())
-                .anyMatch(e -> e.getTopic().equals("merchant.applied"));
+        var outboxPayload = jdbc.queryForObject(
+                "SELECT payload FROM onboarding_outbox_record LIMIT 1", String.class);
+        assertThat(outboxPayload).contains("merchant.applied");
 
         // Step 2: Get merchant
         mockMvc.perform(get("/api/v1/merchants/" + merchantId))
@@ -93,7 +97,8 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.legalName", is("Lifecycle Corp")));
 
         // Step 3: Start KYB
-        mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/kyb/start"))
+        mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/kyb/start")
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isAccepted());
 
         var kybMerchant = merchantJpa.findById(java.util.UUID.fromString(merchantId)).orElseThrow();
@@ -112,6 +117,7 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         // Step 4: Suspend
         mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/suspend")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {"reason": "compliance review"}
                                 """))
@@ -121,7 +127,8 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         assertThat(suspendedMerchant.getStatus()).isEqualTo(MerchantStatus.SUSPENDED);
 
         // Step 5: Reactivate
-        mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/reactivate"))
+        mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/reactivate")
+                        .header("Idempotency-Key", UUID.randomUUID().toString()))
                 .andExpect(status().isAccepted());
 
         var reactivatedMerchant = merchantJpa.findById(java.util.UUID.fromString(merchantId)).orElseThrow();
@@ -130,6 +137,7 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         // Step 6: Close
         mockMvc.perform(post("/api/v1/merchants/" + merchantId + "/close")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
                         .content("""
                                 {"reason": "business shutdown"}
                                 """))
@@ -139,8 +147,9 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
         assertThat(closedMerchant.getStatus()).isEqualTo(MerchantStatus.CLOSED);
         assertThat(closedMerchant.getClosedAt()).isNotNull();
 
-        // Verify outbox events: applied + suspended + closed = 3
-        var allEvents = outboxRepository.findAll();
-        assertThat(allEvents.size()).isGreaterThanOrEqualTo(3);
+        // Verify outbox events: applied + suspended + reactivated + closed >= 3
+        var outboxCount = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM onboarding_outbox_record", Integer.class);
+        assertThat(outboxCount).isGreaterThanOrEqualTo(3);
     }
 }

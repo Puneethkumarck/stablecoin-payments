@@ -127,7 +127,7 @@ class PermissionCheckFlowTest extends AbstractIntegrationTest {
     @DisplayName("should populate Redis cache on first permission check and hit cache on second")
     void shouldCachePermissionsInRedis() throws Exception {
         // given — cache is empty
-        assertThat(redis.hasKey("perms:" + viewerUserId)).isFalse();
+        assertThat(redis.hasKey("perms:" + merchantId + ":" + viewerUserId)).isFalse();
 
         // when — first check (DB miss → load → cache)
         mockMvc.perform(get("/v1/auth/permissions/check")
@@ -138,7 +138,7 @@ class PermissionCheckFlowTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.data.allowed", is(true)));
 
         // then — Redis now has the entry
-        assertThat(redis.hasKey("perms:" + viewerUserId)).isTrue();
+        assertThat(redis.hasKey("perms:" + merchantId + ":" + viewerUserId)).isTrue();
 
         // when — second check (cache hit)
         mockMvc.perform(get("/v1/auth/permissions/check")
