@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.stablecoin.payments.merchant.iam.fixtures.TestUtils.eqIgnoring;
+import static com.stablecoin.payments.merchant.iam.fixtures.TestUtils.eqIgnoringTimestamps;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -109,11 +111,27 @@ class MerchantTeamServiceTest {
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
             given(invitationRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = service.inviteUser(MERCHANT_ID, "new@test.com", "New User",
+            var expectedUser = MerchantUser.builder()
+                    .merchantId(MERCHANT_ID)
+                    .email("new@test.com").emailHash("new-hash")
+                    .fullName("New User").status(UserStatus.INVITED)
+                    .roleId(VIEWER_ROLE_ID).authProvider(AuthProvider.LOCAL)
+                    .mfaEnabled(false)
+                    .invitedBy(adminUser.userId())
+                    .build();
+
+            var expectedInvitation = Invitation.builder()
+                    .merchantId(MERCHANT_ID)
+                    .email("new@test.com").emailHash("new-hash")
+                    .roleId(VIEWER_ROLE_ID).invitedBy(adminUser.userId())
+                    .tokenHash("token-hash").status(InvitationStatus.PENDING)
+                    .build();
+
+            service.inviteUser(MERCHANT_ID, "new@test.com", "New User",
                     VIEWER_ROLE_ID, adminUser.userId(), "ACME Corp");
 
-            assertThat(result).extracting("user.status", "invitation.status")
-                    .containsExactly(UserStatus.INVITED, InvitationStatus.PENDING);
+            then(userRepository).should().save(eqIgnoring(expectedUser, "userId"));
+            then(invitationRepository).should().save(eqIgnoring(expectedInvitation, "invitationId"));
             then(emailSenderProvider).should().sendInvitationEmail(
                     eq("new@test.com"), eq("New User"), eq("ACME Corp"), eq("plain-token"), any());
             then(eventPublisher).should().publish(any());
@@ -126,7 +144,6 @@ class MerchantTeamServiceTest {
             given(tokenGenerator.hash("token")).willReturn("hash");
             given(emailHasher.hash(anyString())).willReturn("email-hash");
 
-            // An unknown role ID causes the aggregate to throw before the repository is queried
             var unknownRoleId = UUID.randomUUID();
 
             assertThatThrownBy(() -> service.inviteUser(MERCHANT_ID, "x@test.com", "X",
@@ -168,10 +185,15 @@ class MerchantTeamServiceTest {
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
             given(invitationRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var activated = service.acceptInvitation("plain-token", "Invited User", "pass-hash");
+            var expectedUser = invitedUser.toBuilder()
+                    .status(UserStatus.ACTIVE)
+                    .fullName("Invited User")
+                    .passwordHash("pass-hash")
+                    .build();
 
-            assertThat(activated).extracting("status", "fullName")
-                    .containsExactly(UserStatus.ACTIVE, "Invited User");
+            service.acceptInvitation("plain-token", "Invited User", "pass-hash");
+
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
         }
     }
 
@@ -197,9 +219,13 @@ class MerchantTeamServiceTest {
             given(invitationRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of());
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var suspended = service.suspendUser(MERCHANT_ID, viewer.userId(), "policy", adminUser.userId());
+            var expectedUser = viewer.toBuilder()
+                    .status(UserStatus.SUSPENDED)
+                    .build();
 
-            assertThat(suspended.status()).isEqualTo(UserStatus.SUSPENDED);
+            service.suspendUser(MERCHANT_ID, viewer.userId(), "policy", adminUser.userId());
+
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
             then(sessionRepository).should().revokeAllByUserId(viewer.userId(), "user_suspended");
             then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
@@ -227,9 +253,14 @@ class MerchantTeamServiceTest {
             given(invitationRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of());
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var reactivated = service.reactivateUser(MERCHANT_ID, suspended.userId());
+            var expectedUser = suspended.toBuilder()
+                    .status(UserStatus.ACTIVE)
+                    .suspendedAt(null)
+                    .build();
 
-            assertThat(reactivated.status()).isEqualTo(UserStatus.ACTIVE);
+            service.reactivateUser(MERCHANT_ID, suspended.userId());
+
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
         }
     }
 
@@ -255,8 +286,13 @@ class MerchantTeamServiceTest {
             given(invitationRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of());
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
+            var expectedUser = viewer.toBuilder()
+                    .status(UserStatus.DEACTIVATED)
+                    .build();
+
             service.deactivateUser(MERCHANT_ID, viewer.userId(), "leaving", adminUser.userId());
 
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
             then(sessionRepository).should().revokeAllByUserId(viewer.userId(), "user_deactivated");
             then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
@@ -272,15 +308,20 @@ class MerchantTeamServiceTest {
             givenEmptyTeam();
             given(roleRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var role = service.createRole(MERCHANT_ID, "AUDITOR", "Read-only",
+            var expectedRole = Role.builder()
+                    .merchantId(MERCHANT_ID)
+                    .roleName("AUDITOR").description("Read-only")
+                    .builtin(false).active(true)
+                    .permissions(List.of(
+                            Permission.of("transactions", "read"),
+                            Permission.of("exports", "read")))
+                    .createdBy(adminUser.userId())
+                    .build();
+
+            service.createRole(MERCHANT_ID, "AUDITOR", "Read-only",
                     List.of("transactions:read", "exports:read"), adminUser.userId());
 
-            assertThat(role).extracting("roleName", "builtin")
-                    .containsExactly("AUDITOR", false);
-            assertThat(role.permissions()).containsExactlyInAnyOrder(
-                    Permission.of("transactions", "read"),
-                    Permission.of("exports", "read"));
-            then(roleRepository).should().save(any());
+            then(roleRepository).should().save(eqIgnoring(expectedRole, "roleId"));
         }
     }
 
@@ -305,12 +346,16 @@ class MerchantTeamServiceTest {
             given(invitationRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of());
             given(roleRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var updated = service.updateRole(MERCHANT_ID, customRole.roleId(),
+            var expectedRole = customRole.toBuilder()
+                    .permissions(List.of(
+                            Permission.of("transactions", "read"),
+                            Permission.of("exports", "read")))
+                    .build();
+
+            service.updateRole(MERCHANT_ID, customRole.roleId(),
                     List.of("transactions:read", "exports:read"));
 
-            assertThat(updated.permissions()).containsExactlyInAnyOrder(
-                    Permission.of("transactions", "read"),
-                    Permission.of("exports", "read"));
+            then(roleRepository).should().save(eqIgnoringTimestamps(expectedRole));
             then(permissionCacheProvider).should().evictAll(MERCHANT_ID);
         }
     }
@@ -339,10 +384,13 @@ class MerchantTeamServiceTest {
             given(roleRepository.findById(ADMIN_ROLE_ID)).willReturn(Optional.of(adminRole));
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = service.changeUserRole(MERCHANT_ID, viewer.userId(), ADMIN_ROLE_ID, adminUser.userId());
+            var expectedUser = viewer.toBuilder()
+                    .roleId(ADMIN_ROLE_ID)
+                    .build();
 
-            assertThat(result).extracting("previousRoleName", "newRoleName")
-                    .containsExactly("VIEWER", "ADMIN");
+            service.changeUserRole(MERCHANT_ID, viewer.userId(), ADMIN_ROLE_ID, adminUser.userId());
+
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
             then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
     }
@@ -394,9 +442,16 @@ class MerchantTeamServiceTest {
             given(tokenGenerator.generateToken()).willReturn("invite-token");
             given(tokenGenerator.hash("invite-token")).willReturn("hashed-token");
 
+            var expectedInvitation = Invitation.builder()
+                    .merchantId(MERCHANT_ID)
+                    .email("admin@test.com").emailHash("admin-hash")
+                    .tokenHash("hashed-token").status(InvitationStatus.PENDING)
+                    .build();
+
             service.seedRolesAndFirstAdmin(MERCHANT_ID, "admin@test.com", "Admin User", "ACME Corp");
 
-            then(invitationRepository).should().save(any(Invitation.class));
+            then(invitationRepository).should().save(eqIgnoring(expectedInvitation,
+                    "invitationId", "roleId", "invitedBy"));
             then(emailSenderProvider).should().sendInvitationEmail(
                     eq("admin@test.com"), eq("Admin User"), eq("ACME Corp"),
                     eq("invite-token"), any(Instant.class));
