@@ -7,7 +7,6 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Ap
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybVerification;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantActivatedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantAppliedEvent;
