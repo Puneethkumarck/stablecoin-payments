@@ -3,6 +3,7 @@ package com.stablecoin.payments.gateway.iam.infrastructure.auth;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -88,6 +90,53 @@ public class NimbusTokenIssuer implements TokenIssuer {
             return new JWKSet(publicKey).toString();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build JWKS", e);
+        }
+    }
+
+    @Override
+    public ParsedToken parseAndVerify(String token) {
+        try {
+            var jwt = SignedJWT.parse(token);
+            var verifier = new ECDSAVerifier(signingKey.toPublicJWK());
+
+            if (!jwt.verify(verifier)) {
+                throw new IllegalArgumentException("JWT signature verification failed");
+            }
+
+            var claims = jwt.getJWTClaimsSet();
+
+            if (!properties.issuer().equals(claims.getIssuer())) {
+                throw new IllegalArgumentException("JWT issuer mismatch");
+            }
+
+            if (claims.getAudience() == null
+                    || !claims.getAudience().contains(properties.audience())) {
+                throw new IllegalArgumentException("JWT audience mismatch");
+            }
+
+            if (claims.getExpirationTime() == null
+                    || claims.getExpirationTime().before(new Date())) {
+                throw new IllegalArgumentException("JWT has expired");
+            }
+
+            var scopeStr = claims.getStringClaim("scope");
+            var scopes = scopeStr != null && !scopeStr.isBlank()
+                    ? Arrays.stream(scopeStr.trim().split("\\s+"))
+                            .filter(s -> !s.isBlank())
+                            .toList()
+                    : List.<String>of();
+
+            return new ParsedToken(
+                    UUID.fromString(claims.getJWTID()),
+                    UUID.fromString(claims.getStringClaim("merchant_id")),
+                    UUID.fromString(claims.getStringClaim("client_id")),
+                    scopes,
+                    claims.getExpirationTime().toInstant().getEpochSecond()
+            );
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid JWT: " + e.getMessage(), e);
         }
     }
 }

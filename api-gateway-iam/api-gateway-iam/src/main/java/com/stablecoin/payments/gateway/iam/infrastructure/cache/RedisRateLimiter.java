@@ -41,7 +41,7 @@ public class RedisRateLimiter implements RateLimiter {
         if (currentMinute > minuteLimit) {
             log.warn("Rate limit exceeded merchantId={} endpoint={} tier={} count={}/{}",
                     merchantId, endpoint, policy.tier(), currentMinute, minuteLimit);
-            return new RateLimitResult(false, currentMinute.intValue(), minuteLimit, "1m");
+            return new RateLimitResult(false, currentMinute.intValue(), minuteLimit, "1m", 60);
         }
 
         var dayKey = "ratelimit:" + merchantId + ":" + endpoint + ":day";
@@ -51,10 +51,10 @@ public class RedisRateLimiter implements RateLimiter {
         if (currentDay > dayLimit) {
             log.warn("Daily rate limit exceeded merchantId={} endpoint={} tier={} count={}/{}",
                     merchantId, endpoint, policy.tier(), currentDay, dayLimit);
-            return new RateLimitResult(false, currentDay.intValue(), dayLimit, "1d");
+            return new RateLimitResult(false, currentDay.intValue(), dayLimit, "1d", 3600);
         }
 
-        return new RateLimitResult(true, currentMinute.intValue(), minuteLimit, "1m");
+        return new RateLimitResult(true, currentMinute.intValue(), minuteLimit, "1m", 0);
     }
 
     private Long executeScript(String key, int limit, int windowSeconds) {
