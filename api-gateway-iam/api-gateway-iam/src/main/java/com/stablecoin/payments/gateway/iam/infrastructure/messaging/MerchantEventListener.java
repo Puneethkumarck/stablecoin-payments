@@ -1,5 +1,6 @@
 package com.stablecoin.payments.gateway.iam.infrastructure.messaging;
 
+import com.stablecoin.payments.gateway.iam.application.service.MerchantApplicationService;
 import com.stablecoin.payments.gateway.iam.domain.service.MerchantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class MerchantEventListener {
 
     private final MerchantService merchantService;
+    private final MerchantApplicationService merchantApplicationService;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "merchant.activated", groupId = "api-gateway-iam-activate")
@@ -25,9 +27,11 @@ public class MerchantEventListener {
             var event = objectMapper.readValue(payload, MerchantActivatedEvent.class);
             log.info("Received merchant.activated merchantId={}", event.merchantId());
 
-            merchantService.activate(event.merchantId());
+            merchantApplicationService.activateAndProvisionOAuthClient(
+                    event.merchantId(), event.companyName(), event.scopes());
 
-            log.info("Activated merchant merchantId={}", event.merchantId());
+            log.info("Activated merchant and provisioned default OAuth client merchantId={}",
+                    event.merchantId());
         } catch (Exception e) {
             log.error("Failed to process merchant.activated: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to process merchant.activated", e);
