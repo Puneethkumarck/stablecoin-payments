@@ -119,6 +119,41 @@ public class NimbusJwtTokenIssuer implements JwtTokenIssuer {
         }
     }
 
+    @Override
+    public ParsedRefreshToken parseRefreshToken(String token) {
+        try {
+            var jwt = SignedJWT.parse(token);
+            var verifier = new ECDSAVerifier(signingKey.toPublicJWK());
+
+            if (!jwt.verify(verifier)) {
+                throw new IllegalArgumentException("Refresh token signature verification failed");
+            }
+
+            var claims = jwt.getJWTClaimsSet();
+
+            if (claims.getExpirationTime() == null
+                    || claims.getExpirationTime().before(new Date())) {
+                throw new IllegalArgumentException("Refresh token has expired");
+            }
+
+            var tokenType = claims.getStringClaim("token_type");
+            if (!"refresh".equals(tokenType)) {
+                throw new IllegalArgumentException("Token is not a refresh token");
+            }
+
+            return new ParsedRefreshToken(
+                    UUID.fromString(claims.getJWTID()),
+                    UUID.fromString(claims.getSubject()),
+                    UUID.fromString(claims.getStringClaim("session_id")),
+                    claims.getExpirationTime().toInstant().getEpochSecond()
+            );
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid refresh token: " + e.getMessage(), e);
+        }
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public ParsedAccessToken parseAndVerify(String token) {

@@ -201,7 +201,7 @@ class MerchantTeamServiceTest {
 
             assertThat(suspended.status()).isEqualTo(UserStatus.SUSPENDED);
             then(sessionRepository).should().revokeAllByUserId(viewer.userId(), "user_suspended");
-            then(permissionCacheProvider).should().evict(viewer.userId());
+            then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
     }
 
@@ -258,7 +258,7 @@ class MerchantTeamServiceTest {
             service.deactivateUser(MERCHANT_ID, viewer.userId(), "leaving", adminUser.userId());
 
             then(sessionRepository).should().revokeAllByUserId(viewer.userId(), "user_deactivated");
-            then(permissionCacheProvider).should().evict(viewer.userId());
+            then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
     }
 
@@ -343,7 +343,7 @@ class MerchantTeamServiceTest {
 
             assertThat(result).extracting("previousRoleName", "newRoleName")
                     .containsExactly("VIEWER", "ADMIN");
-            then(permissionCacheProvider).should().evict(viewer.userId());
+            then(permissionCacheProvider).should().evict(MERCHANT_ID, viewer.userId());
         }
     }
 
@@ -379,6 +379,27 @@ class MerchantTeamServiceTest {
             var result = service.listUsers(MERCHANT_ID, null);
 
             assertThat(result).singleElement();
+        }
+    }
+
+    // ── SeedRolesAndFirstAdmin ──────────────────────────────────────────────
+
+    @Nested
+    class SeedRolesAndFirstAdmin {
+
+        @Test
+        void should_save_invitation_record_for_first_admin() {
+            given(emailHasher.hash("admin@test.com")).willReturn("admin-hash");
+            given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(tokenGenerator.generateToken()).willReturn("invite-token");
+            given(tokenGenerator.hash("invite-token")).willReturn("hashed-token");
+
+            service.seedRolesAndFirstAdmin(MERCHANT_ID, "admin@test.com", "Admin User", "ACME Corp");
+
+            then(invitationRepository).should().save(any(Invitation.class));
+            then(emailSenderProvider).should().sendInvitationEmail(
+                    eq("admin@test.com"), eq("Admin User"), eq("ACME Corp"),
+                    eq("invite-token"), any(Instant.class));
         }
     }
 }

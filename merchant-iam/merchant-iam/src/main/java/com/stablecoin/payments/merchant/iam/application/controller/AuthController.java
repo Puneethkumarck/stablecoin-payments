@@ -2,10 +2,14 @@ package com.stablecoin.payments.merchant.iam.application.controller;
 
 import com.stablecoin.payments.merchant.iam.api.request.AcceptInvitationRequest;
 import com.stablecoin.payments.merchant.iam.api.request.LoginRequest;
+import com.stablecoin.payments.merchant.iam.api.request.MfaActivateRequest;
 import com.stablecoin.payments.merchant.iam.api.request.MfaVerifyRequest;
+import com.stablecoin.payments.merchant.iam.api.request.RefreshTokenRequest;
 import com.stablecoin.payments.merchant.iam.api.response.DataResponse;
 import com.stablecoin.payments.merchant.iam.api.response.LoginResponse;
 import com.stablecoin.payments.merchant.iam.api.response.MfaChallengeResponse;
+import com.stablecoin.payments.merchant.iam.api.response.MfaSetupResponse;
+import com.stablecoin.payments.merchant.iam.api.response.RefreshTokenResponse;
 import com.stablecoin.payments.merchant.iam.api.response.UserResponse;
 import com.stablecoin.payments.merchant.iam.application.controller.mapper.IamResponseMapper;
 import com.stablecoin.payments.merchant.iam.application.security.UserAuthentication;
@@ -17,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -76,6 +81,59 @@ public class AuthController {
         return DataResponse.of(buildLoginResponse(result));
     }
 
+    // ── Refresh token ────────────────────────────────────────────────────────
+
+    /**
+     * POST /v1/auth/refresh
+     * Exchanges a valid refresh token for a new access token.
+     * No authentication required — the refresh token itself serves as the credential.
+     */
+    @PostMapping("/auth/refresh")
+    public DataResponse<RefreshTokenResponse> refresh(
+            @Valid @RequestBody RefreshTokenRequest request) {
+        log.info("Token refresh request");
+        var result = authService.refreshToken(request.refreshToken());
+        return DataResponse.of(new RefreshTokenResponse(result.accessToken(), result.expiresIn()));
+    }
+
+    // ── MFA setup ──────────────────────────────────────────────────────────
+
+    /**
+     * POST /v1/merchants/{merchantId}/users/{userId}/mfa/setup
+     * Generates a TOTP secret and provisioning URI for MFA enrollment.
+     * Requires authentication — caller must be the target user or have team:manage permission.
+     */
+    @PostMapping("/merchants/{merchantId}/users/{userId}/mfa/setup")
+    public DataResponse<MfaSetupResponse> setupMfa(
+            @PathVariable UUID merchantId,
+            @PathVariable UUID userId) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof UserAuthentication userAuth) {
+            validateMfaAccess(userAuth, merchantId, userId);
+        }
+        var user = merchantTeamService.findUser(merchantId, userId);
+        var result = authService.setupMfa(userId, user.email());
+        return DataResponse.of(new MfaSetupResponse(result.secret(), result.provisioningUri()));
+    }
+
+    /**
+     * POST /v1/merchants/{merchantId}/users/{userId}/mfa/activate
+     * Verifies the TOTP code against the provided secret and enables MFA for the user.
+     */
+    @PostMapping("/merchants/{merchantId}/users/{userId}/mfa/activate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void activateMfa(
+            @PathVariable UUID merchantId,
+            @PathVariable UUID userId,
+            @Valid @RequestBody MfaActivateRequest request) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof UserAuthentication userAuth) {
+            validateMfaAccess(userAuth, merchantId, userId);
+        }
+        authService.activateMfa(userId, request.secret(), request.totpCode());
+        log.info("MFA activated userId={}", userId);
+    }
+
     // ── Invitation acceptance ─────────────────────────────────────────────────
 
     /**
@@ -123,6 +181,18 @@ public class AuthController {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void validateMfaAccess(UserAuthentication userAuth, UUID merchantId, UUID userId) {
+        if (!userAuth.merchantId().equals(merchantId)) {
+            throw new AccessDeniedException("Merchant access denied");
+        }
+        if (!userAuth.userId().equals(userId)
+                && !userAuth.getAuthorities().stream()
+                        .anyMatch(a -> "PERM_team:manage".equals(a.getAuthority()))) {
+            throw new AccessDeniedException(
+                    "Can only manage own MFA or requires team:manage permission");
+        }
+    }
 
     private LoginResponse buildLoginResponse(AuthService.LoginResult result) {
         var permissions = result.role().permissions().stream()

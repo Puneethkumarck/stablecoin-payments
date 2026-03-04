@@ -108,6 +108,33 @@ public class AuthService {
         return issueTokens(user, true);
     }
 
+    // ── Refresh token ────────────────────────────────────────────────────────
+
+    public record RefreshResult(String accessToken, int expiresIn) {}
+
+    /**
+     * Exchanges a valid refresh token for a new access token.
+     * Validates the refresh JWT signature, expiry, and that the user is still active.
+     */
+    @Transactional(readOnly = true)
+    public RefreshResult refreshToken(String refreshTokenValue) {
+        var parsed = jwtTokenIssuer.parseRefreshToken(refreshTokenValue);
+
+        var user = userRepository.findById(parsed.userId())
+                .orElseThrow(InvalidCredentialsException::invalidEmailOrPassword);
+
+        if (user.status() != UserStatus.ACTIVE) {
+            throw InvalidCredentialsException.invalidEmailOrPassword();
+        }
+
+        var role = roleRepository.findById(user.roleId())
+                .orElseThrow(() -> RoleNotFoundException.withId(user.roleId()));
+
+        var accessToken = jwtTokenIssuer.issueAccessToken(user, role, user.mfaEnabled());
+        log.info("Access token refreshed userId={}", user.userId());
+        return new RefreshResult(accessToken, 3600);
+    }
+
     // ── MFA setup ─────────────────────────────────────────────────────────────
 
     @Transactional
