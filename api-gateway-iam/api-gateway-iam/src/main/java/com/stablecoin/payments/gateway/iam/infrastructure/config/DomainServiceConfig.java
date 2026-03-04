@@ -5,6 +5,7 @@ import com.stablecoin.payments.gateway.iam.domain.port.AccessTokenRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyGenerator;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyHasher;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
+import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretGenerator;
 import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretHasher;
 import com.stablecoin.payments.gateway.iam.domain.port.EventPublisher;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
@@ -14,6 +15,7 @@ import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyService;
 import com.stablecoin.payments.gateway.iam.domain.service.AuthService;
 import com.stablecoin.payments.gateway.iam.domain.service.MerchantService;
+import com.stablecoin.payments.gateway.iam.domain.service.OAuthClientService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,5 +53,14 @@ public class DomainServiceConfig {
                                        EventPublisher<?> eventPublisher) {
         return new ApiKeyService(apiKeyRepository, merchantRepository,
                 apiKeyGenerator, apiKeyHasher, (EventPublisher<ApiKeyRevokedEvent>) eventPublisher);
+    }
+
+    @Bean
+    public OAuthClientService oauthClientService(OAuthClientRepository oauthClientRepository,
+                                                  MerchantRepository merchantRepository,
+                                                  ClientSecretGenerator clientSecretGenerator,
+                                                  ClientSecretHasher clientSecretHasher) {
+        return new OAuthClientService(oauthClientRepository, merchantRepository,
+                clientSecretGenerator, clientSecretHasher);
     }
 }
