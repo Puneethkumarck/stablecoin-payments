@@ -7,6 +7,7 @@ import com.stablecoin.payments.merchant.iam.domain.team.model.core.AuthProvider;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.BuiltInRole;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.UserStatus;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class NimbusJwtTokenIssuerTest {
 
@@ -113,5 +115,64 @@ class NimbusJwtTokenIssuerTest {
         var t2 = SignedJWT.parse(issuer.issueAccessToken(buildUser(), buildRole(), false));
         assertThat(t1.getJWTClaimsSet().getJWTID())
                 .isNotEqualTo(t2.getJWTClaimsSet().getJWTID());
+    }
+
+    @Nested
+    class ParseAndVerify {
+
+        @Test
+        void shouldParseIssuedAccessToken() {
+            var token = issuer.issueAccessToken(buildUser(), buildRole(), true);
+            var parsed = issuer.parseAndVerify(token);
+
+            assertThat(parsed.userId()).isEqualTo(userId);
+            assertThat(parsed.merchantId()).isEqualTo(merchantId);
+            assertThat(parsed.roleId()).isEqualTo(roleId);
+            assertThat(parsed.role()).isEqualTo("ADMIN");
+            assertThat(parsed.permissions()).isNotEmpty();
+            assertThat(parsed.mfaVerified()).isTrue();
+            assertThat(parsed.jti()).isNotNull();
+            assertThat(parsed.expiresAtEpochSecond()).isGreaterThan(0);
+        }
+
+        @Test
+        void shouldRejectTamperedToken() {
+            var token = issuer.issueAccessToken(buildUser(), buildRole(), false);
+            var tampered = token.substring(0, token.length() - 4) + "XXXX";
+
+            assertThatThrownBy(() -> issuer.parseAndVerify(tampered))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void shouldRejectExpiredToken() throws Exception {
+            var expiredProps = new JwtProperties(null, "test", "test", 0, 0);
+            var expiredIssuer = new NimbusJwtTokenIssuer(expiredProps);
+            expiredIssuer.init();
+
+            var token = expiredIssuer.issueAccessToken(buildUser(), buildRole(), false);
+
+            assertThatThrownBy(() -> expiredIssuer.parseAndVerify(token))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("expired");
+        }
+
+        @Test
+        void shouldRejectTokenSignedByDifferentKey() throws Exception {
+            var otherProps = new JwtProperties(null, "other", "other", 3600, 86400);
+            var otherIssuer = new NimbusJwtTokenIssuer(otherProps);
+            otherIssuer.init();
+
+            var token = otherIssuer.issueAccessToken(buildUser(), buildRole(), false);
+
+            assertThatThrownBy(() -> issuer.parseAndVerify(token))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void shouldRejectGarbage() {
+            assertThatThrownBy(() -> issuer.parseAndVerify("not-a-jwt"))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
     }
 }

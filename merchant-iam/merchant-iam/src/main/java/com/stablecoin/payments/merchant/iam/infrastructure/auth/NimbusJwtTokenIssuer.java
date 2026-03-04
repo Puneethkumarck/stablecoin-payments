@@ -3,6 +3,7 @@ package com.stablecoin.payments.merchant.iam.infrastructure.auth;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -114,6 +116,46 @@ public class NimbusJwtTokenIssuer implements JwtTokenIssuer {
             return jwt.serialize();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to issue refresh token", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public ParsedAccessToken parseAndVerify(String token) {
+        try {
+            var jwt = SignedJWT.parse(token);
+            var verifier = new ECDSAVerifier(signingKey.toPublicJWK());
+
+            if (!jwt.verify(verifier)) {
+                throw new IllegalArgumentException("JWT signature verification failed");
+            }
+
+            var claims = jwt.getJWTClaimsSet();
+
+            if (claims.getExpirationTime() == null
+                    || claims.getExpirationTime().before(new Date())) {
+                throw new IllegalArgumentException("JWT has expired");
+            }
+
+            var permissions = claims.getListClaim("permissions");
+            var permissionStrings = permissions != null
+                    ? permissions.stream().map(Object::toString).toList()
+                    : List.<String>of();
+
+            return new ParsedAccessToken(
+                    UUID.fromString(claims.getJWTID()),
+                    UUID.fromString(claims.getStringClaim("user_id")),
+                    UUID.fromString(claims.getStringClaim("merchant_id")),
+                    UUID.fromString(claims.getStringClaim("role_id")),
+                    claims.getStringClaim("role"),
+                    permissionStrings,
+                    Boolean.TRUE.equals(claims.getBooleanClaim("mfa_verified")),
+                    claims.getExpirationTime().toInstant().getEpochSecond()
+            );
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid JWT: " + e.getMessage(), e);
         }
     }
 

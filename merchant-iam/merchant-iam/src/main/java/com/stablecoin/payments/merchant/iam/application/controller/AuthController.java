@@ -8,19 +8,23 @@ import com.stablecoin.payments.merchant.iam.api.response.LoginResponse;
 import com.stablecoin.payments.merchant.iam.api.response.MfaChallengeResponse;
 import com.stablecoin.payments.merchant.iam.api.response.UserResponse;
 import com.stablecoin.payments.merchant.iam.application.controller.mapper.IamResponseMapper;
+import com.stablecoin.payments.merchant.iam.application.security.UserAuthentication;
 import com.stablecoin.payments.merchant.iam.domain.exceptions.MfaRequiredException;
 import com.stablecoin.payments.merchant.iam.domain.team.AuthService;
 import com.stablecoin.payments.merchant.iam.domain.team.MerchantTeamService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -93,11 +97,18 @@ public class AuthController {
 
     /**
      * POST /v1/auth/logout
-     * TODO: extract userId from Bearer JWT once M-4 filter is wired.
+     * Revokes all sessions for the authenticated user.
      */
     @PostMapping("/auth/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void logout() {
-        log.info("Logout request — userId extracted from JWT (TODO)");
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof UserAuthentication userAuth) {
+            log.info("Logout request userId={}", userAuth.userId());
+            authService.logout(userAuth.userId());
+        } else {
+            log.warn("Logout called without valid authentication");
+        }
     }
 
     // ── JWKS ──────────────────────────────────────────────────────────────────
