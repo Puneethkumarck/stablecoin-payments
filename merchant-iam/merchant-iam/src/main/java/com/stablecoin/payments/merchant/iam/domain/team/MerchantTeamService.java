@@ -6,8 +6,10 @@ import com.stablecoin.payments.merchant.iam.domain.PermissionCacheProvider;
 import com.stablecoin.payments.merchant.iam.domain.exceptions.InvitationNotFoundException;
 import com.stablecoin.payments.merchant.iam.domain.exceptions.RoleNotFoundException;
 import com.stablecoin.payments.merchant.iam.domain.exceptions.UserNotFoundException;
+import com.stablecoin.payments.merchant.iam.domain.team.model.Invitation;
 import com.stablecoin.payments.merchant.iam.domain.team.model.MerchantUser;
 import com.stablecoin.payments.merchant.iam.domain.team.model.Role;
+import com.stablecoin.payments.merchant.iam.domain.team.model.core.InvitationStatus;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.Permission;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.UserStatus;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -92,7 +96,7 @@ public class MerchantTeamService {
         var updated = team.changeUserRole(userId, newRoleId, changedBy);
         userRepository.save(updated);
         publishAll(team);
-      permissionCacheProvider.evict(userId);
+        permissionCacheProvider.evict(merchantId, userId);
 
         var newRole = roleRepository.findById(newRoleId)
                 .orElseThrow(() -> RoleNotFoundException.withId(newRoleId));
@@ -109,7 +113,7 @@ public class MerchantTeamService {
         userRepository.save(suspended);
         sessionRepository.revokeAllByUserId(userId, "user_suspended");
         publishAll(team);
-        permissionCacheProvider.evict(userId);
+        permissionCacheProvider.evict(merchantId, userId);
 
         log.info("User suspended userId={} merchantId={}", userId, merchantId);
         return suspended;
@@ -133,7 +137,7 @@ public class MerchantTeamService {
         userRepository.save(deactivated);
         sessionRepository.revokeAllByUserId(userId, "user_deactivated");
         publishAll(team);
-      permissionCacheProvider.evict(userId);
+        permissionCacheProvider.evict(merchantId, userId);
 
         log.info("User deactivated userId={} merchantId={}", userId, merchantId);
     }
@@ -197,7 +201,7 @@ public class MerchantTeamService {
         var permissions = permissionStrings.stream().map(Permission::parse).toList();
         var updated = team.updateCustomRolePermissions(roleId, permissions);
         var saved = roleRepository.save(updated);
-      permissionCacheProvider.evictAll(merchantId);
+        permissionCacheProvider.evictAll(merchantId);
 
         log.info("Role updated merchantId={} roleId={}", merchantId, roleId);
         return saved;
@@ -217,6 +221,16 @@ public class MerchantTeamService {
         return roleRepository.findByMerchantId(merchantId).stream()
                 .filter(r -> includeInactive || r.active())
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantUser findUser(UUID merchantId, UUID userId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> UserNotFoundException.withId(userId));
+        if (!user.merchantId().equals(merchantId)) {
+            throw UserNotFoundException.withId(userId);
+        }
+        return user;
     }
 
     @Transactional(readOnly = true)
@@ -244,10 +258,25 @@ public class MerchantTeamService {
         userRepository.save(admin);
         publishAll(team);
 
-        emailSenderProvider.sendInvitationEmail(
-                email, fullName, merchantName,
-                tokenGenerator.generateToken(),
-                java.time.Instant.now().plus(java.time.Duration.ofDays(7)));
+        var token = tokenGenerator.generateToken();
+        var tokenHash = tokenGenerator.hash(token);
+        var expiresAt = Instant.now().plus(Duration.ofDays(7));
+
+        var invitation = Invitation.builder()
+                .invitationId(UUID.randomUUID())
+                .merchantId(merchantId)
+                .email(email)
+                .emailHash(emailHash)
+                .roleId(admin.roleId())
+                .invitedBy(admin.userId())
+                .tokenHash(tokenHash)
+                .status(InvitationStatus.PENDING)
+                .createdAt(Instant.now())
+                .expiresAt(expiresAt)
+                .build();
+        invitationRepository.save(invitation);
+
+        emailSenderProvider.sendInvitationEmail(email, fullName, merchantName, token, expiresAt);
 
         log.info("Seeded roles and first admin merchantId={}", merchantId);
         return admin;
@@ -260,12 +289,12 @@ public class MerchantTeamService {
     @Transactional
     public void deactivateAllUsers(UUID merchantId) {
         var users = userRepository.findByMerchantId(merchantId).stream()
-                .filter(u -> u.status() != com.stablecoin.payments.merchant.iam.domain.team.model.core.UserStatus.DEACTIVATED)
+                .filter(u -> u.status() != UserStatus.DEACTIVATED)
                 .toList();
         for (var user : users) {
             var deactivated = user.deactivate();
             userRepository.save(deactivated);
-            permissionCacheProvider.evict(user.userId());
+            permissionCacheProvider.evict(merchantId, user.userId());
         }
         log.info("Deactivated {} users for merchantId={}", users.size(), merchantId);
     }

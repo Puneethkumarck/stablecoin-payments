@@ -31,7 +31,7 @@ public class PermissionQueryService {
     @Transactional(readOnly = true)
     public PermissionCheckResult check(UUID userId, UUID merchantId, String permissionString) {
         var required = Permission.parse(permissionString);
-        var permissions = resolvePermissions(userId);
+        var permissions = resolvePermissions(merchantId, userId);
 
         var allowed = permissions.has(required);
 
@@ -50,19 +50,19 @@ public class PermissionQueryService {
         return new PermissionCheckResult(allowed, roleName, via);
     }
 
-    private PermissionSet resolvePermissions(UUID userId) {
-        return permissionCacheProvider.getPermissions(userId)
-                .orElseGet(() -> loadAndCache(userId));
+    private PermissionSet resolvePermissions(UUID merchantId, UUID userId) {
+        return permissionCacheProvider.getPermissions(merchantId, userId)
+                .orElseGet(() -> loadAndCache(merchantId, userId));
     }
 
-    private PermissionSet loadAndCache(UUID userId) {
+    private PermissionSet loadAndCache(UUID merchantId, UUID userId) {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> UserNotFoundException.withId(userId));
         var role = roleRepository.findById(user.roleId()).orElse(null);
         var permissions = role == null
                 ? PermissionSet.empty()
                 : PermissionSet.of(role.permissions());
-        permissionCacheProvider.putPermissions(userId, permissions);
+        permissionCacheProvider.putPermissions(merchantId, userId, permissions);
         return permissions;
     }
 }
