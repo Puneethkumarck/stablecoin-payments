@@ -4,12 +4,14 @@ import com.stablecoin.payments.gateway.iam.application.security.ApiKeyAuthentica
 import com.stablecoin.payments.gateway.iam.application.security.AuditLogFilter;
 import com.stablecoin.payments.gateway.iam.application.security.JwtAuthenticationFilter;
 import com.stablecoin.payments.gateway.iam.application.security.RateLimitFilter;
+import com.stablecoin.payments.gateway.iam.application.security.UserJwtAuthenticationFilter;
 import com.stablecoin.payments.gateway.iam.domain.port.AuditLogRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.RateLimitEventRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.RateLimiter;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
+import com.stablecoin.payments.gateway.iam.domain.port.UserJwksProvider;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtFilter,
                                                    ApiKeyAuthenticationFilter apiKeyFilter,
+                                                   UserJwtAuthenticationFilter userJwtFilter,
                                                    RateLimitFilter rateLimitFilter,
                                                    AuditLogFilter auditLogFilter) throws Exception {
         return http
@@ -43,7 +46,8 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jwtFilter, ApiKeyAuthenticationFilter.class)
-                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(userJwtFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, UserJwtAuthenticationFilter.class)
                 .addFilterAfter(auditLogFilter, RateLimitFilter.class)
                 .build();
     }
@@ -64,6 +68,13 @@ public class SecurityConfig {
                                            MerchantRepository merchantRepository,
                                            RateLimitEventRepository rateLimitEventRepository) {
         return new RateLimitFilter(rateLimiter, merchantRepository, rateLimitEventRepository);
+    }
+
+    @Bean
+    public UserJwtAuthenticationFilter userJwtAuthenticationFilter(
+            UserJwksProvider userJwksProvider,
+            MerchantIamProperties merchantIamProperties) {
+        return new UserJwtAuthenticationFilter(userJwksProvider, merchantIamProperties);
     }
 
     @Bean

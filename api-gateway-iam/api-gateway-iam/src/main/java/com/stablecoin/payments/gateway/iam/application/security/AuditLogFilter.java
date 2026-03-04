@@ -35,29 +35,37 @@ public class AuditLogFilter extends OncePerRequestFilter {
 
     private void writeAuditLog(HttpServletRequest request, HttpServletResponse response) {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (!(auth instanceof MerchantAuthentication merchantAuth)) {
-            return;
-        }
 
+        if (auth instanceof MerchantAuthentication merchantAuth) {
+            writeEntry(request, response, merchantAuth.merchantId(),
+                    Map.of("status_code", response.getStatus(),
+                            "auth_method", merchantAuth.authMethod().name(),
+                            "client_id", merchantAuth.clientId().toString()));
+        } else if (auth instanceof UserAuthentication userAuth) {
+            writeEntry(request, response, userAuth.merchantId(),
+                    Map.of("status_code", response.getStatus(),
+                            "auth_method", "USER_JWT",
+                            "user_id", userAuth.userId().toString(),
+                            "role", userAuth.role()));
+        }
+    }
+
+    private void writeEntry(HttpServletRequest request, HttpServletResponse response,
+                            UUID merchantId, Map<String, Object> detail) {
         try {
             var entry = AuditLogEntry.builder()
                     .logId(UUID.randomUUID())
-                    .merchantId(merchantAuth.merchantId())
+                    .merchantId(merchantId)
                     .action(request.getMethod())
                     .resource(request.getRequestURI())
                     .sourceIp(request.getRemoteAddr())
-                    .detail(Map.of(
-                            "status_code", response.getStatus(),
-                            "auth_method", merchantAuth.authMethod().name(),
-                            "client_id", merchantAuth.clientId().toString()
-                    ))
+                    .detail(detail)
                     .occurredAt(Instant.now())
                     .build();
 
             auditLogRepository.save(entry);
         } catch (Exception e) {
-            log.error("Failed to write audit log for merchantId={}: {}",
-                    merchantAuth.merchantId(), e.getMessage());
+            log.error("Failed to write audit log for merchantId={}: {}", merchantId, e.getMessage());
         }
     }
 }

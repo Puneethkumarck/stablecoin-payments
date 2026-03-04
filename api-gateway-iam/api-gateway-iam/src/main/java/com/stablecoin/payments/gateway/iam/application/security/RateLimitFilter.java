@@ -37,12 +37,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         var auth = SecurityContextHolder.getContext().getAuthentication();
 
-        if (!(auth instanceof MerchantAuthentication merchantAuth)) {
+        var merchantId = extractMerchantId(auth);
+        if (merchantId == null) {
             chain.doFilter(request, response);
             return;
         }
-
-        var merchantId = merchantAuth.merchantId();
         var endpoint = request.getMethod() + " " + normalizePath(request.getRequestURI());
 
         var merchant = merchantRepository.findById(merchantId).orElse(null);
@@ -99,6 +98,16 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
         }
         return String.join("/", segments);
+    }
+
+    private static UUID extractMerchantId(org.springframework.security.core.Authentication auth) {
+        if (auth instanceof MerchantAuthentication merchantAuth) {
+            return merchantAuth.merchantId();
+        }
+        if (auth instanceof UserAuthentication userAuth) {
+            return userAuth.merchantId();
+        }
+        return null;
     }
 
     private void persistRateLimitEvent(UUID merchantId, String endpoint, RateLimitTier tier,
