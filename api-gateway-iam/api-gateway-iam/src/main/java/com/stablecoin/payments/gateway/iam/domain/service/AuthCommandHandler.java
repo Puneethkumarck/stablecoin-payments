@@ -12,13 +12,18 @@ import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.OAuthClientRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class AuthService {
+@Service
+@Transactional
+public class AuthCommandHandler {
 
     private final OAuthClientRepository oauthClientRepository;
     private final MerchantRepository merchantRepository;
@@ -28,13 +33,13 @@ public class AuthService {
     private final TokenRevocationCache tokenRevocationCache;
     private final long accessTokenTtlSeconds;
 
-    public AuthService(OAuthClientRepository oauthClientRepository,
-                       MerchantRepository merchantRepository,
-                       AccessTokenRepository accessTokenRepository,
-                       TokenIssuer tokenIssuer,
-                       ClientSecretHasher clientSecretHasher,
-                       TokenRevocationCache tokenRevocationCache,
-                       long accessTokenTtlSeconds) {
+    public AuthCommandHandler(OAuthClientRepository oauthClientRepository,
+                              MerchantRepository merchantRepository,
+                              AccessTokenRepository accessTokenRepository,
+                              TokenIssuer tokenIssuer,
+                              ClientSecretHasher clientSecretHasher,
+                              TokenRevocationCache tokenRevocationCache,
+                              @Value("${api-gateway-iam.jwt.access-token-ttl-seconds:3600}") long accessTokenTtlSeconds) {
         this.oauthClientRepository = oauthClientRepository;
         this.merchantRepository = merchantRepository;
         this.accessTokenRepository = accessTokenRepository;
@@ -92,6 +97,7 @@ public class AuthService {
         }
     }
 
+    @Transactional(readOnly = true)
     public String jwksJson() {
         return tokenIssuer.jwksJson();
     }

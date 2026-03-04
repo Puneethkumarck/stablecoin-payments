@@ -6,7 +6,7 @@ import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyRevokedExcepti
 import com.stablecoin.payments.gateway.iam.domain.exception.IpNotAllowedException;
 import com.stablecoin.payments.gateway.iam.domain.model.ApiKey;
 import com.stablecoin.payments.gateway.iam.domain.model.ApiKeyEnvironment;
-import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyService;
+import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.when;
 class ApiKeyAuthenticationFilterTest {
 
     @Mock
-    private ApiKeyService apiKeyService;
+    private ApiKeyCommandHandler apiKeyService;
 
     @Mock
     private FilterChain filterChain;

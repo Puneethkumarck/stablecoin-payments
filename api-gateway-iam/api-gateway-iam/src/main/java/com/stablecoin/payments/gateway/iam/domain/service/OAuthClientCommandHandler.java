@@ -8,27 +8,23 @@ import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretGenerator;
 import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretHasher;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.OAuthClientRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class OAuthClientService {
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class OAuthClientCommandHandler {
 
     private final OAuthClientRepository oauthClientRepository;
     private final MerchantRepository merchantRepository;
     private final ClientSecretGenerator clientSecretGenerator;
     private final ClientSecretHasher clientSecretHasher;
-
-    public OAuthClientService(OAuthClientRepository oauthClientRepository,
-                              MerchantRepository merchantRepository,
-                              ClientSecretGenerator clientSecretGenerator,
-                              ClientSecretHasher clientSecretHasher) {
-        this.oauthClientRepository = oauthClientRepository;
-        this.merchantRepository = merchantRepository;
-        this.clientSecretGenerator = clientSecretGenerator;
-        this.clientSecretHasher = clientSecretHasher;
-    }
 
     public CreateOAuthClientResult create(UUID merchantId, String name,
                                           List<String> scopes, List<String> grantTypes) {

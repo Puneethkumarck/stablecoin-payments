@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
@@ -22,11 +24,16 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("Domain should not depend on Spring")
+    @DisplayName("Domain should not depend on Spring (except stereotype and transaction)")
     void domainShouldNotDependOnSpring() {
         noClasses()
                 .that().resideInAPackage("..domain..")
-                .should().dependOnClassesThat().resideInAPackage("org.springframework..")
+                .should().dependOnClassesThat(
+                        resideInAPackage("org.springframework..")
+                                .and(resideOutsideOfPackage("org.springframework.stereotype.."))
+                                .and(resideOutsideOfPackage("org.springframework.transaction.."))
+                                .and(resideOutsideOfPackage("org.springframework.beans.factory.annotation.."))
+                )
                 .check(importedClasses);
     }
 

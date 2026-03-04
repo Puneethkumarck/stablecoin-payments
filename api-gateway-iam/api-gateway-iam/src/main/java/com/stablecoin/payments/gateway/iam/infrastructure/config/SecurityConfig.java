@@ -12,7 +12,7 @@ import com.stablecoin.payments.gateway.iam.domain.port.RateLimiter;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
 import com.stablecoin.payments.gateway.iam.domain.port.UserJwksProvider;
-import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyService;
+import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -59,7 +59,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public ApiKeyAuthenticationFilter apiKeyAuthenticationFilter(ApiKeyService apiKeyService) {
+    public ApiKeyAuthenticationFilter apiKeyAuthenticationFilter(ApiKeyCommandHandler apiKeyService) {
         return new ApiKeyAuthenticationFilter(apiKeyService);
     }
 

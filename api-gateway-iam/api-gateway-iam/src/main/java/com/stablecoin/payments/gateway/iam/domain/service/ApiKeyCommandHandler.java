@@ -15,30 +15,24 @@ import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyHasher;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.EventPublisher;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class ApiKeyService {
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class ApiKeyCommandHandler {
 
     private final ApiKeyRepository apiKeyRepository;
     private final MerchantRepository merchantRepository;
     private final ApiKeyGenerator apiKeyGenerator;
     private final ApiKeyHasher apiKeyHasher;
-    private final EventPublisher<ApiKeyRevokedEvent> eventPublisher;
-
-    public ApiKeyService(ApiKeyRepository apiKeyRepository,
-                         MerchantRepository merchantRepository,
-                         ApiKeyGenerator apiKeyGenerator,
-                         ApiKeyHasher apiKeyHasher,
-                         EventPublisher<ApiKeyRevokedEvent> eventPublisher) {
-        this.apiKeyRepository = apiKeyRepository;
-        this.merchantRepository = merchantRepository;
-        this.apiKeyGenerator = apiKeyGenerator;
-        this.apiKeyHasher = apiKeyHasher;
-        this.eventPublisher = eventPublisher;
-    }
+    private final EventPublisher<Object> eventPublisher;
 
     public CreateApiKeyResult create(UUID merchantId, String name, ApiKeyEnvironment environment,
                                      List<String> scopes, List<String> allowedIps, Instant expiresAt) {

@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.stablecoin.payments.gateway.iam.fixtures.TestUtils.eqIgnoring;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -37,7 +37,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
-class AuthServiceTest {
+class AuthCommandHandlerTest {
 
     @Mock private OAuthClientRepository oauthClientRepository;
     @Mock private MerchantRepository merchantRepository;
@@ -46,13 +46,13 @@ class AuthServiceTest {
     @Mock private ClientSecretHasher clientSecretHasher;
     @Mock private TokenRevocationCache tokenRevocationCache;
 
-    private AuthService authService;
+    private AuthCommandHandler authCommandHandler;
 
     private static final long TTL = 3600L;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(oauthClientRepository, merchantRepository,
+        authCommandHandler = new AuthCommandHandler(oauthClientRepository, merchantRepository,
                 accessTokenRepository, tokenIssuer, clientSecretHasher, tokenRevocationCache, TTL);
     }
 
@@ -103,11 +103,16 @@ class AuthServiceTest {
             given(tokenIssuer.issueToken(eq(MERCHANT_ID), eq(CLIENT_ID), anyList())).willReturn("jwt-token");
             given(accessTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = authService.issueToken(CLIENT_ID, "secret", null);
+            var expected = AccessToken.builder()
+                    .merchantId(MERCHANT_ID)
+                    .clientId(CLIENT_ID)
+                    .scopes(List.of("payments:read", "payments:write"))
+                    .revoked(false)
+                    .build();
 
-            assertThat(result.accessToken()).isEqualTo("jwt-token");
-            assertThat(result.expiresIn()).isEqualTo(TTL);
-            assertThat(result.scopes()).containsExactly("payments:read", "payments:write");
+            authCommandHandler.issueToken(CLIENT_ID, "secret", null);
+
+            then(accessTokenRepository).should().save(eqIgnoring(expected, "jti"));
         }
 
         @Test
@@ -118,16 +123,23 @@ class AuthServiceTest {
             given(tokenIssuer.issueToken(eq(MERCHANT_ID), eq(CLIENT_ID), anyList())).willReturn("jwt-token");
             given(accessTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = authService.issueToken(CLIENT_ID, "secret", List.of("payments:read"));
+            var expected = AccessToken.builder()
+                    .merchantId(MERCHANT_ID)
+                    .clientId(CLIENT_ID)
+                    .scopes(List.of("payments:read"))
+                    .revoked(false)
+                    .build();
 
-            assertThat(result.scopes()).containsExactly("payments:read");
+            authCommandHandler.issueToken(CLIENT_ID, "secret", List.of("payments:read"));
+
+            then(accessTokenRepository).should().save(eqIgnoring(expected, "jti"));
         }
 
         @Test
         void shouldThrowWhenClientNotFound() {
             given(oauthClientRepository.findActiveById(CLIENT_ID)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.issueToken(CLIENT_ID, "secret", null))
+            assertThatThrownBy(() -> authCommandHandler.issueToken(CLIENT_ID, "secret", null))
                     .isInstanceOf(InvalidClientCredentialsException.class);
         }
 
@@ -136,7 +148,7 @@ class AuthServiceTest {
             given(oauthClientRepository.findActiveById(CLIENT_ID)).willReturn(Optional.of(activeClient()));
             given(clientSecretHasher.matches("wrong", "$2a$12$hash")).willReturn(false);
 
-            assertThatThrownBy(() -> authService.issueToken(CLIENT_ID, "wrong", null))
+            assertThatThrownBy(() -> authCommandHandler.issueToken(CLIENT_ID, "wrong", null))
                     .isInstanceOf(InvalidClientCredentialsException.class);
         }
 
@@ -152,7 +164,7 @@ class AuthServiceTest {
             given(clientSecretHasher.matches("secret", "$2a$12$hash")).willReturn(true);
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(inactiveMerchant));
 
-            assertThatThrownBy(() -> authService.issueToken(CLIENT_ID, "secret", null))
+            assertThatThrownBy(() -> authCommandHandler.issueToken(CLIENT_ID, "secret", null))
                     .isInstanceOf(MerchantNotActiveException.class);
         }
 
@@ -162,7 +174,7 @@ class AuthServiceTest {
             given(clientSecretHasher.matches("secret", "$2a$12$hash")).willReturn(true);
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(activeMerchant()));
 
-            assertThatThrownBy(() -> authService.issueToken(CLIENT_ID, "secret", List.of("admin:write")))
+            assertThatThrownBy(() -> authCommandHandler.issueToken(CLIENT_ID, "secret", List.of("admin:write")))
                     .isInstanceOf(ScopeExceededException.class);
         }
     }
@@ -182,9 +194,13 @@ class AuthServiceTest {
             given(accessTokenRepository.findByJti(jti)).willReturn(Optional.of(token));
             given(accessTokenRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            authService.revokeToken(jti);
+            var expected = token.toBuilder()
+                    .revoked(true)
+                    .build();
 
-            then(accessTokenRepository).should().save(any());
+            authCommandHandler.revokeToken(jti);
+
+            then(accessTokenRepository).should().save(eqIgnoring(expected, "revokedAt"));
             then(tokenRevocationCache).should().markRevoked(eq(jti), any());
         }
     }
@@ -197,9 +213,9 @@ class AuthServiceTest {
         void shouldDelegateToTokenIssuer() {
             given(tokenIssuer.jwksJson()).willReturn("{\"keys\":[]}");
 
-            var result = authService.jwksJson();
+            authCommandHandler.jwksJson();
 
-            assertThat(result).isEqualTo("{\"keys\":[]}");
+            then(tokenIssuer).should().jwksJson();
         }
     }
 }

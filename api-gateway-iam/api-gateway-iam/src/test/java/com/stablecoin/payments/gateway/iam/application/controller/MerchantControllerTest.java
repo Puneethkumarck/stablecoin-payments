@@ -1,8 +1,10 @@
 package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.response.MerchantResponse;
-import com.stablecoin.payments.gateway.iam.application.service.MerchantApplicationService;
+import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
+import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
+import com.stablecoin.payments.gateway.iam.domain.service.MerchantCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +26,10 @@ import static org.mockito.BDDMockito.given;
 class MerchantControllerTest {
 
     @Mock
-    private MerchantApplicationService merchantApplicationService;
+    private MerchantCommandHandler merchantCommandHandler;
+
+    @Mock
+    private GatewayRequestResponseMapper mapper;
 
     @InjectMocks
     private MerchantController controller;
@@ -36,7 +41,9 @@ class MerchantControllerTest {
         var response = new MerchantResponse(
                 merchantId, UUID.randomUUID(), "Test Co", "US",
                 List.of("payments:read"), "ACTIVE", "VERIFIED", "STARTER", Instant.now());
-        given(merchantApplicationService.createMerchant(any())).willReturn(response);
+        given(merchantCommandHandler.register(any(), any(), any(), any(), any()))
+                .willReturn(Merchant.builder().build());
+        given(mapper.toMerchantResponse(any(Merchant.class))).willReturn(response);
 
         var request = new com.stablecoin.payments.gateway.iam.api.request.CreateMerchantRequest(
                 UUID.randomUUID(), "Test Co", "US", List.of("payments:read"), null);
@@ -53,7 +60,9 @@ class MerchantControllerTest {
         var response = new MerchantResponse(
                 merchantId, UUID.randomUUID(), "Test Co", "US",
                 List.of("payments:read"), "ACTIVE", "VERIFIED", "STARTER", Instant.now());
-        given(merchantApplicationService.getMerchant(merchantId)).willReturn(response);
+        given(merchantCommandHandler.findById(merchantId))
+                .willReturn(Merchant.builder().build());
+        given(mapper.toMerchantResponse(any(Merchant.class))).willReturn(response);
 
         var result = controller.getMerchant(merchantId);
 
@@ -64,7 +73,7 @@ class MerchantControllerTest {
     @DisplayName("getMerchant should throw when not found")
     void shouldThrowWhenNotFound() {
         var id = UUID.randomUUID();
-        given(merchantApplicationService.getMerchant(id)).willThrow(MerchantNotFoundException.byId(id));
+        given(merchantCommandHandler.findById(id)).willThrow(MerchantNotFoundException.byId(id));
 
         assertThatThrownBy(() -> controller.getMerchant(id))
                 .isInstanceOf(MerchantNotFoundException.class);

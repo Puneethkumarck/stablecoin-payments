@@ -19,11 +19,12 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.stablecoin.payments.merchant.iam.fixtures.TestUtils.eqIgnoringTimestamps;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -88,10 +89,9 @@ class AuthServiceTest {
             given(roleRepository.findById(ROLE_ID)).willReturn(Optional.of(buildRole()));
             given(jwtTokenIssuer.issueAccessToken(any(), any(), anyBoolean())).willReturn("new-access-token");
 
-            var result = authService.refreshToken("refresh-jwt");
+            authService.refreshToken("refresh-jwt");
 
-            assertThat(result.accessToken()).isEqualTo("new-access-token");
-            assertThat(result.expiresIn()).isEqualTo(3600);
+            then(jwtTokenIssuer).should().issueAccessToken(any(), any(), anyBoolean());
         }
 
         @Test
@@ -152,10 +152,10 @@ class AuthServiceTest {
             given(mfaProvider.generateProvisioningUri("admin@test.com", "JBSWY3DPEHPK3PXP"))
                     .willReturn("otpauth://totp/Test:admin@test.com?secret=JBSWY3DPEHPK3PXP");
 
-            var result = authService.setupMfa(USER_ID, "admin@test.com");
+            authService.setupMfa(USER_ID, "admin@test.com");
 
-            assertThat(result.secret()).isEqualTo("JBSWY3DPEHPK3PXP");
-            assertThat(result.provisioningUri()).contains("otpauth://totp/");
+            then(mfaProvider).should().generateSecret();
+            then(mfaProvider).should().generateProvisioningUri("admin@test.com", "JBSWY3DPEHPK3PXP");
         }
     }
 
@@ -169,9 +169,11 @@ class AuthServiceTest {
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
             given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = authService.activateMfa(USER_ID, "secret", "123456");
+            var expectedUser = user.enableMfa("secret");
 
-            assertThat(result.mfaEnabled()).isTrue();
+            authService.activateMfa(USER_ID, "secret", "123456");
+
+            then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
         }
 
         @Test

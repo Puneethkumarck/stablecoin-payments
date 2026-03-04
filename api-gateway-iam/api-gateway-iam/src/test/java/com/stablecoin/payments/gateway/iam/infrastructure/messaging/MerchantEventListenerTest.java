@@ -1,7 +1,6 @@
 package com.stablecoin.payments.gateway.iam.infrastructure.messaging;
 
-import com.stablecoin.payments.gateway.iam.application.service.MerchantApplicationService;
-import com.stablecoin.payments.gateway.iam.domain.service.MerchantService;
+import com.stablecoin.payments.gateway.iam.domain.service.MerchantCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,8 +20,7 @@ import static org.mockito.Mockito.doThrow;
 @DisplayName("MerchantEventListener")
 class MerchantEventListenerTest {
 
-    @Mock private MerchantService merchantService;
-    @Mock private MerchantApplicationService merchantApplicationService;
+    @Mock private MerchantCommandHandler merchantCommandHandler;
 
     @InjectMocks
     private MerchantEventListener listener;
@@ -41,13 +39,11 @@ class MerchantEventListenerTest {
                 {"merchantId":"%s","companyName":"Acme Corp","country":"US","scopes":["payments:read","payments:write"]}
                 """.formatted(merchantId);
 
-        // Use a real ObjectMapper for deserialization, mock for application service
-        var realListener = new MerchantEventListener(
-                merchantService, merchantApplicationService, objectMapper);
+        var realListener = new MerchantEventListener(merchantCommandHandler, objectMapper);
 
         realListener.onMerchantActivated(payload);
 
-        then(merchantApplicationService).should().activateAndProvisionOAuthClient(
+        then(merchantCommandHandler).should().activateAndProvisionOAuthClient(
                 merchantId, "Acme Corp", List.of("payments:read", "payments:write"));
     }
 
@@ -60,11 +56,10 @@ class MerchantEventListenerTest {
                 """.formatted(merchantId);
 
         doThrow(new RuntimeException("activation failed"))
-                .when(merchantApplicationService)
+                .when(merchantCommandHandler)
                 .activateAndProvisionOAuthClient(merchantId, "Acme Corp", List.of());
 
-        var realListener = new MerchantEventListener(
-                merchantService, merchantApplicationService, objectMapper);
+        var realListener = new MerchantEventListener(merchantCommandHandler, objectMapper);
 
         assertThatThrownBy(() -> realListener.onMerchantActivated(payload))
                 .isInstanceOf(RuntimeException.class)

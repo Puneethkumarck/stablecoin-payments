@@ -98,6 +98,10 @@ dependencies {
     // Outbox (namastack)
     implementation("io.namastack:namastack-outbox-starter-jdbc:1.0.0")
 
+    // Test fixtures
+    testFixturesImplementation("org.assertj:assertj-core")
+    testFixturesImplementation("org.mockito:mockito-core")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")

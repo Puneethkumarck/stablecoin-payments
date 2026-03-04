@@ -1,7 +1,6 @@
 package com.stablecoin.payments.gateway.iam.infrastructure.messaging;
 
-import com.stablecoin.payments.gateway.iam.application.service.MerchantApplicationService;
-import com.stablecoin.payments.gateway.iam.domain.service.MerchantService;
+import com.stablecoin.payments.gateway.iam.domain.service.MerchantCommandHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,8 +16,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MerchantEventListener {
 
-    private final MerchantService merchantService;
-    private final MerchantApplicationService merchantApplicationService;
+    private final MerchantCommandHandler merchantCommandHandler;
     private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "merchant.activated", groupId = "api-gateway-iam-activate")
@@ -27,7 +25,7 @@ public class MerchantEventListener {
             var event = objectMapper.readValue(payload, MerchantActivatedEvent.class);
             log.info("Received merchant.activated merchantId={}", event.merchantId());
 
-            merchantApplicationService.activateAndProvisionOAuthClient(
+            merchantCommandHandler.activateAndProvisionOAuthClient(
                     event.merchantId(), event.companyName(), event.scopes());
 
             log.info("Activated merchant and provisioned default OAuth client merchantId={}",
@@ -44,7 +42,7 @@ public class MerchantEventListener {
             var event = objectMapper.readValue(payload, MerchantSuspendedEvent.class);
             log.info("Received merchant.suspended merchantId={}", event.merchantId());
 
-            merchantService.suspend(event.merchantId());
+            merchantCommandHandler.suspend(event.merchantId());
 
             log.info("Suspended merchant merchantId={}", event.merchantId());
         } catch (Exception e) {
@@ -59,7 +57,7 @@ public class MerchantEventListener {
             var event = objectMapper.readValue(payload, MerchantClosedEvent.class);
             log.info("Received merchant.closed merchantId={}", event.merchantId());
 
-            merchantService.close(event.merchantId());
+            merchantCommandHandler.close(event.merchantId());
 
             log.info("Closed merchant merchantId={}", event.merchantId());
         } catch (Exception e) {

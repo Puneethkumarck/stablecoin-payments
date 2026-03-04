@@ -1,31 +1,13 @@
-package com.stablecoin.payments.merchant.onboarding.application.service;
+package com.stablecoin.payments.merchant.onboarding.domain.merchant;
 
-import com.stablecoin.payments.merchant.onboarding.api.request.ActivateMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.ApproveCorridorRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.CloseMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.DocumentUploadRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.MerchantApplicationRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.SuspendMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.UpdateMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.UpdateRateLimitTierRequest;
-import com.stablecoin.payments.merchant.onboarding.api.response.CorridorResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.DocumentUploadResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.KybStatusResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.MerchantApplicationResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.MerchantResponse;
-import com.stablecoin.payments.merchant.onboarding.application.controller.MerchantRequestResponseMapper;
 import com.stablecoin.payments.merchant.onboarding.domain.EventPublisher;
 import com.stablecoin.payments.merchant.onboarding.domain.exceptions.MerchantAlreadyExistsException;
 import com.stablecoin.payments.merchant.onboarding.domain.exceptions.MerchantNotFoundException;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.ApprovedCorridorRepository;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.CorridorEntitlementService;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.DocumentStore;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.KybProvider;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.Merchant;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantActivationPolicy;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantRepository;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.command.ApplyMerchantCommand;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.ApprovedCorridor;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.BusinessAddress;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.DocumentUploadResult;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatusResult;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantActivatedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantAppliedEvent;
@@ -38,42 +20,43 @@ import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MerchantApplicationService {
+public class MerchantCommandHandler {
 
     private final MerchantRepository merchantRepository;
     private final KybProvider kybProvider;
     private final EventPublisher<Object> eventPublisher;
-    private final MerchantRequestResponseMapper responseMapper;
     private final MerchantActivationPolicy activationPolicy;
     private final CorridorEntitlementService corridorEntitlementService;
     private final DocumentStore documentStore;
     private final ApprovedCorridorRepository approvedCorridorRepository;
 
     @Transactional
-    public MerchantApplicationResponse apply(MerchantApplicationRequest request) {
+    public Merchant apply(ApplyMerchantCommand command) {
         if (merchantRepository.existsByRegistrationNumberAndCountry(
-                request.registrationNumber(), request.registrationCountry())) {
+                command.registrationNumber(), command.registrationCountry())) {
             throw MerchantAlreadyExistsException.withRegistration(
-                    request.registrationNumber(), request.registrationCountry());
+                    command.registrationNumber(), command.registrationCountry());
         }
 
         var merchant = Merchant.createNew(
-                request.legalName(),
-                request.tradingName(),
-                request.registrationNumber(),
-                request.registrationCountry(),
-                EntityType.valueOf(request.entityType()),
-                request.websiteUrl(),
-                request.primaryCurrency(),
-                responseMapper.toBusinessAddress(request.registeredAddress()),
-                responseMapper.toBeneficialOwners(request.beneficialOwners()),
-                request.requestedCorridors()
+                command.legalName(),
+                command.tradingName(),
+                command.registrationNumber(),
+                command.registrationCountry(),
+                command.entityType(),
+                command.websiteUrl(),
+                command.primaryCurrency(),
+                command.registeredAddress(),
+                command.beneficialOwners(),
+                command.requestedCorridors()
         );
 
         var saved = merchantRepository.save(merchant);
@@ -90,7 +73,7 @@ public class MerchantApplicationService {
                 .appliedAt(saved.getCreatedAt())
                 .build());
 
-        return responseMapper.toApplicationResponse(saved);
+        return saved;
     }
 
     @Transactional
@@ -109,26 +92,26 @@ public class MerchantApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public KybStatusResponse getKybStatus(UUID merchantId) {
+    public KybStatusResult getKybStatus(UUID merchantId) {
         var merchant = findOrThrow(merchantId);
         var kybResult = kybProvider.getResult("merchant-" + merchantId);
         if (kybResult.isPresent()) {
             var kyb = kybResult.get();
-            return new KybStatusResponse(
+            return new KybStatusResult(
                     kyb.kybId(), kyb.status().name(), kyb.provider(),
                     kyb.providerRef(), kyb.initiatedAt(), kyb.completedAt(),
                     kyb.riskSignals());
         }
-        return new KybStatusResponse(
+        return new KybStatusResult(
                 null, merchant.getKybStatus().name(), null,
                 null, null, null, null);
     }
 
     @Transactional
-    public MerchantResponse activate(UUID merchantId, ActivateMerchantRequest request) {
+    public Merchant activate(UUID merchantId, UUID approvedBy, List<String> scopes) {
         var merchant = findOrThrow(merchantId);
         activationPolicy.validate(merchant);
-        merchant.activate(request.approvedBy(), request.scopes());
+        merchant.activate(approvedBy, scopes);
         var saved = merchantRepository.save(merchant);
         log.info("Merchant activated merchantId={}", merchantId);
 
@@ -145,23 +128,23 @@ public class MerchantApplicationService {
                 .activatedAt(saved.getActivatedAt())
                 .build());
 
-        return responseMapper.toMerchantResponse(saved);
+        return saved;
     }
 
     @Transactional
-    public void suspend(UUID merchantId, SuspendMerchantRequest request) {
+    public void suspend(UUID merchantId, String reason, UUID suspendedBy) {
         var merchant = findOrThrow(merchantId);
         merchant.suspend();
         merchantRepository.save(merchant);
-        log.info("Merchant suspended merchantId={} reason={}", merchantId, request.reason());
+        log.info("Merchant suspended merchantId={} reason={}", merchantId, reason);
 
         eventPublisher.publish(MerchantSuspendedEvent.builder()
                 .eventId(UUID.randomUUID().toString())
                 .eventType(MerchantSuspendedEvent.EVENT_TYPE)
                 .merchantId(merchantId)
                 .correlationId(correlationId())
-                .reason(request.reason())
-                .suspendedBy(request.suspendedBy())
+                .reason(reason)
+                .suspendedBy(suspendedBy)
                 .suspendedAt(merchant.getSuspendedAt())
                 .build());
     }
@@ -175,11 +158,10 @@ public class MerchantApplicationService {
     }
 
     @Transactional
-    public void close(UUID merchantId, CloseMerchantRequest request) {
+    public void close(UUID merchantId, String reason, UUID closedBy) {
         var merchant = findOrThrow(merchantId);
         merchant.close();
         merchantRepository.save(merchant);
-        var reason = request != null ? request.reason() : null;
         log.info("Merchant closed merchantId={} reason={}", merchantId, reason);
 
         eventPublisher.publish(MerchantClosedEvent.builder()
@@ -188,63 +170,65 @@ public class MerchantApplicationService {
                 .merchantId(merchantId)
                 .correlationId(correlationId())
                 .reason(reason)
-                .closedBy(request != null ? request.closedBy() : null)
+                .closedBy(closedBy)
                 .closedAt(merchant.getClosedAt())
                 .build());
     }
 
     @Transactional
-    public MerchantResponse updateMerchant(UUID merchantId, UpdateMerchantRequest request) {
+    public Merchant updateMerchant(UUID merchantId, String tradingName, String websiteUrl, BusinessAddress registeredAddress) {
         var merchant = findOrThrow(merchantId);
         var builder = merchant.toBuilder();
-        if (request.tradingName() != null) {
-            builder.tradingName(request.tradingName());
+        if (tradingName != null) {
+            builder.tradingName(tradingName);
         }
-        if (request.websiteUrl() != null) {
-            builder.websiteUrl(request.websiteUrl());
+        if (websiteUrl != null) {
+            builder.websiteUrl(websiteUrl);
         }
-        if (request.registeredAddress() != null) {
-            builder.registeredAddress(responseMapper.toBusinessAddress(request.registeredAddress()));
+        if (registeredAddress != null) {
+            builder.registeredAddress(registeredAddress);
         }
         var updated = builder.updatedAt(Instant.now()).build();
         var saved = merchantRepository.save(updated);
         log.info("Merchant updated merchantId={}", merchantId);
-        return responseMapper.toMerchantResponse(saved);
+        return saved;
     }
 
     @Transactional
-    public DocumentUploadResponse uploadDocument(UUID merchantId, DocumentUploadRequest request) {
+    public DocumentUploadResult uploadDocument(UUID merchantId, String documentType, String fileName) {
         findOrThrow(merchantId);
-        var uploadUrl = documentStore.generateUploadUrl(merchantId, request.documentType(), request.fileName());
-        log.info("Document upload URL generated merchantId={} documentType={}", merchantId, request.documentType());
-        return new DocumentUploadResponse(uploadUrl, Instant.now().plusSeconds(3600));
+        var uploadUrl = documentStore.generateUploadUrl(merchantId, documentType, fileName);
+        log.info("Document upload URL generated merchantId={} documentType={}", merchantId, documentType);
+        return new DocumentUploadResult(uploadUrl, Instant.now().plusSeconds(3600));
     }
 
     @Transactional
-    public MerchantResponse updateRateLimitTier(UUID merchantId, UpdateRateLimitTierRequest request) {
+    public Merchant updateRateLimitTier(UUID merchantId, String newTier) {
         var merchant = findOrThrow(merchantId);
-        var newTier = RateLimitTier.valueOf(request.newTier());
-        merchant.upgradeRateLimitTier(newTier);
+        var tier = RateLimitTier.valueOf(newTier);
+        merchant.upgradeRateLimitTier(tier);
         var saved = merchantRepository.save(merchant);
-        log.info("Rate limit tier updated merchantId={} newTier={}", merchantId, newTier);
-        return responseMapper.toMerchantResponse(saved);
+        log.info("Rate limit tier updated merchantId={} newTier={}", merchantId, tier);
+        return saved;
     }
 
     @Transactional
-    public CorridorResponse approveCorridor(UUID merchantId, ApproveCorridorRequest request, UUID approvedBy) {
+    public ApprovedCorridor approveCorridor(UUID merchantId, String sourceCountry, String targetCountry,
+                                            List<String> currencies, BigDecimal maxAmountUsd,
+                                            Instant expiresAt, UUID approvedBy) {
         var merchant = findOrThrow(merchantId);
-        corridorEntitlementService.validate(merchant, request.sourceCountry(), request.targetCountry());
+        corridorEntitlementService.validate(merchant, sourceCountry, targetCountry);
 
         var corridor = ApprovedCorridor.builder()
                 .corridorId(UUID.randomUUID())
                 .merchantId(merchantId)
-                .sourceCountry(request.sourceCountry())
-                .targetCountry(request.targetCountry())
-                .currencies(request.currencies())
-                .maxAmountUsd(request.maxAmountUsd())
+                .sourceCountry(sourceCountry)
+                .targetCountry(targetCountry)
+                .currencies(currencies)
+                .maxAmountUsd(maxAmountUsd)
                 .approvedBy(approvedBy)
                 .approvedAt(Instant.now())
-                .expiresAt(request.expiresAt())
+                .expiresAt(expiresAt)
                 .isActive(true)
                 .build();
 
@@ -263,12 +247,12 @@ public class MerchantApplicationService {
                 .approvedAt(corridor.approvedAt())
                 .build());
 
-        return responseMapper.toCorridorResponse(saved);
+        return saved;
     }
 
     @Transactional(readOnly = true)
-    public MerchantResponse findById(UUID merchantId) {
-        return responseMapper.toMerchantResponse(findOrThrow(merchantId));
+    public Merchant findById(UUID merchantId) {
+        return findOrThrow(merchantId);
     }
 
     private Merchant findOrThrow(UUID merchantId) {

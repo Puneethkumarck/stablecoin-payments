@@ -32,28 +32,29 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.stablecoin.payments.gateway.iam.fixtures.TestUtils.eqIgnoring;
+import static com.stablecoin.payments.gateway.iam.fixtures.TestUtils.eqIgnoringTimestamps;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
-class ApiKeyServiceTest {
+class ApiKeyCommandHandlerTest {
 
     @Mock private ApiKeyRepository apiKeyRepository;
     @Mock private MerchantRepository merchantRepository;
     @Mock private ApiKeyGenerator apiKeyGenerator;
     @Mock private ApiKeyHasher apiKeyHasher;
-    @Mock private EventPublisher<ApiKeyRevokedEvent> eventPublisher;
+    @Mock private EventPublisher<Object> eventPublisher;
 
-    private ApiKeyService apiKeyService;
+    private ApiKeyCommandHandler apiKeyCommandHandler;
 
     private static final UUID MERCHANT_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        apiKeyService = new ApiKeyService(apiKeyRepository, merchantRepository,
+        apiKeyCommandHandler = new ApiKeyCommandHandler(apiKeyRepository, merchantRepository,
                 apiKeyGenerator, apiKeyHasher, eventPublisher);
     }
 
@@ -86,12 +87,22 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_abc123")).willReturn("sha256hash");
             given(apiKeyRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = apiKeyService.create(MERCHANT_ID, "My Key", ApiKeyEnvironment.LIVE,
+            var expected = ApiKey.builder()
+                    .merchantId(MERCHANT_ID)
+                    .keyHash("sha256hash")
+                    .keyPrefix("pk_live_")
+                    .name("My Key")
+                    .environment(ApiKeyEnvironment.LIVE)
+                    .scopes(List.of("payments:read"))
+                    .allowedIps(List.of("10.0.0.1"))
+                    .active(true)
+                    .version(0L)
+                    .build();
+
+            apiKeyCommandHandler.create(MERCHANT_ID, "My Key", ApiKeyEnvironment.LIVE,
                     List.of("payments:read"), List.of("10.0.0.1"), null);
 
-            assertThat(result.rawKey()).isEqualTo("pk_live_abc123");
-            assertThat(result.apiKey().getKeyHash()).isEqualTo("sha256hash");
-            assertThat(result.apiKey().getScopes()).containsExactly("payments:read");
+            then(apiKeyRepository).should().save(eqIgnoring(expected, "keyId"));
         }
 
         @Test
@@ -102,17 +113,29 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_abc123")).willReturn("sha256hash");
             given(apiKeyRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = apiKeyService.create(MERCHANT_ID, "My Key", ApiKeyEnvironment.LIVE,
+            var expected = ApiKey.builder()
+                    .merchantId(MERCHANT_ID)
+                    .keyHash("sha256hash")
+                    .keyPrefix("pk_live_")
+                    .name("My Key")
+                    .environment(ApiKeyEnvironment.LIVE)
+                    .scopes(List.of("payments:read", "payments:write"))
+                    .allowedIps(List.of())
+                    .active(true)
+                    .version(0L)
+                    .build();
+
+            apiKeyCommandHandler.create(MERCHANT_ID, "My Key", ApiKeyEnvironment.LIVE,
                     null, null, null);
 
-            assertThat(result.apiKey().getScopes()).containsExactly("payments:read", "payments:write");
+            then(apiKeyRepository).should().save(eqIgnoring(expected, "keyId"));
         }
 
         @Test
         void shouldThrowWhenMerchantNotFound() {
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> apiKeyService.create(MERCHANT_ID, "Key",
+            assertThatThrownBy(() -> apiKeyCommandHandler.create(MERCHANT_ID, "Key",
                     ApiKeyEnvironment.LIVE, null, null, null))
                     .isInstanceOf(MerchantNotFoundException.class);
         }
@@ -127,7 +150,7 @@ class ApiKeyServiceTest {
                     .updatedAt(Instant.now()).version(0L).build();
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(inactiveMerchant));
 
-            assertThatThrownBy(() -> apiKeyService.create(MERCHANT_ID, "Key",
+            assertThatThrownBy(() -> apiKeyCommandHandler.create(MERCHANT_ID, "Key",
                     ApiKeyEnvironment.LIVE, null, null, null))
                     .isInstanceOf(MerchantNotActiveException.class);
         }
@@ -136,7 +159,7 @@ class ApiKeyServiceTest {
         void shouldThrowWhenScopesExceedMerchant() {
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(activeMerchant()));
 
-            assertThatThrownBy(() -> apiKeyService.create(MERCHANT_ID, "Key",
+            assertThatThrownBy(() -> apiKeyCommandHandler.create(MERCHANT_ID, "Key",
                     ApiKeyEnvironment.LIVE, List.of("admin:write"), null, null))
                     .isInstanceOf(ScopeExceededException.class);
         }
@@ -159,10 +182,16 @@ class ApiKeyServiceTest {
             given(apiKeyRepository.findById(keyId)).willReturn(Optional.of(apiKey));
             given(apiKeyRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            apiKeyService.revoke(keyId);
+            var expectedKey = apiKey.toBuilder()
+                    .active(false)
+                    .build();
 
-            then(apiKeyRepository).should().save(any());
-            then(eventPublisher).should().publish(any(ApiKeyRevokedEvent.class));
+            var expectedEvent = new ApiKeyRevokedEvent(keyId, MERCHANT_ID, "pk_live_", null);
+
+            apiKeyCommandHandler.revoke(keyId);
+
+            then(apiKeyRepository).should().save(eqIgnoringTimestamps(expectedKey));
+            then(eventPublisher).should().publish(eqIgnoringTimestamps(expectedEvent));
         }
 
         @Test
@@ -170,7 +199,7 @@ class ApiKeyServiceTest {
             var keyId = UUID.randomUUID();
             given(apiKeyRepository.findById(keyId)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> apiKeyService.revoke(keyId))
+            assertThatThrownBy(() -> apiKeyCommandHandler.revoke(keyId))
                     .isInstanceOf(ApiKeyNotFoundException.class);
         }
     }
@@ -191,9 +220,9 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_raw")).willReturn("sha256hash");
             given(apiKeyRepository.findByKeyHash("sha256hash")).willReturn(Optional.of(apiKey));
 
-            var result = apiKeyService.validate("pk_live_raw", "10.0.0.1");
+            apiKeyCommandHandler.validate("pk_live_raw", "10.0.0.1");
 
-            assertThat(result.getKeyHash()).isEqualTo("sha256hash");
+            then(apiKeyRepository).should().findByKeyHash("sha256hash");
         }
 
         @Test
@@ -201,7 +230,7 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_raw")).willReturn("sha256hash");
             given(apiKeyRepository.findByKeyHash("sha256hash")).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> apiKeyService.validate("pk_live_raw", "10.0.0.1"))
+            assertThatThrownBy(() -> apiKeyCommandHandler.validate("pk_live_raw", "10.0.0.1"))
                     .isInstanceOf(ApiKeyNotFoundException.class);
         }
 
@@ -217,7 +246,7 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_raw")).willReturn("sha256hash");
             given(apiKeyRepository.findByKeyHash("sha256hash")).willReturn(Optional.of(apiKey));
 
-            assertThatThrownBy(() -> apiKeyService.validate("pk_live_raw", "10.0.0.1"))
+            assertThatThrownBy(() -> apiKeyCommandHandler.validate("pk_live_raw", "10.0.0.1"))
                     .isInstanceOf(ApiKeyRevokedException.class);
         }
 
@@ -233,7 +262,7 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_raw")).willReturn("sha256hash");
             given(apiKeyRepository.findByKeyHash("sha256hash")).willReturn(Optional.of(apiKey));
 
-            assertThatThrownBy(() -> apiKeyService.validate("pk_live_raw", "10.0.0.1"))
+            assertThatThrownBy(() -> apiKeyCommandHandler.validate("pk_live_raw", "10.0.0.1"))
                     .isInstanceOf(ApiKeyExpiredException.class);
         }
 
@@ -249,7 +278,7 @@ class ApiKeyServiceTest {
             given(apiKeyHasher.hash("pk_live_raw")).willReturn("sha256hash");
             given(apiKeyRepository.findByKeyHash("sha256hash")).willReturn(Optional.of(apiKey));
 
-            assertThatThrownBy(() -> apiKeyService.validate("pk_live_raw", "192.168.1.1"))
+            assertThatThrownBy(() -> apiKeyCommandHandler.validate("pk_live_raw", "192.168.1.1"))
                     .isInstanceOf(IpNotAllowedException.class);
         }
     }

@@ -2,9 +2,10 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.request.CreateOAuthClientRequest;
 import com.stablecoin.payments.gateway.iam.api.response.OAuthClientResponse;
-import com.stablecoin.payments.gateway.iam.application.service.OAuthClientApplicationService;
+import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotActiveException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
+import com.stablecoin.payments.gateway.iam.domain.service.OAuthClientCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +28,10 @@ import static org.mockito.BDDMockito.given;
 class OAuthClientControllerTest {
 
     @Mock
-    private OAuthClientApplicationService oauthClientApplicationService;
+    private OAuthClientCommandHandler oauthClientCommandHandler;
+
+    @Mock
+    private GatewayRequestResponseMapper mapper;
 
     @InjectMocks
     private OAuthClientController controller;
@@ -40,8 +44,9 @@ class OAuthClientControllerTest {
         var response = new OAuthClientResponse(
                 clientId, "raw-secret-hex", merchantId, "My Client",
                 List.of("payments:read"), List.of("client_credentials"), Instant.now());
-        given(oauthClientApplicationService.createOAuthClient(eq(merchantId), any()))
-                .willReturn(response);
+        given(oauthClientCommandHandler.create(eq(merchantId), any(), any(), any()))
+                .willReturn(new OAuthClientCommandHandler.CreateOAuthClientResult(null, "raw-secret-hex"));
+        given(mapper.toOAuthClientResponse(any())).willReturn(response);
 
         var request = new CreateOAuthClientRequest(
                 "My Client", List.of("payments:read"), List.of("client_credentials"));
@@ -58,7 +63,7 @@ class OAuthClientControllerTest {
     @DisplayName("createOAuthClient should throw when merchant not found")
     void shouldThrowWhenMerchantNotFound() {
         var merchantId = UUID.randomUUID();
-        given(oauthClientApplicationService.createOAuthClient(eq(merchantId), any()))
+        given(oauthClientCommandHandler.create(eq(merchantId), any(), any(), any()))
                 .willThrow(MerchantNotFoundException.byId(merchantId));
 
         var request = new CreateOAuthClientRequest("Client", null, null);
@@ -71,7 +76,7 @@ class OAuthClientControllerTest {
     @DisplayName("createOAuthClient should throw when merchant not active")
     void shouldThrowWhenMerchantNotActive() {
         var merchantId = UUID.randomUUID();
-        given(oauthClientApplicationService.createOAuthClient(eq(merchantId), any()))
+        given(oauthClientCommandHandler.create(eq(merchantId), any(), any(), any()))
                 .willThrow(MerchantNotActiveException.of(merchantId));
 
         var request = new CreateOAuthClientRequest("Client", null, null);

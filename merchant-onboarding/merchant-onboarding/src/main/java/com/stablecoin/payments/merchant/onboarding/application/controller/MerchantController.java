@@ -13,7 +13,7 @@ import com.stablecoin.payments.merchant.onboarding.api.response.DocumentUploadRe
 import com.stablecoin.payments.merchant.onboarding.api.response.KybStatusResponse;
 import com.stablecoin.payments.merchant.onboarding.api.response.MerchantApplicationResponse;
 import com.stablecoin.payments.merchant.onboarding.api.response.MerchantResponse;
-import com.stablecoin.payments.merchant.onboarding.application.service.MerchantApplicationService;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantCommandHandler;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,19 +37,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MerchantController {
 
-    private final MerchantApplicationService service;
+    private final MerchantCommandHandler commandHandler;
+    private final MerchantRequestResponseMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('merchant:write')")
     public MerchantApplicationResponse apply(@Valid @RequestBody MerchantApplicationRequest request) {
-        return service.apply(request);
+        var command = mapper.toApplyMerchantCommand(request);
+        var merchant = commandHandler.apply(command);
+        return mapper.toApplicationResponse(merchant);
     }
 
     @GetMapping("/{merchantId}")
     @PreAuthorize("hasAuthority('merchant:read')")
     public MerchantResponse findById(@PathVariable UUID merchantId) {
-        return service.findById(merchantId);
+        var merchant = commandHandler.findById(merchantId);
+        return mapper.toMerchantResponse(merchant);
     }
 
     @PatchMapping("/{merchantId}")
@@ -57,20 +61,26 @@ public class MerchantController {
     public MerchantResponse updateMerchant(
             @PathVariable UUID merchantId,
             @Valid @RequestBody UpdateMerchantRequest request) {
-        return service.updateMerchant(merchantId, request);
+        var address = request.registeredAddress() != null
+                ? mapper.toBusinessAddress(request.registeredAddress())
+                : null;
+        var merchant = commandHandler.updateMerchant(
+                merchantId, request.tradingName(), request.websiteUrl(), address);
+        return mapper.toMerchantResponse(merchant);
     }
 
     @PostMapping("/{merchantId}/kyb/start")
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PreAuthorize("hasAuthority('admin')")
     public void startKyb(@PathVariable UUID merchantId) {
-        service.startKyb(merchantId);
+        commandHandler.startKyb(merchantId);
     }
 
     @GetMapping("/{merchantId}/kyb")
     @PreAuthorize("hasAuthority('merchant:read')")
     public KybStatusResponse getKybStatus(@PathVariable UUID merchantId) {
-        return service.getKybStatus(merchantId);
+        var result = commandHandler.getKybStatus(merchantId);
+        return mapper.toKybStatusResponse(result);
     }
 
     @PostMapping("/{merchantId}/activate")
@@ -78,7 +88,8 @@ public class MerchantController {
     public MerchantResponse activate(
             @PathVariable UUID merchantId,
             @Valid @RequestBody ActivateMerchantRequest request) {
-        return service.activate(merchantId, request);
+        var merchant = commandHandler.activate(merchantId, request.approvedBy(), request.scopes());
+        return mapper.toMerchantResponse(merchant);
     }
 
     @PostMapping("/{merchantId}/suspend")
@@ -87,14 +98,14 @@ public class MerchantController {
     public void suspend(
             @PathVariable UUID merchantId,
             @Valid @RequestBody SuspendMerchantRequest request) {
-        service.suspend(merchantId, request);
+        commandHandler.suspend(merchantId, request.reason(), request.suspendedBy());
     }
 
     @PostMapping("/{merchantId}/reactivate")
     @ResponseStatus(HttpStatus.ACCEPTED)
     @PreAuthorize("hasAuthority('admin')")
     public void reactivate(@PathVariable UUID merchantId) {
-        service.reactivate(merchantId);
+        commandHandler.reactivate(merchantId);
     }
 
     @PostMapping("/{merchantId}/close")
@@ -103,7 +114,9 @@ public class MerchantController {
     public void close(
             @PathVariable UUID merchantId,
             @RequestBody(required = false) CloseMerchantRequest request) {
-        service.close(merchantId, request);
+        var reason = request != null ? request.reason() : null;
+        var closedBy = request != null ? request.closedBy() : null;
+        commandHandler.close(merchantId, reason, closedBy);
     }
 
     @PostMapping("/{merchantId}/corridors")
@@ -113,7 +126,10 @@ public class MerchantController {
             @PathVariable UUID merchantId,
             @Valid @RequestBody ApproveCorridorRequest request,
             @RequestHeader("X-Approved-By") UUID approvedBy) {
-        return service.approveCorridor(merchantId, request, approvedBy);
+        var corridor = commandHandler.approveCorridor(
+                merchantId, request.sourceCountry(), request.targetCountry(),
+                request.currencies(), request.maxAmountUsd(), request.expiresAt(), approvedBy);
+        return mapper.toCorridorResponse(corridor);
     }
 
     @PostMapping("/{merchantId}/documents")
@@ -122,7 +138,8 @@ public class MerchantController {
     public DocumentUploadResponse uploadDocument(
             @PathVariable UUID merchantId,
             @Valid @RequestBody DocumentUploadRequest request) {
-        return service.uploadDocument(merchantId, request);
+        var result = commandHandler.uploadDocument(merchantId, request.documentType(), request.fileName());
+        return mapper.toDocumentUploadResponse(result);
     }
 
     @PatchMapping("/{merchantId}/rate-limit-tier")
@@ -130,6 +147,7 @@ public class MerchantController {
     public MerchantResponse updateRateLimitTier(
             @PathVariable UUID merchantId,
             @Valid @RequestBody UpdateRateLimitTierRequest request) {
-        return service.updateRateLimitTier(merchantId, request);
+        var merchant = commandHandler.updateRateLimitTier(merchantId, request.newTier());
+        return mapper.toMerchantResponse(merchant);
     }
 }

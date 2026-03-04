@@ -6,6 +6,7 @@ import com.stablecoin.payments.gateway.iam.domain.exception.ScopeExceededExcepti
 import com.stablecoin.payments.gateway.iam.domain.model.KybStatus;
 import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
 import com.stablecoin.payments.gateway.iam.domain.model.MerchantStatus;
+import com.stablecoin.payments.gateway.iam.domain.model.OAuthClient;
 import com.stablecoin.payments.gateway.iam.domain.model.RateLimitTier;
 import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretGenerator;
 import com.stablecoin.payments.gateway.iam.domain.port.ClientSecretHasher;
@@ -24,26 +25,27 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.stablecoin.payments.gateway.iam.fixtures.TestUtils.eqIgnoring;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
-class OAuthClientServiceTest {
+class OAuthClientCommandHandlerTest {
 
     @Mock private OAuthClientRepository oauthClientRepository;
     @Mock private MerchantRepository merchantRepository;
     @Mock private ClientSecretGenerator clientSecretGenerator;
     @Mock private ClientSecretHasher clientSecretHasher;
 
-    private OAuthClientService service;
+    private OAuthClientCommandHandler commandHandler;
 
     private static final UUID MERCHANT_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        service = new OAuthClientService(oauthClientRepository, merchantRepository,
+        commandHandler = new OAuthClientCommandHandler(oauthClientRepository, merchantRepository,
                 clientSecretGenerator, clientSecretHasher);
     }
 
@@ -93,16 +95,20 @@ class OAuthClientServiceTest {
             given(clientSecretHasher.hash("raw-secret-hex")).willReturn("$2a$12$hashed");
             given(oauthClientRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = service.create(MERCHANT_ID, "My Client",
+            var expected = OAuthClient.builder()
+                    .merchantId(MERCHANT_ID)
+                    .clientSecretHash("$2a$12$hashed")
+                    .name("My Client")
+                    .scopes(List.of("payments:read"))
+                    .grantTypes(List.of("client_credentials"))
+                    .active(true)
+                    .version(0L)
+                    .build();
+
+            commandHandler.create(MERCHANT_ID, "My Client",
                     List.of("payments:read"), List.of("client_credentials"));
 
-            assertThat(result.rawSecret()).isEqualTo("raw-secret-hex");
-            assertThat(result.client().getMerchantId()).isEqualTo(MERCHANT_ID);
-            assertThat(result.client().getName()).isEqualTo("My Client");
-            assertThat(result.client().getScopes()).containsExactly("payments:read");
-            assertThat(result.client().getGrantTypes()).containsExactly("client_credentials");
-            assertThat(result.client().getClientSecretHash()).isEqualTo("$2a$12$hashed");
-            assertThat(result.client().isActive()).isTrue();
+            then(oauthClientRepository).should().save(eqIgnoring(expected, "clientId"));
         }
 
         @Test
@@ -113,10 +119,19 @@ class OAuthClientServiceTest {
             given(clientSecretHasher.hash("secret")).willReturn("hash");
             given(oauthClientRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = service.create(MERCHANT_ID, "Client", List.of(), List.of());
+            var expected = OAuthClient.builder()
+                    .merchantId(MERCHANT_ID)
+                    .clientSecretHash("hash")
+                    .name("Client")
+                    .scopes(List.of("payments:read", "payments:write"))
+                    .grantTypes(List.of("client_credentials"))
+                    .active(true)
+                    .version(0L)
+                    .build();
 
-            assertThat(result.client().getScopes())
-                    .containsExactly("payments:read", "payments:write");
+            commandHandler.create(MERCHANT_ID, "Client", List.of(), List.of());
+
+            then(oauthClientRepository).should().save(eqIgnoring(expected, "clientId"));
         }
 
         @Test
@@ -127,9 +142,19 @@ class OAuthClientServiceTest {
             given(clientSecretHasher.hash("secret")).willReturn("hash");
             given(oauthClientRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-            var result = service.create(MERCHANT_ID, "Client", null, null);
+            var expected = OAuthClient.builder()
+                    .merchantId(MERCHANT_ID)
+                    .clientSecretHash("hash")
+                    .name("Client")
+                    .scopes(List.of("payments:read", "payments:write"))
+                    .grantTypes(List.of("client_credentials"))
+                    .active(true)
+                    .version(0L)
+                    .build();
 
-            assertThat(result.client().getGrantTypes()).containsExactly("client_credentials");
+            commandHandler.create(MERCHANT_ID, "Client", null, null);
+
+            then(oauthClientRepository).should().save(eqIgnoring(expected, "clientId"));
         }
 
         @Test
@@ -137,7 +162,7 @@ class OAuthClientServiceTest {
         void shouldThrowWhenMerchantNotFound() {
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> service.create(MERCHANT_ID, "Client", List.of(), List.of()))
+            assertThatThrownBy(() -> commandHandler.create(MERCHANT_ID, "Client", List.of(), List.of()))
                     .isInstanceOf(MerchantNotFoundException.class);
         }
 
@@ -146,7 +171,7 @@ class OAuthClientServiceTest {
         void shouldThrowWhenMerchantNotActive() {
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(pendingMerchant()));
 
-            assertThatThrownBy(() -> service.create(MERCHANT_ID, "Client", List.of(), List.of()))
+            assertThatThrownBy(() -> commandHandler.create(MERCHANT_ID, "Client", List.of(), List.of()))
                     .isInstanceOf(MerchantNotActiveException.class);
         }
 
@@ -155,7 +180,7 @@ class OAuthClientServiceTest {
         void shouldThrowWhenScopesExceeded() {
             given(merchantRepository.findById(MERCHANT_ID)).willReturn(Optional.of(activeMerchant()));
 
-            assertThatThrownBy(() -> service.create(MERCHANT_ID, "Client",
+            assertThatThrownBy(() -> commandHandler.create(MERCHANT_ID, "Client",
                     List.of("payments:read", "admin:full"), List.of()))
                     .isInstanceOf(ScopeExceededException.class);
         }

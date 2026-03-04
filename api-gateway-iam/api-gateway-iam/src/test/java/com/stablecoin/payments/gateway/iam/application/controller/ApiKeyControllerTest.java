@@ -1,8 +1,9 @@
 package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.response.ApiKeyResponse;
-import com.stablecoin.payments.gateway.iam.application.service.ApiKeyApplicationService;
+import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
+import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +26,10 @@ import static org.mockito.BDDMockito.then;
 class ApiKeyControllerTest {
 
     @Mock
-    private ApiKeyApplicationService apiKeyApplicationService;
+    private ApiKeyCommandHandler apiKeyCommandHandler;
+
+    @Mock
+    private GatewayRequestResponseMapper mapper;
 
     @InjectMocks
     private ApiKeyController controller;
@@ -37,7 +41,9 @@ class ApiKeyControllerTest {
         var response = new ApiKeyResponse(
                 keyId, "pk_live_raw123", "pk_live_abc", "My Key", "LIVE",
                 List.of("payments:read"), List.of(), Instant.now().plusSeconds(86400), Instant.now());
-        given(apiKeyApplicationService.createApiKey(any())).willReturn(response);
+        given(apiKeyCommandHandler.create(any(), any(), any(), any(), any(), any()))
+                .willReturn(new ApiKeyCommandHandler.CreateApiKeyResult(null, "pk_live_raw123"));
+        given(mapper.toApiKeyResponse(any())).willReturn(response);
 
         var request = new com.stablecoin.payments.gateway.iam.api.request.CreateApiKeyRequest(
                 UUID.randomUUID(), "My Key", "LIVE", List.of("payments:read"), null, null);
@@ -53,7 +59,7 @@ class ApiKeyControllerTest {
     @DisplayName("createApiKey should throw when merchant not found")
     void shouldThrowWhenMerchantNotFound() {
         var merchantId = UUID.randomUUID();
-        given(apiKeyApplicationService.createApiKey(any()))
+        given(apiKeyCommandHandler.create(any(), any(), any(), any(), any(), any()))
                 .willThrow(MerchantNotFoundException.byId(merchantId));
 
         var request = new com.stablecoin.payments.gateway.iam.api.request.CreateApiKeyRequest(
@@ -64,12 +70,12 @@ class ApiKeyControllerTest {
     }
 
     @Test
-    @DisplayName("revokeApiKey should delegate to service")
+    @DisplayName("revokeApiKey should delegate to command handler")
     void shouldRevokeApiKey() {
         var keyId = UUID.randomUUID();
 
         controller.revokeApiKey(keyId);
 
-        then(apiKeyApplicationService).should().revokeApiKey(keyId);
+        then(apiKeyCommandHandler).should().revoke(keyId);
     }
 }

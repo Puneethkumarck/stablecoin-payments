@@ -4,10 +4,12 @@ import com.stablecoin.payments.merchant.onboarding.domain.exceptions.InvalidMerc
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RiskTier;
+import org.springframework.stereotype.Service;
 
 /**
  * Domain service: enforces all invariants before a merchant can be activated.
  */
+@Service
 public class MerchantActivationPolicy {
 
     public void validate(Merchant merchant) {

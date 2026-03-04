@@ -1,8 +1,9 @@
 package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.response.TokenResponse;
-import com.stablecoin.payments.gateway.iam.application.service.AuthApplicationService;
+import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
 import com.stablecoin.payments.gateway.iam.domain.exception.InvalidClientCredentialsException;
+import com.stablecoin.payments.gateway.iam.domain.service.AuthCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,11 +11,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -23,7 +28,10 @@ import static org.mockito.BDDMockito.then;
 class AuthControllerTest {
 
     @Mock
-    private AuthApplicationService authApplicationService;
+    private AuthCommandHandler authCommandHandler;
+
+    @Mock
+    private GatewayRequestResponseMapper mapper;
 
     @InjectMocks
     private AuthController controller;
@@ -32,8 +40,10 @@ class AuthControllerTest {
     @DisplayName("issueToken should return token response")
     void shouldIssueToken() {
         var clientId = UUID.randomUUID();
+        var tokenResult = new AuthCommandHandler.TokenResult("jwt-token", UUID.randomUUID(), 3600L, List.of("payments:read"));
         var tokenResponse = new TokenResponse("jwt-token", "Bearer", 3600, "payments:read");
-        given(authApplicationService.issueToken(any())).willReturn(tokenResponse);
+        given(authCommandHandler.issueToken(eq(clientId), anyString(), anyList())).willReturn(tokenResult);
+        given(mapper.toTokenResponse(tokenResult)).willReturn(tokenResponse);
 
         var request = new com.stablecoin.payments.gateway.iam.api.request.TokenRequest(
                 "client_credentials", clientId, "secret", "payments:read");
@@ -48,7 +58,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("issueToken should propagate invalid credentials")
     void shouldPropagateInvalidCredentials() {
-        given(authApplicationService.issueToken(any()))
+        given(authCommandHandler.issueToken(any(), anyString(), anyList()))
                 .willThrow(InvalidClientCredentialsException.clientNotFound());
 
         var request = new com.stablecoin.payments.gateway.iam.api.request.TokenRequest(
@@ -59,20 +69,20 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("revokeToken should delegate to service")
+    @DisplayName("revokeToken should delegate to command handler")
     void shouldRevokeToken() {
         var jti = UUID.randomUUID();
         var request = new com.stablecoin.payments.gateway.iam.api.request.TokenRevokeRequest(jti);
 
         controller.revokeToken(request);
 
-        then(authApplicationService).should().revokeToken(jti);
+        then(authCommandHandler).should().revokeToken(jti);
     }
 
     @Test
     @DisplayName("jwks should return JWKS JSON")
     void shouldReturnJwks() {
-        given(authApplicationService.jwksJson()).willReturn("{\"keys\":[]}");
+        given(authCommandHandler.jwksJson()).willReturn("{\"keys\":[]}");
 
         var result = controller.jwks();
 

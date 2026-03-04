@@ -1,26 +1,13 @@
-package com.stablecoin.payments.merchant.onboarding.application.service;
+package com.stablecoin.payments.merchant.onboarding.domain.merchant;
 
-import com.stablecoin.payments.merchant.onboarding.api.request.ActivateMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.ApproveCorridorRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.CloseMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.MerchantApplicationRequest;
-import com.stablecoin.payments.merchant.onboarding.api.request.SuspendMerchantRequest;
-import com.stablecoin.payments.merchant.onboarding.api.response.CorridorResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.MerchantApplicationResponse;
-import com.stablecoin.payments.merchant.onboarding.api.response.MerchantResponse;
-import com.stablecoin.payments.merchant.onboarding.application.controller.MerchantRequestResponseMapper;
 import com.stablecoin.payments.merchant.onboarding.domain.EventPublisher;
 import com.stablecoin.payments.merchant.onboarding.domain.exceptions.MerchantNotFoundException;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.ApprovedCorridorRepository;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.CorridorEntitlementService;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.DocumentStore;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.KybProvider;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.Merchant;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantActivationPolicy;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantRepository;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.command.ApplyMerchantCommand;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.ApprovedCorridor;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybVerification;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantActivatedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantAppliedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantClosedEvent;
@@ -30,8 +17,6 @@ import com.stablecoin.payments.merchant.onboarding.fixtures.MerchantFixtures;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,16 +27,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.stablecoin.payments.merchant.onboarding.fixtures.TestUtils.eqIgnoring;
+import static com.stablecoin.payments.merchant.onboarding.fixtures.TestUtils.eqIgnoringTimestamps;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("MerchantApplicationService")
-class MerchantApplicationServiceTest {
+@DisplayName("MerchantCommandHandler")
+class MerchantCommandHandlerTest {
 
     @Mock
     private MerchantRepository merchantRepository;
@@ -59,8 +46,6 @@ class MerchantApplicationServiceTest {
     private KybProvider kybProvider;
     @Mock
     private EventPublisher<Object> eventPublisher;
-    @Mock
-    private MerchantRequestResponseMapper responseMapper;
     @Mock
     private MerchantActivationPolicy activationPolicy;
     @Mock
@@ -71,32 +56,39 @@ class MerchantApplicationServiceTest {
     private ApprovedCorridorRepository approvedCorridorRepository;
 
     @InjectMocks
-    private MerchantApplicationService service;
-
-    @Captor
-    private ArgumentCaptor<Object> eventCaptor;
+    private MerchantCommandHandler handler;
 
     @Test
     @DisplayName("should apply merchant and publish event")
     void shouldApplyMerchant() {
         // given
-        var request = new MerchantApplicationRequest(
-                "Acme Ltd", "Acme", "REG-123", "GB", "PRIVATE_LIMITED",
+        var command = new ApplyMerchantCommand(
+                "Acme Ltd", "Acme", "REG-123", "GB", EntityType.PRIVATE_LIMITED,
                 "https://acme.com", "USD", null, null, List.of("GB->US"));
         given(merchantRepository.existsByRegistrationNumberAndCountry("REG-123", "GB"))
                 .willReturn(false);
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
-        given(responseMapper.toApplicationResponse(any(Merchant.class)))
-                .willReturn(new MerchantApplicationResponse(UUID.randomUUID(), "APPLIED", "NOT_STARTED", "Acme Ltd", Instant.now()));
+
+        var expectedMerchant = Merchant.createNew(
+                "Acme Ltd", "Acme", "REG-123", "GB", EntityType.PRIVATE_LIMITED,
+                "https://acme.com", "USD", null, null, List.of("GB->US"));
+
+        var expectedEvent = MerchantAppliedEvent.builder()
+                .eventType(MerchantAppliedEvent.EVENT_TYPE)
+                .legalName("Acme Ltd")
+                .registrationCountry("GB")
+                .entityType(EntityType.PRIVATE_LIMITED.name())
+                .build();
 
         // when
-        var result = service.apply(request);
+        handler.apply(command);
 
         // then
-        assertThat(result).isNotNull();
-        assertThat(result.status()).isEqualTo("APPLIED");
-        then(eventPublisher).should().publish(any(MerchantAppliedEvent.class));
+        then(merchantRepository).should().save(
+                eqIgnoring(expectedMerchant, "merchantId"));
+        then(eventPublisher).should().publish(
+                eqIgnoring(expectedEvent, "eventId", "correlationId", "merchantId"));
     }
 
     @Test
@@ -118,11 +110,14 @@ class MerchantApplicationServiceTest {
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
+        var expectedMerchant = merchant.toBuilder().build();
+        expectedMerchant.startKyb();
+
         // when
-        service.startKyb(merchantId);
+        handler.startKyb(merchantId);
 
         // then
-        then(merchantRepository).should().save(any(Merchant.class));
+        then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
     }
 
     @Test
@@ -131,21 +126,33 @@ class MerchantApplicationServiceTest {
         // given
         var merchant = MerchantFixtures.pendingApprovalMerchant();
         var merchantId = merchant.getMerchantId();
-        var request = new ActivateMerchantRequest(MerchantFixtures.anApprover(),
-                List.of("payments:read", "payments:write"));
+        var approver = MerchantFixtures.anApprover();
+        var scopes = List.of("payments:read", "payments:write");
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
-        given(responseMapper.toMerchantResponse(any(Merchant.class)))
-                .willReturn(merchantResponse(merchantId));
+
+        var expectedMerchant = merchant.toBuilder().build();
+        expectedMerchant.activate(approver, scopes);
+
+        var expectedEvent = MerchantActivatedEvent.builder()
+                .eventType(MerchantActivatedEvent.EVENT_TYPE)
+                .merchantId(merchantId)
+                .legalName(merchant.getLegalName())
+                .riskTier(merchant.getRiskTier() != null ? merchant.getRiskTier().name() : null)
+                .rateLimitTier(RateLimitTier.GROWTH.name())
+                .allowedScopes(scopes)
+                .primaryCurrency(merchant.getPrimaryCurrency())
+                .build();
 
         // when
-        var result = service.activate(merchantId, request);
+        handler.activate(merchantId, approver, scopes);
 
         // then
-        assertThat(result).isNotNull();
         then(activationPolicy).should().validate(merchant);
-        then(eventPublisher).should().publish(any(MerchantActivatedEvent.class));
+        then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
+        then(eventPublisher).should().publish(
+                eqIgnoring(expectedEvent, "eventId", "correlationId"));
     }
 
     @Test
@@ -154,13 +161,12 @@ class MerchantApplicationServiceTest {
         // given
         var merchant = MerchantFixtures.appliedMerchant();
         var merchantId = merchant.getMerchantId();
-        var request = new ActivateMerchantRequest(MerchantFixtures.anApprover(), List.of("payments:read"));
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
-        org.mockito.BDDMockito.willThrow(new IllegalStateException("KYB not passed"))
+        willThrow(new IllegalStateException("KYB not passed"))
                 .given(activationPolicy).validate(any());
 
         // when / then
-        assertThatThrownBy(() -> service.activate(merchantId, request))
+        assertThatThrownBy(() -> handler.activate(merchantId, MerchantFixtures.anApprover(), List.of("payments:read")))
                 .isInstanceOf(IllegalStateException.class);
         then(eventPublisher).should(never()).publish(any());
     }
@@ -171,16 +177,26 @@ class MerchantApplicationServiceTest {
         // given
         var merchant = MerchantFixtures.activeMerchant();
         var merchantId = merchant.getMerchantId();
-        var request = new SuspendMerchantRequest("compliance review", null);
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
+        var expectedMerchant = merchant.toBuilder().build();
+        expectedMerchant.suspend();
+
+        var expectedEvent = MerchantSuspendedEvent.builder()
+                .eventType(MerchantSuspendedEvent.EVENT_TYPE)
+                .merchantId(merchantId)
+                .reason("compliance review")
+                .build();
+
         // when
-        service.suspend(merchantId, request);
+        handler.suspend(merchantId, "compliance review", null);
 
         // then
-        then(eventPublisher).should().publish(any(MerchantSuspendedEvent.class));
+        then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
+        then(eventPublisher).should().publish(
+                eqIgnoring(expectedEvent, "eventId", "correlationId"));
     }
 
     @Test
@@ -193,11 +209,14 @@ class MerchantApplicationServiceTest {
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
+        var expectedMerchant = merchant.toBuilder().build();
+        expectedMerchant.reactivate();
+
         // when
-        service.reactivate(merchantId);
+        handler.reactivate(merchantId);
 
         // then
-        then(merchantRepository).should().save(any(Merchant.class));
+        then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
     }
 
     @Test
@@ -206,16 +225,26 @@ class MerchantApplicationServiceTest {
         // given
         var merchant = MerchantFixtures.activeMerchant();
         var merchantId = merchant.getMerchantId();
-        var request = new CloseMerchantRequest("business closure", null);
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
+        var expectedMerchant = merchant.toBuilder().build();
+        expectedMerchant.close();
+
+        var expectedEvent = MerchantClosedEvent.builder()
+                .eventType(MerchantClosedEvent.EVENT_TYPE)
+                .merchantId(merchantId)
+                .reason("business closure")
+                .build();
+
         // when
-        service.close(merchantId, request);
+        handler.close(merchantId, "business closure", null);
 
         // then
-        then(eventPublisher).should().publish(any(MerchantClosedEvent.class));
+        then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
+        then(eventPublisher).should().publish(
+                eqIgnoring(expectedEvent, "eventId", "correlationId"));
     }
 
     @Test
@@ -225,23 +254,40 @@ class MerchantApplicationServiceTest {
         var merchant = MerchantFixtures.activeMerchant();
         var merchantId = merchant.getMerchantId();
         var approvedBy = MerchantFixtures.anApprover();
-        var request = new ApproveCorridorRequest("GB", "US", List.of("GBP", "USD"),
-                new BigDecimal("100000"), Instant.now().plusSeconds(86400));
+        var expiresAt = Instant.now().plusSeconds(86400);
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
         given(approvedCorridorRepository.save(any(ApprovedCorridor.class)))
                 .willAnswer(inv -> inv.getArgument(0));
-        given(responseMapper.toCorridorResponse(any(ApprovedCorridor.class)))
-                .willReturn(new CorridorResponse(UUID.randomUUID(), merchantId, "GB", "US",
-                        List.of("GBP", "USD"), new BigDecimal("100000"), approvedBy,
-                        Instant.now(), request.expiresAt(), true));
+
+        var expectedCorridor = ApprovedCorridor.builder()
+                .merchantId(merchantId)
+                .sourceCountry("GB")
+                .targetCountry("US")
+                .currencies(List.of("GBP", "USD"))
+                .maxAmountUsd(new BigDecimal("100000"))
+                .approvedBy(approvedBy)
+                .expiresAt(expiresAt)
+                .isActive(true)
+                .build();
+
+        var expectedEvent = MerchantCorridorApprovedEvent.builder()
+                .eventType(MerchantCorridorApprovedEvent.EVENT_TYPE)
+                .merchantId(merchantId)
+                .sourceCountry("GB")
+                .targetCountry("US")
+                .maxAmountUsd("100000")
+                .build();
 
         // when
-        var result = service.approveCorridor(merchantId, request, approvedBy);
+        handler.approveCorridor(merchantId, "GB", "US",
+                List.of("GBP", "USD"), new BigDecimal("100000"), expiresAt, approvedBy);
 
         // then
-        assertThat(result).isNotNull();
         then(corridorEntitlementService).should().validate(merchant, "GB", "US");
-        then(eventPublisher).should().publish(any(MerchantCorridorApprovedEvent.class));
+        then(approvedCorridorRepository).should().save(
+                eqIgnoring(expectedCorridor, "corridorId"));
+        then(eventPublisher).should().publish(
+                eqIgnoring(expectedEvent, "eventId", "correlationId", "corridorId"));
     }
 
     @Test
@@ -252,16 +298,7 @@ class MerchantApplicationServiceTest {
         given(merchantRepository.findById(merchantId)).willReturn(Optional.empty());
 
         // when / then
-        assertThatThrownBy(() -> service.findById(merchantId))
+        assertThatThrownBy(() -> handler.findById(merchantId))
                 .isInstanceOf(MerchantNotFoundException.class);
-    }
-
-    private MerchantResponse merchantResponse(UUID merchantId) {
-        return new MerchantResponse(
-                merchantId, "Acme Ltd", "Acme", "REG-123", "GB",
-                "PRIVATE_LIMITED", "https://acme.com", "USD",
-                "ACTIVE", "PASSED", "LOW", "GROWTH",
-                List.of("payments:read"), List.of("GB->US"),
-                Instant.now(), Instant.now(), Instant.now());
     }
 }

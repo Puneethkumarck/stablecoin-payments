@@ -92,6 +92,10 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     // hypersistence-utils removed: using native Hibernate 7 @JdbcTypeCode(SqlTypes.JSON) for JSONB
 
+    // Test Fixtures
+    testFixturesImplementation("org.assertj:assertj-core")
+    testFixturesImplementation("org.mockito:mockito-core")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")

@@ -2,7 +2,9 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.request.CreateMerchantRequest;
 import com.stablecoin.payments.gateway.iam.api.response.MerchantResponse;
-import com.stablecoin.payments.gateway.iam.application.service.MerchantApplicationService;
+import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
+import com.stablecoin.payments.gateway.iam.domain.model.Corridor;
+import com.stablecoin.payments.gateway.iam.domain.service.MerchantCommandHandler;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -23,17 +27,33 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MerchantController {
 
-    private final MerchantApplicationService merchantApplicationService;
+    private final MerchantCommandHandler merchantCommandHandler;
+    private final GatewayRequestResponseMapper mapper;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MerchantResponse createMerchant(@Valid @RequestBody CreateMerchantRequest request) {
         log.info("Create merchant externalId={} name={}", request.externalId(), request.name());
-        return merchantApplicationService.createMerchant(request);
+
+        List<Corridor> corridors = request.corridors() != null
+                ? request.corridors().stream()
+                        .map(c -> new Corridor(c.sourceCountry(), c.targetCountry()))
+                        .toList()
+                : Collections.emptyList();
+
+        var merchant = merchantCommandHandler.register(
+                request.externalId(),
+                request.name(),
+                request.country(),
+                request.scopes() != null ? request.scopes() : Collections.emptyList(),
+                corridors);
+
+        return mapper.toMerchantResponse(merchant);
     }
 
     @GetMapping("/{merchantId}")
     public MerchantResponse getMerchant(@PathVariable UUID merchantId) {
-        return merchantApplicationService.getMerchant(merchantId);
+        var merchant = merchantCommandHandler.findById(merchantId);
+        return mapper.toMerchantResponse(merchant);
     }
 }

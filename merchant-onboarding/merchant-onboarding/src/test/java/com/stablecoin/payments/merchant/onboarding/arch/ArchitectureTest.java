@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 @DisplayName("Architecture rules")
@@ -44,12 +46,15 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("domain must not import Spring Framework classes")
+    @DisplayName("domain must not import Spring Framework classes except stereotype annotations")
     void domainMustNotImportSpring() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage(BASE + ".domain..")
-                .should().dependOnClassesThat()
-                .resideInAPackage("org.springframework..");
+                .should().dependOnClassesThat(
+                        resideInAPackage("org.springframework..")
+                                .and(resideOutsideOfPackage("org.springframework.stereotype.."))
+                                .and(resideOutsideOfPackage("org.springframework.transaction.."))
+                );
         rule.check(classes);
     }
 

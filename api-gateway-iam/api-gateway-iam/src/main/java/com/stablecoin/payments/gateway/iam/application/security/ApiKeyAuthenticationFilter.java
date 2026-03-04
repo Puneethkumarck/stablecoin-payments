@@ -4,7 +4,7 @@ import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyExpiredExcepti
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyRevokedException;
 import com.stablecoin.payments.gateway.iam.domain.exception.IpNotAllowedException;
-import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyService;
+import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,7 +24,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String API_KEY_HEADER = "X-API-Key";
 
-    private final ApiKeyService apiKeyService;
+    private final ApiKeyCommandHandler apiKeyService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

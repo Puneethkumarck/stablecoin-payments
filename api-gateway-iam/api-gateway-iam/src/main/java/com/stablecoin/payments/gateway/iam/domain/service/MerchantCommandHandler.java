@@ -1,5 +1,6 @@
 package com.stablecoin.payments.gateway.iam.domain.service;
 
+import com.stablecoin.payments.gateway.iam.domain.event.OAuthClientProvisionedEvent;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.model.Corridor;
 import com.stablecoin.payments.gateway.iam.domain.model.KybStatus;
@@ -8,29 +9,30 @@ import com.stablecoin.payments.gateway.iam.domain.model.MerchantStatus;
 import com.stablecoin.payments.gateway.iam.domain.model.RateLimitTier;
 import com.stablecoin.payments.gateway.iam.domain.port.AccessTokenRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
+import com.stablecoin.payments.gateway.iam.domain.port.EventPublisher;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.OAuthClientRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-public class MerchantService {
+@Slf4j
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class MerchantCommandHandler {
 
     private final MerchantRepository merchantRepository;
     private final ApiKeyRepository apiKeyRepository;
     private final OAuthClientRepository oauthClientRepository;
     private final AccessTokenRepository accessTokenRepository;
-
-    public MerchantService(MerchantRepository merchantRepository,
-                           ApiKeyRepository apiKeyRepository,
-                           OAuthClientRepository oauthClientRepository,
-                           AccessTokenRepository accessTokenRepository) {
-        this.merchantRepository = merchantRepository;
-        this.apiKeyRepository = apiKeyRepository;
-        this.oauthClientRepository = oauthClientRepository;
-        this.accessTokenRepository = accessTokenRepository;
-    }
+    private final OAuthClientCommandHandler oauthClientCommandHandler;
+    private final EventPublisher<Object> eventPublisher;
 
     public Merchant register(UUID externalId, String name, String country,
                              List<String> scopes, List<Corridor> corridors) {
@@ -78,13 +80,42 @@ public class MerchantService {
         return merchantRepository.save(merchant);
     }
 
+    @Transactional(readOnly = true)
     public Merchant findById(UUID merchantId) {
         return merchantRepository.findById(merchantId)
                 .orElseThrow(() -> MerchantNotFoundException.byId(merchantId));
     }
 
+    @Transactional(readOnly = true)
     public Merchant findByExternalId(UUID externalId) {
         return merchantRepository.findByExternalId(externalId)
                 .orElseThrow(() -> MerchantNotFoundException.byExternalId(externalId));
+    }
+
+    public void activateAndProvisionOAuthClient(UUID externalId, String companyName,
+                                                 List<String> scopes) {
+        var merchant = activate(externalId);
+
+        var effectiveScopes = (scopes != null && !scopes.isEmpty())
+                ? scopes : merchant.getScopes();
+
+        var result = oauthClientCommandHandler.create(
+                merchant.getMerchantId(),
+                companyName + " Default Client",
+                effectiveScopes,
+                List.of("client_credentials"));
+
+        var client = result.client();
+        eventPublisher.publish(new OAuthClientProvisionedEvent(
+                client.getClientId(),
+                client.getMerchantId(),
+                result.rawSecret(),
+                client.getName(),
+                client.getScopes(),
+                client.getGrantTypes(),
+                client.getCreatedAt()));
+
+        log.info("Activated merchant and provisioned default OAuth client externalId={} clientId={}",
+                externalId, client.getClientId());
     }
 }
