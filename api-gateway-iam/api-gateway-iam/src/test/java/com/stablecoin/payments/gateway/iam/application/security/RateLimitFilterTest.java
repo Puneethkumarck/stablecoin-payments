@@ -2,7 +2,6 @@ package com.stablecoin.payments.gateway.iam.application.security;
 
 import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
 import com.stablecoin.payments.gateway.iam.domain.model.MerchantStatus;
-import com.stablecoin.payments.gateway.iam.domain.model.RateLimitPolicy;
 import com.stablecoin.payments.gateway.iam.domain.model.RateLimitTier;
 import com.stablecoin.payments.gateway.iam.domain.port.MerchantRepository;
 import com.stablecoin.payments.gateway.iam.domain.port.RateLimitEventRepository;

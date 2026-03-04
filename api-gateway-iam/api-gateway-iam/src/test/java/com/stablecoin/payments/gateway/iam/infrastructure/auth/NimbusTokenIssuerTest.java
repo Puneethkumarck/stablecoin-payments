@@ -1,6 +1,5 @@
 package com.stablecoin.payments.gateway.iam.infrastructure.auth;
 
-import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
