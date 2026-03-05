@@ -1,0 +1,9 @@
+{
+  "id": "check-e2e-sandbox-001",
+  "status": "in_progress",
+  "result": null,
+  "href": "/v3.6/checks/check-e2e-sandbox-001",
+  "applicant_id": "applicant-e2e-sandbox-001",
+  "report_ids": ["report-e2e-sandbox-001"],
+  "tags": []
+}

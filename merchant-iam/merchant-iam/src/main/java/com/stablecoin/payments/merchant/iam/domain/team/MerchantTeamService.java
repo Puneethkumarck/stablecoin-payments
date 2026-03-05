@@ -36,6 +36,7 @@ public class MerchantTeamService {
     private final PermissionCacheProvider permissionCacheProvider;
     private final InvitationTokenGenerator tokenGenerator;
     private final EmailHasher emailHasher;
+    private final PasswordHasher passwordHasher;
 
     // ── User management ─────────────────────────────────────────────────────
 
@@ -70,7 +71,8 @@ public class MerchantTeamService {
                 .orElseThrow(InvitationNotFoundException::withToken);
 
         var team = loadTeam(invitation.merchantId());
-        var activated = team.acceptInvitation(invitation.invitationId(), fullName, password);
+        var hashedPassword = passwordHasher.hash(password);
+        var activated = team.acceptInvitation(invitation.invitationId(), fullName, hashedPassword);
 
         userRepository.save(activated);
         invitationRepository.save(team.getInvitations().stream()

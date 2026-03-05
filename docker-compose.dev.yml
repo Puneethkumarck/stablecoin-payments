@@ -196,12 +196,15 @@ services:
   # ─────────────────────────────────────────────
   # Mailhog — captures outbound email (replaces SendGrid in dev)
   # ─────────────────────────────────────────────
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: sp-mailhog
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: sp-mailpit
     ports:
       - "1025:1025"   # SMTP — point SMTP config here
-      - "8025:8025"   # Web UI — view captured emails
+      - "8025:8025"   # Web UI + REST API (GET /api/v1/messages)
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
   # ─────────────────────────────────────────────
   # WireMock — stubs for external providers
@@ -215,7 +218,7 @@ services:
     volumes:
       - ./infra/local/wiremock/mappings:/home/wiremock/mappings
       - ./infra/local/wiremock/__files:/home/wiremock/__files
-    command: --verbose
+    command: --verbose --global-response-templating
 
 volumes:
   pgdata:

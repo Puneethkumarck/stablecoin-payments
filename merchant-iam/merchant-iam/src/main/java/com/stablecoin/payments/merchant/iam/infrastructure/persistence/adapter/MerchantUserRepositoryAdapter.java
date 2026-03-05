@@ -73,6 +73,8 @@ public class MerchantUserRepositoryAdapter implements MerchantUserRepository {
             }
             return mapper.toDomain(jpa.save(entity));
         }
-        return mapper.toDomain(jpa.save(mapper.toEntity(user)));
+        var entity = mapper.toEntity(user);
+        entity.setRole(roleJpa.getReferenceById(user.roleId()));
+        return mapper.toDomain(jpa.save(entity));
     }
 }

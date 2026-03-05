@@ -173,7 +173,7 @@ public class MerchantTeam {
 
     /**
      * Creates the first ADMIN user when a merchant is activated.
-     * The user starts in ACTIVE status (no invitation needed).
+     * The user starts in INVITED status — they set their password via the invitation link.
      */
     public MerchantUser createFirstAdmin(String email, String emailHash, String fullName,
                                          String passwordHash) {
@@ -185,29 +185,16 @@ public class MerchantTeam {
                 .email(email)
                 .emailHash(emailHash)
                 .fullName(fullName)
-                .status(UserStatus.ACTIVE)
+                .status(UserStatus.INVITED)
                 .roleId(adminRole.roleId())
                 .passwordHash(passwordHash)
                 .authProvider(AuthProvider.LOCAL)
                 .mfaEnabled(false)
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
-                .activatedAt(Instant.now())
                 .build();
 
         users.add(user);
-
-        domainEvents.add(MerchantUserActivatedEvent.builder()
-                .schemaVersion(MerchantUserActivatedEvent.SCHEMA_VERSION)
-                .eventId(UUID.randomUUID().toString())
-                .eventType(MerchantUserActivatedEvent.EVENT_TYPE)
-                .merchantId(merchantId)
-                .userId(user.userId())
-                .emailHash(emailHash)
-                .roleId(adminRole.roleId())
-                .roleName(adminRole.roleName())
-                .occurredAt(Instant.now())
-                .build());
 
         return user;
     }

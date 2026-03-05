@@ -24,6 +24,8 @@ public final class MerchantFixtures {
                 EntityType.PRIVATE_LIMITED,
                 "https://acmepay.com",
                 "USD",
+                "admin@acmepay.com",
+                "Jane Smith",
                 aRegisteredAddress(),
                 aBeneficialOwners(),
                 List.of("GB->US", "GB->EU")

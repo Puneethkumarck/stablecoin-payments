@@ -13,6 +13,8 @@ public record MerchantResponse(
         String entityType,
         String websiteUrl,
         String primaryCurrency,
+        String primaryContactEmail,
+        String primaryContactName,
         String status,
         String kybStatus,
         String riskTier,

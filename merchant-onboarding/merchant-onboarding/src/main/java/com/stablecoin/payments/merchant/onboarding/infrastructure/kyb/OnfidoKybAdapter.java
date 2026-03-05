@@ -8,9 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +41,9 @@ public class OnfidoKybAdapter implements KybProvider {
 
   public OnfidoKybAdapter(OnfidoProperties properties) {
     this.properties = properties;
+    var httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
     this.restClient = RestClient.builder().baseUrl(properties.baseUrl())
+        .requestFactory(new JdkClientHttpRequestFactory(httpClient))
         .defaultHeader(HttpHeaders.AUTHORIZATION, "Token token=" + properties.apiToken())
         .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
   }

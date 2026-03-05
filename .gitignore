@@ -1,6 +1,9 @@
 # Gradle
 .gradle/
 build/
+
+# Local run (PIDs, logs)
+.run/
 !gradle/wrapper/gradle-wrapper.jar
 
 # IDE
@@ -24,6 +27,16 @@ credentials.json
 
 # Logs
 *.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+
+# Monitoring (Grafana/Prometheus local data)
+monitoring/
 
 # Claude Code
 .claude/

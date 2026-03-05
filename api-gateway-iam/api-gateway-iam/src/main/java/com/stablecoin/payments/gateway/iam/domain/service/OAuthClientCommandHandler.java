@@ -64,5 +64,12 @@ public class OAuthClientCommandHandler {
         return new CreateOAuthClientResult(saved, rawSecret);
     }
 
+    @Transactional(readOnly = true)
+    public List<OAuthClient> listByMerchantId(UUID merchantId) {
+        merchantRepository.findById(merchantId)
+                .orElseThrow(() -> MerchantNotFoundException.byId(merchantId));
+        return oauthClientRepository.findByMerchantId(merchantId);
+    }
+
     public record CreateOAuthClientResult(OAuthClient client, String rawSecret) {}
 }

@@ -2,12 +2,14 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.request.CreateOAuthClientRequest;
 import com.stablecoin.payments.gateway.iam.api.response.OAuthClientResponse;
+import com.stablecoin.payments.gateway.iam.api.response.OAuthClientSummaryResponse;
 import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
 import com.stablecoin.payments.gateway.iam.domain.service.OAuthClientCommandHandler;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,5 +44,13 @@ public class OAuthClientController {
                 request.grantTypes() != null ? request.grantTypes() : List.of("client_credentials"));
 
         return mapper.toOAuthClientResponse(result);
+    }
+
+    @GetMapping
+    public List<OAuthClientSummaryResponse> listOAuthClients(@PathVariable UUID merchantId) {
+        log.info("List OAuth clients merchantId={}", merchantId);
+        return oauthClientCommandHandler.listByMerchantId(merchantId).stream()
+                .map(mapper::toOAuthClientSummaryResponse)
+                .toList();
     }
 }

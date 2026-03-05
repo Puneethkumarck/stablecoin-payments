@@ -34,6 +34,11 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
             "/actuator/"
     );
 
+    /** Path segments that mark a sub-resource as auth-related (login, refresh, logout, mfa). */
+    private static final Set<String> AUTH_PATH_SEGMENTS = Set.of(
+            "/auth/login", "/auth/refresh", "/auth/logout", "/auth/mfa"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -58,6 +63,10 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
             return false;
         }
         var uri = request.getRequestURI();
-        return EXEMPT_PREFIXES.stream().noneMatch(uri::startsWith);
+        if (EXEMPT_PREFIXES.stream().anyMatch(uri::startsWith)) {
+            return false;
+        }
+        // Exempt merchant-scoped auth endpoints: /v1/merchants/{id}/auth/login etc.
+        return AUTH_PATH_SEGMENTS.stream().noneMatch(uri::contains);
     }
 }

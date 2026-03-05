@@ -26,7 +26,7 @@ public class MerchantEventListener {
             log.info("Received merchant.activated merchantId={}", event.merchantId());
 
             merchantCommandHandler.activateAndProvisionOAuthClient(
-                    event.merchantId(), event.companyName(), event.scopes());
+                    event.merchantId(), event.companyName(), event.country(), event.scopes());
 
             log.info("Activated merchant and provisioned default OAuth client merchantId={}",
                     event.merchantId());
@@ -66,9 +66,19 @@ public class MerchantEventListener {
         }
     }
 
-    record MerchantActivatedEvent(UUID merchantId, String companyName, String country,
-                                  java.util.List<String> scopes) {
+    record MerchantActivatedEvent(UUID merchantId, String companyName, String legalName,
+                                  String country, String registrationCountry,
+                                  java.util.List<String> scopes, java.util.List<String> allowedScopes) {
         MerchantActivatedEvent {
+            if (companyName == null && legalName != null) {
+                companyName = legalName;
+            }
+            if (country == null && registrationCountry != null) {
+                country = registrationCountry;
+            }
+            if (scopes == null && allowedScopes != null) {
+                scopes = allowedScopes;
+            }
             if (scopes == null) {
                 scopes = Collections.emptyList();
             }

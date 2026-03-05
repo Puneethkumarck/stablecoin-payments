@@ -56,4 +56,10 @@ public class MerchantController {
         var merchant = merchantCommandHandler.findById(merchantId);
         return mapper.toMerchantResponse(merchant);
     }
+
+    @GetMapping(params = "externalId")
+    public MerchantResponse getMerchantByExternalId(@org.springframework.web.bind.annotation.RequestParam UUID externalId) {
+        var merchant = merchantCommandHandler.findByExternalId(externalId);
+        return mapper.toMerchantResponse(merchant);
+    }
 }

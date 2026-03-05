@@ -288,7 +288,7 @@ class MerchantCommandHandlerTest {
                     .willReturn(new OAuthClientCommandHandler.CreateOAuthClientResult(oauthClient, "raw-secret"));
 
             merchantCommandHandler.activateAndProvisionOAuthClient(
-                    externalId, "Acme Corp", List.of("payments:read"));
+                    externalId, "Acme Corp", "US", List.of("payments:read"));
 
             then(oauthClientCommandHandler).should().create(
                     merchantId, "Acme Corp Default Client",
@@ -334,7 +334,7 @@ class MerchantCommandHandlerTest {
                     .willReturn(new OAuthClientCommandHandler.CreateOAuthClientResult(oauthClient, "raw-secret"));
 
             merchantCommandHandler.activateAndProvisionOAuthClient(
-                    externalId, "Test Corp", List.of());
+                    externalId, "Test Corp", "US", List.of());
 
             then(oauthClientCommandHandler).should().create(
                     merchantId, "Test Corp Default Client",

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -52,9 +53,38 @@ class MerchantTeamTest {
         return team.seedBuiltInRoles();
     }
 
+    /**
+     * Mirrors the production flow in {@code MerchantTeamService.seedRolesAndFirstAdmin}:
+     * 1. Seeds built-in roles
+     * 2. Creates first admin in INVITED status (aggregate)
+     * 3. Creates PENDING invitation (service layer — simulated by reconstructing the team)
+     * 4. Accepts invitation → admin transitions to ACTIVE with password set
+     */
     private MerchantUser createAdmin() {
         seedRoles();
-        return team.createFirstAdmin("admin@test.com", "admin-hash", "Admin User", "pwd-hash");
+        var admin = team.createFirstAdmin("admin@test.com", "admin-hash", "Admin User", "");
+
+        // Service layer creates the invitation and saves to DB.
+        // Simulate by reconstructing the team as loadTeam() would after the DB round-trip.
+        var invitation = Invitation.builder()
+                .invitationId(UUID.randomUUID())
+                .merchantId(MERCHANT_ID)
+                .email("admin@test.com")
+                .emailHash("admin-hash")
+                .roleId(admin.roleId())
+                .invitedBy(admin.userId())
+                .tokenHash("admin-token-hash")
+                .status(InvitationStatus.PENDING)
+                .createdAt(Instant.now())
+                .expiresAt(Instant.now().plus(Duration.ofDays(7)))
+                .build();
+
+        team = new MerchantTeam(MERCHANT_ID,
+                new ArrayList<>(team.getRoles()),
+                new ArrayList<>(team.getUsers()),
+                new ArrayList<>(List.of(invitation)));
+
+        return team.acceptInvitation(invitation.invitationId(), "Admin User", "pwd-hash");
     }
 
     private Role findRole(String name) {
@@ -125,13 +155,13 @@ class MerchantTeamTest {
     class CreateFirstAdmin {
 
         @Test
-        void creates_active_user_with_admin_role() {
+        void creates_invited_user_with_admin_role() {
             seedRoles();
             var admin = team.createFirstAdmin(
                     "admin@test.com", "admin-hash", "Admin User", "pwd-hash");
 
             var expected = MerchantUser.builder()
-                    .status(UserStatus.ACTIVE)
+                    .status(UserStatus.INVITED)
                     .email("admin@test.com")
                     .fullName("Admin User")
                     .passwordHash("pwd-hash")
@@ -141,7 +171,7 @@ class MerchantTeamTest {
             assertThat(admin).usingRecursiveComparison()
                     .comparingOnlyFields("status", "email", "fullName", "passwordHash", "authProvider", "merchantId")
                     .isEqualTo(expected);
-            assertThat(admin.activatedAt()).isNotNull();
+            assertThat(admin.activatedAt()).isNull();
         }
 
         @Test
@@ -156,14 +186,11 @@ class MerchantTeamTest {
         }
 
         @Test
-        void produces_activated_event() {
+        void produces_no_domain_events() {
             seedRoles();
             team.createFirstAdmin("admin@test.com", "admin-hash", "Admin User", "pwd-hash");
 
-            assertThat(team.domainEvents()).singleElement()
-                    .isInstanceOf(MerchantUserActivatedEvent.class)
-                    .extracting("merchantId", "emailHash", "roleName", "schemaVersion")
-                    .containsExactly(MERCHANT_ID, "admin-hash", "ADMIN", "1.0");
+            assertThat(team.domainEvents()).isEmpty();
         }
 
         @Test

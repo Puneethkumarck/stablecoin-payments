@@ -56,6 +56,8 @@ public interface MerchantRequestResponseMapper {
                 EntityType.valueOf(request.entityType()),
                 request.websiteUrl(),
                 request.primaryCurrency(),
+                request.primaryContactEmail(),
+                request.primaryContactName(),
                 toBusinessAddress(request.registeredAddress()),
                 toBeneficialOwners(request.beneficialOwners()),
                 request.requestedCorridors()

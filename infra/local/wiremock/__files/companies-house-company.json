@@ -1,0 +1,15 @@
+{
+  "company_name": "Acme Payments Ltd",
+  "company_number": "12345678",
+  "company_status": "active",
+  "type": "ltd",
+  "date_of_creation": "2020-01-15",
+  "registered_office_address": {
+    "address_line_1": "10 Downing Street",
+    "locality": "London",
+    "postal_code": "SW1A 2AA",
+    "country": "United Kingdom"
+  },
+  "jurisdiction": "england-wales",
+  "sic_codes": ["64999"]
+}
