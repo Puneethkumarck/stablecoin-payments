@@ -1,3 +1,7 @@
+app:
+  security:
+    enabled: false
+
 spring:
   jpa:
     hibernate:

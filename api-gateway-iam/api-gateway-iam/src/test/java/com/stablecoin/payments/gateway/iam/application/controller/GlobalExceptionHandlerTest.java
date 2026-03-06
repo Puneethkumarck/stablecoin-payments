@@ -2,6 +2,7 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.InvalidClientCredentialsException;
+import com.stablecoin.payments.gateway.iam.domain.exception.MerchantAccessDeniedException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotActiveException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.RateLimitExceededException;
@@ -33,6 +34,16 @@ class GlobalExceptionHandlerTest {
 
         assertThat(error.code()).isEqualTo("GW-2001");
         assertThat(error.status()).isEqualTo("Not Found");
+    }
+
+    @Test
+    @DisplayName("should handle merchant access denied as 403")
+    void shouldHandleMerchantAccessDenied() {
+        var error = handler.handleMerchantAccessDenied(
+                MerchantAccessDeniedException.forMerchant(UUID.randomUUID()));
+
+        assertThat(error.code()).isEqualTo("GW-2003");
+        assertThat(error.status()).isEqualTo("Forbidden");
     }
 
     @Test

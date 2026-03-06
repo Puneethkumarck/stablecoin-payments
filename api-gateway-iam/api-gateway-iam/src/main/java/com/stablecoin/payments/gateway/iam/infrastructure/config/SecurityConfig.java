@@ -13,10 +13,10 @@ import com.stablecoin.payments.gateway.iam.domain.port.TokenIssuer;
 import com.stablecoin.payments.gateway.iam.domain.port.TokenRevocationCache;
 import com.stablecoin.payments.gateway.iam.domain.port.UserJwksProvider;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,7 +30,6 @@ public class SecurityConfig {
 
     @Bean
     @ConditionalOnProperty(name = "app.security.enabled", havingValue = "true", matchIfMissing = true)
-    @ConditionalOnMissingBean(name = "testSecurityFilterChain")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtFilter,
                                                    ApiKeyAuthenticationFilter apiKeyFilter,
@@ -43,7 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/token").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/revoke").authenticated()
                         .requestMatchers("/.well-known/**").permitAll()
                         .anyRequest().authenticated()
                 )

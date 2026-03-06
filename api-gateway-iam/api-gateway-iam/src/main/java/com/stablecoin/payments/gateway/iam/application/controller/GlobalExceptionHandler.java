@@ -6,6 +6,7 @@ import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundExcept
 import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyRevokedException;
 import com.stablecoin.payments.gateway.iam.domain.exception.InvalidClientCredentialsException;
 import com.stablecoin.payments.gateway.iam.domain.exception.IpNotAllowedException;
+import com.stablecoin.payments.gateway.iam.domain.exception.MerchantAccessDeniedException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotActiveException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.OAuthClientNotFoundException;
@@ -57,6 +58,13 @@ public class GlobalExceptionHandler {
                                 Collectors.toList())));
         return ApiError.withErrors("GW-0001", BAD_REQUEST.getReasonPhrase(),
                 "Invalid request content", errors);
+    }
+
+    @ResponseStatus(FORBIDDEN)
+    @ExceptionHandler(MerchantAccessDeniedException.class)
+    public ApiError handleMerchantAccessDenied(MerchantAccessDeniedException ex) {
+        log.info("Merchant access denied: {}", ex.getMessage());
+        return ApiError.of("GW-2003", FORBIDDEN.getReasonPhrase(), ex.getMessage());
     }
 
     @ResponseStatus(UNAUTHORIZED)
