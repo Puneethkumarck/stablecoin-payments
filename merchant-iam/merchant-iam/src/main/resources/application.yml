@@ -134,6 +134,16 @@ server:
   port: ${SERVER_PORT:8083}
   shutdown: graceful
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: S13 Merchant IAM API
+    description: User authentication, roles, permissions, and team management
+    version: 1.0.0
+
 logging:
   level:
     com.stablecoin.payments: INFO

@@ -123,6 +123,16 @@ server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: S10 API Gateway & IAM API
+    description: OAuth2 authentication, API key management, rate limiting, and merchant registry
+    version: 1.0.0
+
 logging:
   level:
     com.stablecoin.payments: INFO
