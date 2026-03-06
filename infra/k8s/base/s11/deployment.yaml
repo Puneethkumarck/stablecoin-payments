@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s11-merchant-onboarding
+  namespace: stablebridge
+  labels:
+    app: s11-merchant-onboarding
+    service: merchant-onboarding
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s11-merchant-onboarding
+  template:
+    metadata:
+      labels:
+        app: s11-merchant-onboarding
+        service: merchant-onboarding
+    spec:
+      containers:
+        - name: s11-merchant-onboarding
+          image: eclipse-temurin:25-jre-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              JAR=$(find /libs -name '*.jar' ! -name '*-plain.jar' ! -name '*-test-fixtures.jar' | head -1)
+              exec java -jar $JAR
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: s11-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /onboarding/actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /onboarding/actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: app-jar
+              mountPath: /libs
+              readOnly: true
+      volumes:
+        - name: app-jar
+          hostPath:
+            path: /app-jars/merchant-onboarding
+            type: Directory

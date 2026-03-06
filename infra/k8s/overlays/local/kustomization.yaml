@@ -1,0 +1,66 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  # S10 — reduce resources + add JVM opts for local dev
+  - target:
+      kind: Deployment
+      name: s10-api-gateway
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "384Mi"
+            cpu: "200m"
+          limits:
+            memory: "768Mi"
+            cpu: "500m"
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: JAVA_TOOL_OPTIONS
+            value: "-Xms256m -Xmx512m -XX:+UseZGC"
+
+  # S11 — reduce resources + add JVM opts for local dev
+  - target:
+      kind: Deployment
+      name: s11-merchant-onboarding
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "384Mi"
+            cpu: "200m"
+          limits:
+            memory: "768Mi"
+            cpu: "500m"
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: JAVA_TOOL_OPTIONS
+            value: "-Xms256m -Xmx512m -XX:+UseZGC"
+
+  # S13 — reduce resources + add JVM opts for local dev
+  - target:
+      kind: Deployment
+      name: s13-merchant-iam
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            memory: "384Mi"
+            cpu: "200m"
+          limits:
+            memory: "768Mi"
+            cpu: "500m"
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: JAVA_TOOL_OPTIONS
+            value: "-Xms256m -Xmx512m -XX:+UseZGC"

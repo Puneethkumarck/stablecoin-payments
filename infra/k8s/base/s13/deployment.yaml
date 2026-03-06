@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s13-merchant-iam
+  namespace: stablebridge
+  labels:
+    app: s13-merchant-iam
+    service: merchant-iam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: s13-merchant-iam
+  template:
+    metadata:
+      labels:
+        app: s13-merchant-iam
+        service: merchant-iam
+    spec:
+      containers:
+        - name: s13-merchant-iam
+          image: eclipse-temurin:25-jre-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              JAR=$(find /libs -name '*.jar' ! -name '*-plain.jar' ! -name '*-test-fixtures.jar' | head -1)
+              exec java -jar $JAR
+          ports:
+            - containerPort: 8083
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: s13-config
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /iam/actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: /iam/actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 5
+          volumeMounts:
+            - name: app-jar
+              mountPath: /libs
+              readOnly: true
+      volumes:
+        - name: app-jar
+          hostPath:
+            path: /app-jars/merchant-iam
+            type: Directory

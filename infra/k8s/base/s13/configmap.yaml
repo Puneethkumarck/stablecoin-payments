@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s13-config
+  namespace: stablebridge
+  labels:
+    app: s13-merchant-iam
+data:
+  SPRING_PROFILES_ACTIVE: "local"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://host.docker.internal:5432/s13_merchant_iam"
+  SPRING_DATASOURCE_USERNAME: "dev"
+  SPRING_DATASOURCE_PASSWORD: "dev"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "host.docker.internal:9092"
+  SPRING_DATA_REDIS_HOST: "host.docker.internal"
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_MAIL_HOST: "host.docker.internal"
+  SPRING_MAIL_PORT: "1025"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318/v1/traces"

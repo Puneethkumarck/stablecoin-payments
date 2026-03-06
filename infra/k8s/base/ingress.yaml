@@ -1,0 +1,53 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stablebridge-ingress
+  namespace: stablebridge
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost,http://localhost:3000"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type,Idempotency-Key,X-Request-ID"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # S10 API Gateway — /gateway/*
+          - path: /gateway
+            pathType: Prefix
+            backend:
+              service:
+                name: s10-api-gateway
+                port:
+                  number: 8080
+
+          # S11 Merchant Onboarding — /onboarding/*
+          - path: /onboarding
+            pathType: Prefix
+            backend:
+              service:
+                name: s11-merchant-onboarding
+                port:
+                  number: 8081
+
+          # S13 Merchant IAM — /iam/*
+          - path: /iam
+            pathType: Prefix
+            backend:
+              service:
+                name: s13-merchant-iam
+                port:
+                  number: 8083
+
+          # Merchant Portal — / (default, must be last)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: merchant-portal
+                port:
+                  number: 3000
