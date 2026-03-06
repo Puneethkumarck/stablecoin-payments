@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/merchants/{merchantId}/oauth-clients")
@@ -32,6 +35,7 @@ public class OAuthClientController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize(HAS_MERCHANT_ACCESS)
     public OAuthClientResponse createOAuthClient(
             @PathVariable UUID merchantId,
             @Valid @RequestBody CreateOAuthClientRequest request) {
@@ -47,6 +51,7 @@ public class OAuthClientController {
     }
 
     @GetMapping
+    @PreAuthorize(HAS_MERCHANT_ACCESS)
     public List<OAuthClientSummaryResponse> listOAuthClients(@PathVariable UUID merchantId) {
         log.info("List OAuth clients merchantId={}", merchantId);
         return oauthClientCommandHandler.listByMerchantId(merchantId).stream()
