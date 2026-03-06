@@ -9,9 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS;
-import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_RESPONSE;
-
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +24,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS;
+import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_RESPONSE;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/merchants")
@@ -38,6 +38,7 @@ public class MerchantController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PostAuthorize(HAS_MERCHANT_ACCESS_VIA_RESPONSE)
     public MerchantResponse createMerchant(@Valid @RequestBody CreateMerchantRequest request) {
         log.info("Create merchant externalId={} name={}", request.externalId(), request.name());
 

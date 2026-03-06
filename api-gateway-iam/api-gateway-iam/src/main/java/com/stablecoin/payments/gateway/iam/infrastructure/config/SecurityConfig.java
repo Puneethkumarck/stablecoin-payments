@@ -16,6 +16,7 @@ import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -41,8 +42,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        .requestMatchers("/v1/auth/token").permitAll()
-                        .requestMatchers("/v1/auth/revoke").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/token").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/v1/auth/revoke").authenticated()
                         .requestMatchers("/.well-known/**").permitAll()
                         .anyRequest().authenticated()
                 )

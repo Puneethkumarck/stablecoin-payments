@@ -76,6 +76,21 @@ class MerchantScopeEnforcerTest {
     }
 
     @Nested
+    @DisplayName("with null target merchant ID")
+    class WithNullTarget {
+
+        @Test
+        @DisplayName("should throw when target merchant ID is null")
+        void shouldThrowWhenTargetIsNull() {
+            var merchantId = UUID.randomUUID();
+            setMerchantAuth(merchantId);
+
+            assertThatThrownBy(() -> enforcer.hasAccess(null))
+                    .isInstanceOf(MerchantAccessDeniedException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("with no authentication")
     class WithNoAuth {
 

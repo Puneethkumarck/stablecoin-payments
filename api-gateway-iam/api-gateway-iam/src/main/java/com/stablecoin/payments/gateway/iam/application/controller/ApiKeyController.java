@@ -3,14 +3,13 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 import com.stablecoin.payments.gateway.iam.api.request.CreateApiKeyRequest;
 import com.stablecoin.payments.gateway.iam.api.response.ApiKeyResponse;
 import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
+import com.stablecoin.payments.gateway.iam.application.security.MerchantScopeEnforcer;
 import com.stablecoin.payments.gateway.iam.domain.model.ApiKeyEnvironment;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_REQUEST;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +23,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.UUID;
 
+import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_REQUEST;
+
 @Slf4j
 @RestController
 @RequestMapping("/v1/api-keys")
@@ -32,6 +33,7 @@ public class ApiKeyController {
 
     private final ApiKeyCommandHandler apiKeyCommandHandler;
     private final GatewayRequestResponseMapper mapper;
+    private final MerchantScopeEnforcer merchantScopeEnforcer;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -60,6 +62,8 @@ public class ApiKeyController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeApiKey(@PathVariable UUID keyId) {
         log.info("Revoke API key keyId={}", keyId);
+        var apiKey = apiKeyCommandHandler.findById(keyId);
+        merchantScopeEnforcer.hasAccess(apiKey.getMerchantId());
         apiKeyCommandHandler.revoke(keyId);
     }
 }
