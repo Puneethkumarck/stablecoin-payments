@@ -2,7 +2,7 @@ package com.stablecoin.payments.merchant.onboarding.infrastructure.kyb;
 
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.CompanyRegistryProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -20,7 +20,7 @@ import java.util.Optional;
  */
 @Slf4j
 @Component
-@Profile("sandbox")
+@ConditionalOnProperty(name = "app.company-registry.provider", havingValue = "companies-house")
 public class CompaniesHouseAdapter implements CompanyRegistryProvider {
 
   private final RestClient restClient;
