@@ -4,6 +4,7 @@ import com.stablecoin.payments.merchant.iam.domain.exceptions.InvalidCredentials
 import com.stablecoin.payments.merchant.iam.domain.exceptions.RoleNotFoundException;
 import com.stablecoin.payments.merchant.iam.domain.team.model.MerchantUser;
 import com.stablecoin.payments.merchant.iam.domain.team.model.Role;
+import com.stablecoin.payments.merchant.iam.domain.team.model.UserSession;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.AuthProvider;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.BuiltInRole;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.UserStatus;
@@ -77,14 +78,51 @@ class AuthServiceTest {
     }
 
     @Nested
-    class RefreshToken {
+    class Login {
 
         @Test
-        void shouldRefreshTokenForActiveUser() {
+        void shouldPersistSessionOnSuccessfulLogin() {
+            var user = buildActiveUser();
+            given(emailHasher.hash("admin@test.com")).willReturn("hash");
+            given(loginAttemptTracker.isLockedOut("hash")).willReturn(false);
+            given(userRepository.findByMerchantIdAndEmailHash(MERCHANT_ID, "hash"))
+                    .willReturn(Optional.of(user));
+            given(passwordHasher.verify("password", null)).willReturn(true);
+            given(roleRepository.findById(ROLE_ID)).willReturn(Optional.of(buildRole()));
+            given(jwtTokenIssuer.refreshTokenTtlSeconds()).willReturn(86400);
+            given(jwtTokenIssuer.issueAccessToken(any(), any(), anyBoolean())).willReturn("access");
+            given(jwtTokenIssuer.issueRefreshToken(any(), any())).willReturn("refresh");
+            given(userRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+            given(sessionRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            authService.login(MERCHANT_ID, "admin@test.com", "password");
+
+            then(sessionRepository).should().save(any(UserSession.class));
+        }
+    }
+
+    @Nested
+    class RefreshToken {
+
+        private UserSession buildValidSession() {
+            return UserSession.builder()
+                    .sessionId(SESSION_ID)
+                    .userId(USER_ID)
+                    .merchantId(MERCHANT_ID)
+                    .createdAt(Instant.now())
+                    .expiresAt(Instant.now().plusSeconds(86400))
+                    .lastActiveAt(Instant.now())
+                    .revoked(false)
+                    .build();
+        }
+
+        @Test
+        void shouldRefreshTokenForActiveUserWithValidSession() {
             var parsed = new JwtTokenIssuer.ParsedRefreshToken(
                     UUID.randomUUID(), USER_ID, SESSION_ID,
                     Instant.now().plusSeconds(3600).getEpochSecond());
             given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.of(buildValidSession()));
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(buildActiveUser()));
             given(roleRepository.findById(ROLE_ID)).willReturn(Optional.of(buildRole()));
             given(jwtTokenIssuer.issueAccessToken(any(), any(), anyBoolean())).willReturn("new-access-token");
@@ -95,12 +133,59 @@ class AuthServiceTest {
         }
 
         @Test
+        void shouldRejectRefreshWhenSessionNotFound() {
+            var parsed = new JwtTokenIssuer.ParsedRefreshToken(
+                    UUID.randomUUID(), USER_ID, SESSION_ID,
+                    Instant.now().plusSeconds(3600).getEpochSecond());
+            given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.refreshToken("refresh-jwt"))
+                    .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        void shouldRejectRefreshWhenSessionRevoked() {
+            var parsed = new JwtTokenIssuer.ParsedRefreshToken(
+                    UUID.randomUUID(), USER_ID, SESSION_ID,
+                    Instant.now().plusSeconds(3600).getEpochSecond());
+            given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID))
+                    .willReturn(Optional.of(buildValidSession().revoke("logout")));
+
+            assertThatThrownBy(() -> authService.refreshToken("refresh-jwt"))
+                    .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
+        void shouldRejectRefreshWhenSessionExpired() {
+            var expired = UserSession.builder()
+                    .sessionId(SESSION_ID)
+                    .userId(USER_ID)
+                    .merchantId(MERCHANT_ID)
+                    .createdAt(Instant.now().minusSeconds(90000))
+                    .expiresAt(Instant.now().minusSeconds(3600))
+                    .lastActiveAt(Instant.now().minusSeconds(90000))
+                    .revoked(false)
+                    .build();
+            var parsed = new JwtTokenIssuer.ParsedRefreshToken(
+                    UUID.randomUUID(), USER_ID, SESSION_ID,
+                    Instant.now().plusSeconds(3600).getEpochSecond());
+            given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.of(expired));
+
+            assertThatThrownBy(() -> authService.refreshToken("refresh-jwt"))
+                    .isInstanceOf(InvalidCredentialsException.class);
+        }
+
+        @Test
         void shouldRejectRefreshForInactiveUser() {
             var suspended = buildActiveUser().suspend();
             var parsed = new JwtTokenIssuer.ParsedRefreshToken(
                     UUID.randomUUID(), USER_ID, SESSION_ID,
                     Instant.now().plusSeconds(3600).getEpochSecond());
             given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.of(buildValidSession()));
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(suspended));
 
             assertThatThrownBy(() -> authService.refreshToken("refresh-jwt"))
@@ -113,6 +198,7 @@ class AuthServiceTest {
                     UUID.randomUUID(), USER_ID, SESSION_ID,
                     Instant.now().plusSeconds(3600).getEpochSecond());
             given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.of(buildValidSession()));
             given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.refreshToken("refresh-jwt"))
@@ -125,6 +211,7 @@ class AuthServiceTest {
                     UUID.randomUUID(), USER_ID, SESSION_ID,
                     Instant.now().plusSeconds(3600).getEpochSecond());
             given(jwtTokenIssuer.parseRefreshToken("refresh-jwt")).willReturn(parsed);
+            given(sessionRepository.findById(SESSION_ID)).willReturn(Optional.of(buildValidSession()));
             given(userRepository.findById(USER_ID)).willReturn(Optional.of(buildActiveUser()));
             given(roleRepository.findById(ROLE_ID)).willReturn(Optional.empty());
 

@@ -2,8 +2,10 @@ package com.stablecoin.payments.merchant.iam.infrastructure.persistence.adapter;
 
 import com.stablecoin.payments.merchant.iam.domain.team.UserSessionRepository;
 import com.stablecoin.payments.merchant.iam.domain.team.model.UserSession;
+import com.stablecoin.payments.merchant.iam.infrastructure.persistence.entity.MerchantUserEntity;
 import com.stablecoin.payments.merchant.iam.infrastructure.persistence.mapper.UserSessionEntityMapper;
 import com.stablecoin.payments.merchant.iam.infrastructure.persistence.repository.UserSessionJpaRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,7 @@ public class UserSessionRepositoryAdapter implements UserSessionRepository {
 
     private final UserSessionJpaRepository jpa;
     private final UserSessionEntityMapper mapper;
+    private final EntityManager entityManager;
 
     @Override
     public Optional<UserSession> findById(UUID sessionId) {
@@ -45,7 +48,9 @@ public class UserSessionRepositoryAdapter implements UserSessionRepository {
             entity.setExpiresAt(session.expiresAt());
             return mapper.toDomain(jpa.save(entity));
         }
-        return mapper.toDomain(jpa.save(mapper.toEntity(session)));
+        var entity = mapper.toEntity(session);
+        entity.setUser(entityManager.getReference(MerchantUserEntity.class, session.userId()));
+        return mapper.toDomain(jpa.save(entity));
     }
 
     @Override

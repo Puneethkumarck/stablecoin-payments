@@ -195,6 +195,11 @@ public class NimbusJwtTokenIssuer implements JwtTokenIssuer {
     }
 
     @Override
+    public int refreshTokenTtlSeconds() {
+        return properties.refreshTokenTtlSeconds();
+    }
+
+    @Override
     public String jwksJson() {
         try {
             var publicKey = signingKey.toPublicJWK();

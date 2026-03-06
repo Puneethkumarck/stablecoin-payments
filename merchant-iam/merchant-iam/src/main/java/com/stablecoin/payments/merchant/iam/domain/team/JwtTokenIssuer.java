@@ -38,6 +38,11 @@ public interface JwtTokenIssuer {
     ParsedRefreshToken parseRefreshToken(String token);
 
     /**
+     * Returns the refresh token TTL in seconds (used to set session expiry).
+     */
+    int refreshTokenTtlSeconds();
+
+    /**
      * Returns the public key set in JWK Set JSON format for the JWKS endpoint.
      */
     String jwksJson();

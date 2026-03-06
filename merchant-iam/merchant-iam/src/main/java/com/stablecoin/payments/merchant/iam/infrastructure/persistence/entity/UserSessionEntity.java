@@ -36,7 +36,7 @@ public class UserSessionEntity {
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    @Column(name = "ip_address", nullable = false, length = 45)
+    @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
     @Column(name = "user_agent")

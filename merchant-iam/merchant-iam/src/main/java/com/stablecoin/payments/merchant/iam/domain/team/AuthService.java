@@ -6,12 +6,14 @@ import com.stablecoin.payments.merchant.iam.domain.exceptions.RoleNotFoundExcept
 import com.stablecoin.payments.merchant.iam.domain.exceptions.UserNotFoundException;
 import com.stablecoin.payments.merchant.iam.domain.team.model.MerchantUser;
 import com.stablecoin.payments.merchant.iam.domain.team.model.Role;
+import com.stablecoin.payments.merchant.iam.domain.team.model.UserSession;
 import com.stablecoin.payments.merchant.iam.domain.team.model.core.UserStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -114,11 +116,19 @@ public class AuthService {
 
     /**
      * Exchanges a valid refresh token for a new access token.
-     * Validates the refresh JWT signature, expiry, and that the user is still active.
+     * Validates the refresh JWT signature, expiry, session state, and that the user is still active.
      */
     @Transactional(readOnly = true)
     public RefreshResult refreshToken(String refreshTokenValue) {
         var parsed = jwtTokenIssuer.parseRefreshToken(refreshTokenValue);
+
+        var session = sessionRepository.findById(parsed.sessionId())
+                .orElseThrow(InvalidCredentialsException::invalidEmailOrPassword);
+
+        if (!session.isValid()) {
+            log.info("Refresh rejected — session revoked/expired sessionId={}", parsed.sessionId());
+            throw InvalidCredentialsException.invalidEmailOrPassword();
+        }
 
         var user = userRepository.findById(parsed.userId())
                 .orElseThrow(InvalidCredentialsException::invalidEmailOrPassword);
@@ -182,10 +192,21 @@ public class AuthService {
         var role = roleRepository.findById(user.roleId())
                 .orElseThrow(() -> RoleNotFoundException.withId(user.roleId()));
         var sessionId = UUID.randomUUID();
+        var now = Instant.now();
+        var session = UserSession.builder()
+                .sessionId(sessionId)
+                .userId(user.userId())
+                .merchantId(user.merchantId())
+                .createdAt(now)
+                .expiresAt(now.plusSeconds(jwtTokenIssuer.refreshTokenTtlSeconds()))
+                .lastActiveAt(now)
+                .revoked(false)
+                .build();
+        sessionRepository.save(session);
         var accessToken = jwtTokenIssuer.issueAccessToken(user, role, mfaVerified);
         var refreshToken = jwtTokenIssuer.issueRefreshToken(user.userId(), sessionId);
         var updated = userRepository.save(user.recordLogin());
-        log.info("Tokens issued userId={} mfaVerified={}", user.userId(), mfaVerified);
+        log.info("Tokens issued userId={} sessionId={} mfaVerified={}", user.userId(), sessionId, mfaVerified);
         return new LoginResult(updated, role, accessToken, refreshToken);
     }
 }
