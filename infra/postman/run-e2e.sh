@@ -170,7 +170,7 @@ S13_PID=$!
 echo "Starting S10 (API Gateway IAM) on port $S10_PORT..."
 java -jar "$S10_JAR" \
   --spring.profiles.active=local \
-  --merchant-iam.base-url=http://localhost:$S13_PORT \
+  --merchant-iam.base-url=http://localhost:$S13_PORT/iam \
   > "$LOG_DIR/s10.log" 2>&1 &
 S10_PID=$!
 
@@ -178,9 +178,9 @@ echo ""
 
 # Step 5: Wait for health
 echo "=== Step 5: Waiting for services to be healthy ==="
-wait_for_health "http://localhost:$S11_PORT/actuator/health" "S11" 60
-wait_for_health "http://localhost:$S13_PORT/actuator/health" "S13" 60
-wait_for_health "http://localhost:$S10_PORT/actuator/health" "S10" 60
+wait_for_health "http://localhost:$S11_PORT/onboarding/actuator/health" "S11" 60
+wait_for_health "http://localhost:$S13_PORT/iam/actuator/health" "S13" 60
+wait_for_health "http://localhost:$S10_PORT/gateway/actuator/health" "S10" 60
 echo ""
 
 # Step 6: Run Newman

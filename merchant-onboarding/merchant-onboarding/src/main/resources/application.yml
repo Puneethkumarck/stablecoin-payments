@@ -113,6 +113,8 @@ management:
 
 server:
   port: ${SERVER_PORT:8081}
+  servlet:
+    context-path: /onboarding
   shutdown: graceful
 
 springdoc:

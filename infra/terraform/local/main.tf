@@ -620,7 +620,7 @@ resource "docker_container" "s11" {
   ]
 
   healthcheck {
-    test         = ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+    test         = ["CMD-SHELL", "wget -qO- http://localhost:8081/onboarding/actuator/health || exit 1"]
     interval     = "10s"
     timeout      = "5s"
     retries      = 20
@@ -682,7 +682,7 @@ resource "docker_container" "s13" {
   ]
 
   healthcheck {
-    test         = ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+    test         = ["CMD-SHELL", "wget -qO- http://localhost:8083/iam/actuator/health || exit 1"]
     interval     = "10s"
     timeout      = "5s"
     retries      = 20
@@ -722,7 +722,7 @@ resource "docker_container" "s10" {
     "SPRING_KAFKA_BOOTSTRAP_SERVERS=sp-redpanda:29092",
     "SPRING_DATA_REDIS_HOST=sp-redis",
     "SPRING_DATA_REDIS_PORT=6379",
-    "MERCHANT_IAM_BASE_URL=http://sp-s13-merchant-iam:8083",
+    "MERCHANT_IAM_BASE_URL=http://sp-s13-merchant-iam:8083/iam",
     "OTEL_EXPORTER_OTLP_ENDPOINT=http://sp-tempo:4318/v1/traces",
   ]
 
@@ -743,7 +743,7 @@ resource "docker_container" "s10" {
   ]
 
   healthcheck {
-    test         = ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+    test         = ["CMD-SHELL", "wget -qO- http://localhost:8080/gateway/actuator/health || exit 1"]
     interval     = "10s"
     timeout      = "5s"
     retries      = 20

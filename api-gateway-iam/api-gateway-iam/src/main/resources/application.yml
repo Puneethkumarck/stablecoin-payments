@@ -61,7 +61,7 @@ api-gateway-iam:
     audience: ${JWT_AUDIENCE:payment-platform}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL:3600}
   merchant-iam:
-    base-url: ${MERCHANT_IAM_BASE_URL:http://localhost:8083}
+    base-url: ${MERCHANT_IAM_BASE_URL:http://localhost:8083/iam}
     issuer: ${MERCHANT_IAM_ISSUER:https://api.stablebridge.dev}
     audience: ${MERCHANT_IAM_AUDIENCE:payment-platform}
     jwks-cache-ttl-hours: ${MERCHANT_IAM_JWKS_CACHE_TTL_HOURS:24}
@@ -121,6 +121,8 @@ management:
 
 server:
   port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /gateway
   shutdown: graceful
 
 springdoc:
