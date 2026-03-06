@@ -11,6 +11,9 @@ public final class SecurityExpressions {
     public static final String HAS_MERCHANT_ACCESS_VIA_RESPONSE =
             "@merchantScopeEnforcer.hasAccess(returnObject.merchantId())";
 
+    public static final String HAS_MERCHANT_ACCESS_VIA_API_KEY =
+            "@merchantScopeEnforcer.hasAccessToApiKey(#keyId)";
+
     private SecurityExpressions() {
     }
 }

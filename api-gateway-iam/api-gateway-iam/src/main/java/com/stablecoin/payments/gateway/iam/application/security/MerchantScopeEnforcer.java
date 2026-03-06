@@ -1,6 +1,9 @@
 package com.stablecoin.payments.gateway.iam.application.security;
 
+import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantAccessDeniedException;
+import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -13,7 +16,10 @@ import java.util.UUID;
  * Used via {@code @PreAuthorize("@merchantScopeEnforcer.hasAccess(#merchantId)")}.
  */
 @Component
+@RequiredArgsConstructor
 public class MerchantScopeEnforcer {
+
+    private final ApiKeyRepository apiKeyRepository;
 
     /**
      * Checks whether the authenticated principal has access to the given merchant.
@@ -27,6 +33,19 @@ public class MerchantScopeEnforcer {
             throw MerchantAccessDeniedException.forMerchant(targetMerchantId);
         }
         return true;
+    }
+
+    /**
+     * Checks whether the authenticated principal owns the API key.
+     *
+     * @return true if the key's merchant ID matches the principal's
+     * @throws ApiKeyNotFoundException if the key does not exist
+     * @throws MerchantAccessDeniedException if the principal does not own the key
+     */
+    public boolean hasAccessToApiKey(UUID keyId) {
+        var apiKey = apiKeyRepository.findById(keyId)
+                .orElseThrow(() -> ApiKeyNotFoundException.byId(keyId));
+        return hasAccess(apiKey.getMerchantId());
     }
 
     /**

@@ -2,9 +2,7 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 
 import com.stablecoin.payments.gateway.iam.api.response.ApiKeyResponse;
 import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
-import com.stablecoin.payments.gateway.iam.application.security.MerchantScopeEnforcer;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantNotFoundException;
-import com.stablecoin.payments.gateway.iam.domain.model.ApiKey;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,9 +30,6 @@ class ApiKeyControllerTest {
 
     @Mock
     private GatewayRequestResponseMapper mapper;
-
-    @Mock
-    private MerchantScopeEnforcer merchantScopeEnforcer;
 
     @InjectMocks
     private ApiKeyController controller;
@@ -75,18 +70,12 @@ class ApiKeyControllerTest {
     }
 
     @Test
-    @DisplayName("revokeApiKey should verify merchant ownership and delegate to command handler")
+    @DisplayName("revokeApiKey should delegate to command handler")
     void shouldRevokeApiKey() {
         var keyId = UUID.randomUUID();
-        var merchantId = UUID.randomUUID();
-        var apiKey = ApiKey.builder().keyId(keyId).merchantId(merchantId).build();
-        given(apiKeyCommandHandler.findById(keyId)).willReturn(apiKey);
-        given(merchantScopeEnforcer.hasAccess(merchantId)).willReturn(true);
 
         controller.revokeApiKey(keyId);
 
-        then(apiKeyCommandHandler).should().findById(keyId);
-        then(merchantScopeEnforcer).should().hasAccess(merchantId);
         then(apiKeyCommandHandler).should().revoke(keyId);
     }
 }

@@ -70,12 +70,6 @@ public class ApiKeyCommandHandler {
         return new CreateApiKeyResult(saved, generated.rawKey());
     }
 
-    @Transactional(readOnly = true)
-    public ApiKey findById(UUID keyId) {
-        return apiKeyRepository.findById(keyId)
-                .orElseThrow(() -> ApiKeyNotFoundException.byId(keyId));
-    }
-
     public void revoke(UUID keyId) {
         var apiKey = apiKeyRepository.findById(keyId)
                 .orElseThrow(() -> ApiKeyNotFoundException.byId(keyId));

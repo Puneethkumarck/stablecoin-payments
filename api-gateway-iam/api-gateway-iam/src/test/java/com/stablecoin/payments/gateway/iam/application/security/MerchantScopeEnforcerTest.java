@@ -1,22 +1,36 @@
 package com.stablecoin.payments.gateway.iam.application.security;
 
+import com.stablecoin.payments.gateway.iam.domain.exception.ApiKeyNotFoundException;
 import com.stablecoin.payments.gateway.iam.domain.exception.MerchantAccessDeniedException;
+import com.stablecoin.payments.gateway.iam.domain.model.ApiKey;
+import com.stablecoin.payments.gateway.iam.domain.port.ApiKeyRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.given;
 
+@ExtendWith(MockitoExtension.class)
 @DisplayName("MerchantScopeEnforcer")
 class MerchantScopeEnforcerTest {
 
-    private final MerchantScopeEnforcer enforcer = new MerchantScopeEnforcer();
+    @Mock
+    private ApiKeyRepository apiKeyRepository;
+
+    @InjectMocks
+    private MerchantScopeEnforcer enforcer;
 
     @AfterEach
     void clearContext() {
@@ -72,6 +86,46 @@ class MerchantScopeEnforcerTest {
 
             assertThatThrownBy(() -> enforcer.hasAccess(otherMerchantId))
                     .isInstanceOf(MerchantAccessDeniedException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("hasAccessToApiKey")
+    class HasAccessToApiKey {
+
+        @Test
+        @DisplayName("should return true when principal owns the API key")
+        void shouldReturnTrueWhenOwner() {
+            var merchantId = UUID.randomUUID();
+            var keyId = UUID.randomUUID();
+            setMerchantAuth(merchantId);
+            given(apiKeyRepository.findById(keyId)).willReturn(
+                    Optional.of(ApiKey.builder().keyId(keyId).merchantId(merchantId).build()));
+
+            assertThat(enforcer.hasAccessToApiKey(keyId)).isTrue();
+        }
+
+        @Test
+        @DisplayName("should throw when principal does not own the API key")
+        void shouldThrowWhenNotOwner() {
+            var keyId = UUID.randomUUID();
+            setMerchantAuth(UUID.randomUUID());
+            given(apiKeyRepository.findById(keyId)).willReturn(
+                    Optional.of(ApiKey.builder().keyId(keyId).merchantId(UUID.randomUUID()).build()));
+
+            assertThatThrownBy(() -> enforcer.hasAccessToApiKey(keyId))
+                    .isInstanceOf(MerchantAccessDeniedException.class);
+        }
+
+        @Test
+        @DisplayName("should throw when API key not found")
+        void shouldThrowWhenKeyNotFound() {
+            var keyId = UUID.randomUUID();
+            setMerchantAuth(UUID.randomUUID());
+            given(apiKeyRepository.findById(keyId)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> enforcer.hasAccessToApiKey(keyId))
+                    .isInstanceOf(ApiKeyNotFoundException.class);
         }
     }
 

@@ -3,7 +3,6 @@ package com.stablecoin.payments.gateway.iam.application.controller;
 import com.stablecoin.payments.gateway.iam.api.request.CreateApiKeyRequest;
 import com.stablecoin.payments.gateway.iam.api.response.ApiKeyResponse;
 import com.stablecoin.payments.gateway.iam.application.controller.mapper.GatewayRequestResponseMapper;
-import com.stablecoin.payments.gateway.iam.application.security.MerchantScopeEnforcer;
 import com.stablecoin.payments.gateway.iam.domain.model.ApiKeyEnvironment;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import jakarta.validation.Valid;
@@ -23,6 +22,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.UUID;
 
+import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_API_KEY;
 import static com.stablecoin.payments.gateway.iam.application.security.SecurityExpressions.HAS_MERCHANT_ACCESS_VIA_REQUEST;
 
 @Slf4j
@@ -33,7 +33,6 @@ public class ApiKeyController {
 
     private final ApiKeyCommandHandler apiKeyCommandHandler;
     private final GatewayRequestResponseMapper mapper;
-    private final MerchantScopeEnforcer merchantScopeEnforcer;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -60,10 +59,9 @@ public class ApiKeyController {
 
     @DeleteMapping("/{keyId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize(HAS_MERCHANT_ACCESS_VIA_API_KEY)
     public void revokeApiKey(@PathVariable UUID keyId) {
         log.info("Revoke API key keyId={}", keyId);
-        var apiKey = apiKeyCommandHandler.findById(keyId);
-        merchantScopeEnforcer.hasAccess(apiKey.getMerchantId());
         apiKeyCommandHandler.revoke(keyId);
     }
 }
