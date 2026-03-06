@@ -51,6 +51,7 @@ val flywayVersion: String by project
 val archunitVersion: String by project
 val testcontainersVersion: String by project
 val wiremockVersion: String by project
+val springdocVersion: String by project
 
 dependencies {
     implementation(project(":merchant-iam:merchant-iam-api"))
@@ -60,6 +61,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    // OpenAPI / Swagger UI
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
