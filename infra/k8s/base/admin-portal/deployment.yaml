@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-portal
+  namespace: stablebridge
+  labels:
+    app: admin-portal
+    service: admin-portal
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: admin-portal
+  template:
+    metadata:
+      labels:
+        app: admin-portal
+        service: admin-portal
+    spec:
+      containers:
+        - name: admin-portal
+          image: stablebridge/admin-portal:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /admin
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /admin
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10

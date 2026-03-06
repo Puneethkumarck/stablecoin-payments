@@ -62,11 +62,11 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
         if (!MUTATING_METHODS.contains(request.getMethod())) {
             return false;
         }
-        var uri = request.getRequestURI();
-        if (EXEMPT_PREFIXES.stream().anyMatch(uri::startsWith)) {
+        var path = request.getServletPath();
+        if (EXEMPT_PREFIXES.stream().anyMatch(path::startsWith)) {
             return false;
         }
         // Exempt merchant-scoped auth endpoints: /v1/merchants/{id}/auth/login etc.
-        return AUTH_PATH_SEGMENTS.stream().noneMatch(uri::contains);
+        return AUTH_PATH_SEGMENTS.stream().noneMatch(path::contains);
     }
 }

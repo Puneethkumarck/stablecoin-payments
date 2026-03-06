@@ -8,6 +8,8 @@ metadata:
     service: merchant-onboarding
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: s11-merchant-onboarding

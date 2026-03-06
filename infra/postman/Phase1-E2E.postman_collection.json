@@ -1393,7 +1393,7 @@
       "description": "Test error handling, validation, and security edge cases across all three services.",
       "item": [
         {
-          "name": "25. Duplicate Registration (409)",
+          "name": "25. Duplicate Registration - Setup (201)",
           "event": [
             {
               "listen": "prerequest",
@@ -1401,13 +1401,7 @@
                 "exec": [
                   "const uuid = require('uuid');",
                   "pm.variables.set('idempotencyKey', uuid.v4());",
-                  "",
-                  "// Use the same registration number as the original merchant",
-                  "// The original used REG-E2E-{{$timestamp}} but we store the",
-                  "// exact value. We use a known duplicate approach.",
-                  "// Since we can't retrieve the original regNumber easily,",
-                  "// we submit with the same legalName + country combination",
-                  "// which should trigger the duplicate check."
+                  "pm.variables.set('dupRegNumber', 'REG-DUP-' + Date.now());"
                 ],
                 "type": "text/javascript"
               }
@@ -1416,15 +1410,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 409 Conflict', function () {",
-                  "    pm.response.to.have.status(409);",
+                  "pm.test('Status code is 201 Created (setup for duplicate test)', function () {",
+                  "    pm.response.to.have.status(201);",
                   "});",
                   "",
-                  "pm.test('Error response has meaningful message', function () {",
+                  "pm.test('Merchant created for duplicate check', function () {",
                   "    const json = pm.response.json();",
-                  "    const message = json.message || json.detail || json.title || '';",
-                  "    pm.expect(message).to.not.be.empty;",
-                  "    console.log('Duplicate registration error: ' + message);",
+                  "    pm.expect(json.merchantId).to.be.a('string').and.not.empty;",
+                  "    console.log('Setup merchant for duplicate test: ' + json.merchantId);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1445,7 +1438,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"legalName\": \"Duplicate Merchant Ltd\",\n  \"tradingName\": \"DupeMerch\",\n  \"registrationNumber\": \"REG-DUPLICATE-FIXED-001\",\n  \"registrationCountry\": \"GB\",\n  \"entityType\": \"PRIVATE_LIMITED\",\n  \"websiteUrl\": \"https://duplicate-merchant.com\",\n  \"primaryCurrency\": \"USD\",\n  \"primaryContactEmail\": \"dup@testmerchant.com\",\n  \"primaryContactName\": \"Dup User\",\n  \"registeredAddress\": {\n    \"streetLine1\": \"456 Dup Street\",\n    \"city\": \"London\",\n    \"postcode\": \"EC1A 1BB\",\n    \"country\": \"GB\"\n  },\n  \"beneficialOwners\": [\n    {\n      \"fullName\": \"Dup User\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"nationality\": \"GB\",\n      \"ownershipPct\": 100.00,\n      \"isPoliticallyExposed\": false\n    }\n  ],\n  \"requestedCorridors\": [\"GB->US\"]\n}",
+              "raw": "{\n  \"legalName\": \"Duplicate Merchant Ltd\",\n  \"tradingName\": \"DupeMerch\",\n  \"registrationNumber\": \"{{dupRegNumber}}\",\n  \"registrationCountry\": \"GB\",\n  \"entityType\": \"PRIVATE_LIMITED\",\n  \"websiteUrl\": \"https://duplicate-merchant.com\",\n  \"primaryCurrency\": \"USD\",\n  \"primaryContactEmail\": \"dup@testmerchant.com\",\n  \"primaryContactName\": \"Dup User\",\n  \"registeredAddress\": {\n    \"streetLine1\": \"456 Dup Street\",\n    \"city\": \"London\",\n    \"postcode\": \"EC1A 1BB\",\n    \"country\": \"GB\"\n  },\n  \"beneficialOwners\": [\n    {\n      \"fullName\": \"Dup User\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"nationality\": \"GB\",\n      \"ownershipPct\": 100.00,\n      \"isPoliticallyExposed\": false\n    }\n  ],\n  \"requestedCorridors\": [\"GB->US\"]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1463,7 +1456,7 @@
                 "merchants"
               ]
             },
-            "description": "Submit a merchant with a known duplicate registration number. First run this request once to create the record, then run it again with the same Idempotency-Key removed (a new one is generated) to trigger 409.\n\nAlternative: Run the request twice in succession -- the second call with a new Idempotency-Key should return 409."
+            "description": "Setup step: creates a merchant with a unique registration number. The next request (25b) re-submits the same registration number to verify 409 Conflict."
           }
         },
         {
@@ -1511,7 +1504,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"legalName\": \"Duplicate Merchant Ltd\",\n  \"tradingName\": \"DupeMerch\",\n  \"registrationNumber\": \"REG-DUPLICATE-FIXED-001\",\n  \"registrationCountry\": \"GB\",\n  \"entityType\": \"PRIVATE_LIMITED\",\n  \"websiteUrl\": \"https://duplicate-merchant.com\",\n  \"primaryCurrency\": \"USD\",\n  \"primaryContactEmail\": \"dup@testmerchant.com\",\n  \"primaryContactName\": \"Dup User\",\n  \"registeredAddress\": {\n    \"streetLine1\": \"456 Dup Street\",\n    \"city\": \"London\",\n    \"postcode\": \"EC1A 1BB\",\n    \"country\": \"GB\"\n  },\n  \"beneficialOwners\": [\n    {\n      \"fullName\": \"Dup User\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"nationality\": \"GB\",\n      \"ownershipPct\": 100.00,\n      \"isPoliticallyExposed\": false\n    }\n  ],\n  \"requestedCorridors\": [\"GB->US\"]\n}"
+              "raw": "{\n  \"legalName\": \"Duplicate Merchant Ltd\",\n  \"tradingName\": \"DupeMerch\",\n  \"registrationNumber\": \"{{dupRegNumber}}\",\n  \"registrationCountry\": \"GB\",\n  \"entityType\": \"PRIVATE_LIMITED\",\n  \"websiteUrl\": \"https://duplicate-merchant.com\",\n  \"primaryCurrency\": \"USD\",\n  \"primaryContactEmail\": \"dup@testmerchant.com\",\n  \"primaryContactName\": \"Dup User\",\n  \"registeredAddress\": {\n    \"streetLine1\": \"456 Dup Street\",\n    \"city\": \"London\",\n    \"postcode\": \"EC1A 1BB\",\n    \"country\": \"GB\"\n  },\n  \"beneficialOwners\": [\n    {\n      \"fullName\": \"Dup User\",\n      \"dateOfBirth\": \"1990-01-01\",\n      \"nationality\": \"GB\",\n      \"ownershipPct\": 100.00,\n      \"isPoliticallyExposed\": false\n    }\n  ],\n  \"requestedCorridors\": [\"GB->US\"]\n}"
             },
             "url": {
               "raw": "{{S11_URL}}/api/v1/merchants",
@@ -1524,7 +1517,7 @@
                 "merchants"
               ]
             },
-            "description": "Second submission of the same registration number (REG-DUPLICATE-FIXED-001). This one should return 409 Conflict."
+            "description": "Second submission of the same registration number. This one should return 409 Conflict."
           }
         },
         {

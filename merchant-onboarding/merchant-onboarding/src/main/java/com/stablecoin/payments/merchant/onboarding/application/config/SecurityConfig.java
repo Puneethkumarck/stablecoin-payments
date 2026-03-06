@@ -8,8 +8,13 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
-@EnableMethodSecurity
 public class SecurityConfig {
+
+  @Configuration
+  @EnableMethodSecurity
+  @ConditionalOnProperty(name = "app.security.enabled", havingValue = "true", matchIfMissing = true)
+  static class MethodSecurityConfig {
+  }
 
   @Bean
   @ConditionalOnProperty(name = "app.security.enabled", havingValue = "true", matchIfMissing = true)

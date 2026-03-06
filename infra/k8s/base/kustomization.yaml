@@ -6,4 +6,5 @@ resources:
   - s11/
   - s13/
   - merchant-portal/
+  - admin-portal/
   - ingress.yaml

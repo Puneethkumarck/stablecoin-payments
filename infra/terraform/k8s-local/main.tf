@@ -70,6 +70,7 @@ resource "helm_release" "ingress_nginx" {
   set {
     name  = "controller.hostPort.enabled"
     value = "true"
+    type  = "string"
   }
 
   set {
@@ -80,6 +81,7 @@ resource "helm_release" "ingress_nginx" {
   set {
     name  = "controller.nodeSelector.ingress-ready"
     value = "true"
+    type  = "string"
   }
 
   set {
@@ -101,6 +103,7 @@ resource "helm_release" "ingress_nginx" {
   set {
     name  = "controller.allowSnippetAnnotations"
     value = "true"
+    type  = "string"
   }
 
   depends_on = [kind_cluster.local]

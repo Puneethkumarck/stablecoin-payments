@@ -183,7 +183,7 @@ cmd_up() {
   fi
 
   info "Running terraform apply..."
-  terraform apply -auto-approve -input=false "${tf_vars[@]}"
+  terraform apply -auto-approve -input=false ${tf_vars[@]+"${tf_vars[@]}"}
   echo ""
 
   # Wait for core infrastructure to be healthy

@@ -8,6 +8,8 @@ metadata:
     service: api-gateway-iam
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: s10-api-gateway

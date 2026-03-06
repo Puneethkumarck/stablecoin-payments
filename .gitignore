@@ -38,6 +38,9 @@ credentials.json
 # Monitoring (Grafana/Prometheus local data)
 monitoring/
 
+# Docs (generated / local only)
+docs/
+
 # Claude Code
 .claude/
 

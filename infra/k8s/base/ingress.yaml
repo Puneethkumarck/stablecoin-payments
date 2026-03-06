@@ -43,6 +43,15 @@ spec:
                 port:
                   number: 8083
 
+          # Admin Portal — /admin/*
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-portal
+                port:
+                  number: 3001
+
           # Merchant Portal — / (default, must be last)
           - path: /
             pathType: Prefix

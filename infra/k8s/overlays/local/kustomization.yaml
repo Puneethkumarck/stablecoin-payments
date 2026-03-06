@@ -4,8 +4,72 @@ kind: Kustomization
 resources:
   - ../../base
 
+replicas:
+  - name: s10-api-gateway
+    count: 1
+  - name: s11-merchant-onboarding
+    count: 1
+  - name: s13-merchant-iam
+    count: 1
+  - name: merchant-portal
+    count: 1
+  - name: admin-portal
+    count: 1
+
 patches:
-  # S10 — reduce resources + add JVM opts for local dev
+  # Merchant Portal — increase probe timeout (Next.js redirects cause slow responses)
+  - target:
+      kind: Deployment
+      name: merchant-portal
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe
+        value:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 5
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe
+        value:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 5
+
+  # Admin Portal — increase probe timeout (Next.js redirects cause slow responses)
+  - target:
+      kind: Deployment
+      name: admin-portal
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe
+        value:
+          httpGet:
+            path: /admin
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 5
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe
+        value:
+          httpGet:
+            path: /admin
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 10
+          failureThreshold: 5
+
+  # S10 — optimized for fast local startup
   - target:
       kind: Deployment
       name: s10-api-gateway
@@ -14,18 +78,24 @@ patches:
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
-            memory: "384Mi"
-            cpu: "200m"
-          limits:
-            memory: "768Mi"
+            memory: "512Mi"
             cpu: "500m"
       - op: add
         path: /spec/template/spec/containers/0/env
         value:
           - name: JAVA_TOOL_OPTIONS
-            value: "-Xms256m -Xmx512m -XX:+UseZGC"
+            value: "-Xms256m -Xmx512m -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Dspring.main.lazy-initialization=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
+        value: 120
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
+        value: 10
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe/initialDelaySeconds
+        value: 60
 
-  # S11 — reduce resources + add JVM opts for local dev
+  # S11 — optimized for fast local startup
   - target:
       kind: Deployment
       name: s11-merchant-onboarding
@@ -34,18 +104,24 @@ patches:
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
-            memory: "384Mi"
-            cpu: "200m"
-          limits:
-            memory: "768Mi"
+            memory: "512Mi"
             cpu: "500m"
       - op: add
         path: /spec/template/spec/containers/0/env
         value:
           - name: JAVA_TOOL_OPTIONS
-            value: "-Xms256m -Xmx512m -XX:+UseZGC"
+            value: "-Xms256m -Xmx512m -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Dspring.main.lazy-initialization=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
+        value: 120
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
+        value: 10
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe/initialDelaySeconds
+        value: 60
 
-  # S13 — reduce resources + add JVM opts for local dev
+  # S13 — optimized for fast local startup
   - target:
       kind: Deployment
       name: s13-merchant-iam
@@ -54,13 +130,19 @@ patches:
         path: /spec/template/spec/containers/0/resources
         value:
           requests:
-            memory: "384Mi"
-            cpu: "200m"
-          limits:
-            memory: "768Mi"
+            memory: "512Mi"
             cpu: "500m"
       - op: add
         path: /spec/template/spec/containers/0/env
         value:
           - name: JAVA_TOOL_OPTIONS
-            value: "-Xms256m -Xmx512m -XX:+UseZGC"
+            value: "-Xms256m -Xmx512m -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Dspring.main.lazy-initialization=true"
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/initialDelaySeconds
+        value: 120
+      - op: replace
+        path: /spec/template/spec/containers/0/livenessProbe/failureThreshold
+        value: 10
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe/initialDelaySeconds
+        value: 60
