@@ -8,6 +8,8 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Ap
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.BusinessAddress;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.DocumentUploadResult;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatusResult;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.PagedResult;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantActivatedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantAppliedEvent;
@@ -255,6 +257,14 @@ public class MerchantCommandHandler {
     @Transactional(readOnly = true)
     public Merchant findById(UUID merchantId) {
         return findOrThrow(merchantId);
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResult<Merchant> listMerchants(MerchantStatus status, int page, int size) {
+        if (status != null) {
+            return merchantRepository.findAllByStatus(status, page, size);
+        }
+        return merchantRepository.findAll(page, size);
     }
 
     private Merchant findOrThrow(UUID merchantId) {
