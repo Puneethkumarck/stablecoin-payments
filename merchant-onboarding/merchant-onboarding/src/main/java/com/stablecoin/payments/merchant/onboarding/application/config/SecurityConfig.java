@@ -18,7 +18,10 @@ public class SecurityConfig {
         // Webhook endpoints use HMAC validation, not JWT
         .requestMatchers("/api/internal/webhooks/**").permitAll()
         // Actuator health/readiness
-        .requestMatchers("/actuator/**").permitAll().anyRequest().authenticated());
+        .requestMatchers("/actuator/**").permitAll()
+        // OpenAPI / Swagger UI
+        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+        .anyRequest().authenticated());
     return http.build();
   }
 }

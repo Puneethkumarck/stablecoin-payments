@@ -115,6 +115,16 @@ server:
   port: ${SERVER_PORT:8081}
   shutdown: graceful
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: S11 Merchant Onboarding API
+    description: Merchant onboarding, KYB verification, and lifecycle management
+    version: 1.0.0
+
 logging:
   level:
     com.stablecoin.payments: INFO
