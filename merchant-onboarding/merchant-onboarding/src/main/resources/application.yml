@@ -87,9 +87,29 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      group:
+        readiness:
+          include: db
+        liveness:
+          include: livenessState
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   metrics:
     tags:
+      application: ${spring.application.name}
       service: merchant-onboarding
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 server:
   port: ${SERVER_PORT:8081}

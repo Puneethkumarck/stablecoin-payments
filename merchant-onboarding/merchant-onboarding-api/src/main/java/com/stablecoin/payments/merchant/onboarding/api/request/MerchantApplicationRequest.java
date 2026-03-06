@@ -3,6 +3,7 @@ package com.stablecoin.payments.merchant.onboarding.api.request;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -20,6 +21,8 @@ public record MerchantApplicationRequest(
         @NotBlank String entityType,
         @NotBlank String websiteUrl,
         @NotBlank @Size(min = 3, max = 3) String primaryCurrency,
+        @NotBlank @Email String primaryContactEmail,
+        @NotBlank String primaryContactName,
         @Valid @NotNull BusinessAddressDto registeredAddress,
         @Valid @NotEmpty List<BeneficialOwnerDto> beneficialOwners,
         @NotEmpty List<String> requestedCorridors

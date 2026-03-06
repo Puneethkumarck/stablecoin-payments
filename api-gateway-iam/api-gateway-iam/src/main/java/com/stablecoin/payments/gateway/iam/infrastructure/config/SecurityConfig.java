@@ -16,6 +16,7 @@ import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,6 +29,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
+    @Profile("!local")
     @ConditionalOnMissingBean(name = "testSecurityFilterChain")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtFilter,
@@ -53,17 +55,30 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Profile("local")
+    public SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .build();
+    }
+
+    @Bean
+    @Profile("!local")
     public JwtAuthenticationFilter jwtAuthenticationFilter(TokenIssuer tokenIssuer,
                                                            TokenRevocationCache tokenRevocationCache) {
         return new JwtAuthenticationFilter(tokenIssuer, tokenRevocationCache);
     }
 
     @Bean
+    @Profile("!local")
     public ApiKeyAuthenticationFilter apiKeyAuthenticationFilter(ApiKeyCommandHandler apiKeyService) {
         return new ApiKeyAuthenticationFilter(apiKeyService);
     }
 
     @Bean
+    @Profile("!local")
     public RateLimitFilter rateLimitFilter(RateLimiter rateLimiter,
                                            MerchantRepository merchantRepository,
                                            RateLimitEventRepository rateLimitEventRepository) {
@@ -71,6 +86,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Profile("!local")
     public UserJwtAuthenticationFilter userJwtAuthenticationFilter(
             UserJwksProvider userJwksProvider,
             MerchantIamProperties merchantIamProperties) {
@@ -78,6 +94,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Profile("!local")
     public AuditLogFilter auditLogFilter(AuditLogRepository auditLogRepository) {
         return new AuditLogFilter(auditLogRepository);
     }

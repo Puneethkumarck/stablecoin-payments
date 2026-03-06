@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +38,13 @@ public class OAuthClientRepositoryAdapter implements OAuthClientRepository {
     @Override
     public Optional<OAuthClient> findActiveById(UUID clientId) {
         return jpa.findByClientIdAndActiveTrue(clientId).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<OAuthClient> findByMerchantId(UUID merchantId) {
+        return jpa.findByMerchantId(merchantId).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override

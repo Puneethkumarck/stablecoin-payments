@@ -58,6 +58,8 @@ class MerchantControllerIT extends AbstractIntegrationTest {
                                         "entityType": "PRIVATE_LIMITED",
                                         "websiteUrl": "https://testcorp.com",
                                         "primaryCurrency": "USD",
+                                        "primaryContactEmail": "john@testcorp.com",
+                                        "primaryContactName": "John Doe",
                                         "registeredAddress": {
                                             "streetLine1": "1 Test Street",
                                             "city": "London",
@@ -117,6 +119,8 @@ class MerchantControllerIT extends AbstractIntegrationTest {
                                         "entityType": "PRIVATE_LIMITED",
                                         "websiteUrl": "https://dup.com",
                                         "primaryCurrency": "USD",
+                                        "primaryContactEmail": "jane@dup.com",
+                                        "primaryContactName": "Jane Doe",
                                         "registeredAddress": {
                                             "streetLine1": "1 Street",
                                             "city": "London",

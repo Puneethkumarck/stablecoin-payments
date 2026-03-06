@@ -14,6 +14,8 @@ public record ApplyMerchantCommand(
         EntityType entityType,
         String websiteUrl,
         String primaryCurrency,
+        String primaryContactEmail,
+        String primaryContactName,
         BusinessAddress registeredAddress,
         List<BeneficialOwner> beneficialOwners,
         List<String> requestedCorridors

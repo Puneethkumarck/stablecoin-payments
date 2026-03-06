@@ -59,6 +59,8 @@ class MerchantOnboardingLifecycleTest extends AbstractIntegrationTest {
                                     "entityType": "PRIVATE_LIMITED",
                                     "websiteUrl": "https://lifecycle.com",
                                     "primaryCurrency": "USD",
+                                    "primaryContactEmail": "test@lifecycle.com",
+                                    "primaryContactName": "Test Owner",
                                     "registeredAddress": {
                                         "streetLine1": "1 Life Street",
                                         "city": "London",

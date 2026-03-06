@@ -44,7 +44,7 @@ class MerchantEventListenerTest {
         realListener.onMerchantActivated(payload);
 
         then(merchantCommandHandler).should().activateAndProvisionOAuthClient(
-                merchantId, "Acme Corp", List.of("payments:read", "payments:write"));
+                merchantId, "Acme Corp", "US", List.of("payments:read", "payments:write"));
     }
 
     @Test
@@ -57,7 +57,7 @@ class MerchantEventListenerTest {
 
         doThrow(new RuntimeException("activation failed"))
                 .when(merchantCommandHandler)
-                .activateAndProvisionOAuthClient(merchantId, "Acme Corp", List.of());
+                .activateAndProvisionOAuthClient(merchantId, "Acme Corp", "US", List.of());
 
         var realListener = new MerchantEventListener(merchantCommandHandler, objectMapper);
 

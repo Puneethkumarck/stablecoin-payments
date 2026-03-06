@@ -48,18 +48,15 @@ public class MerchantOnboardingActivitiesImpl implements MerchantOnboardingActiv
   }
 
   @Override
-  @Transactional
+  @Transactional(readOnly = true)
   public String startKyb(UUID merchantId) {
     var merchant = merchantRepository.findById(merchantId)
         .orElseThrow(() -> MerchantNotFoundException.withId(merchantId));
 
-    merchant.startKyb();
-
     var kyb = kybProvider.submit(merchant.getMerchantId(), merchant.getLegalName(), merchant.getRegistrationNumber(),
         merchant.getRegistrationCountry());
 
-    merchantRepository.save(merchant);
-    log.info("[ACTIVITY] KYB started merchantId={} providerRef={}", merchantId, kyb.providerRef());
+    log.info("[ACTIVITY] KYB submitted merchantId={} providerRef={}", merchantId, kyb.providerRef());
     return kyb.providerRef();
   }
 

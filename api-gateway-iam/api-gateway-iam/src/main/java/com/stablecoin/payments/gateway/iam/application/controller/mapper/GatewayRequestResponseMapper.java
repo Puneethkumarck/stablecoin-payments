@@ -3,8 +3,10 @@ package com.stablecoin.payments.gateway.iam.application.controller.mapper;
 import com.stablecoin.payments.gateway.iam.api.response.ApiKeyResponse;
 import com.stablecoin.payments.gateway.iam.api.response.MerchantResponse;
 import com.stablecoin.payments.gateway.iam.api.response.OAuthClientResponse;
+import com.stablecoin.payments.gateway.iam.api.response.OAuthClientSummaryResponse;
 import com.stablecoin.payments.gateway.iam.api.response.TokenResponse;
 import com.stablecoin.payments.gateway.iam.domain.model.Merchant;
+import com.stablecoin.payments.gateway.iam.domain.model.OAuthClient;
 import com.stablecoin.payments.gateway.iam.domain.service.ApiKeyCommandHandler;
 import com.stablecoin.payments.gateway.iam.domain.service.AuthCommandHandler;
 import com.stablecoin.payments.gateway.iam.domain.service.OAuthClientCommandHandler;
@@ -50,6 +52,17 @@ public interface GatewayRequestResponseMapper {
                 client.getName(),
                 client.getScopes(),
                 client.getGrantTypes(),
+                client.getCreatedAt());
+    }
+
+    default OAuthClientSummaryResponse toOAuthClientSummaryResponse(OAuthClient client) {
+        return new OAuthClientSummaryResponse(
+                client.getClientId(),
+                client.getMerchantId(),
+                client.getName(),
+                client.getScopes(),
+                client.getGrantTypes(),
+                client.isActive(),
                 client.getCreatedAt());
     }
 }

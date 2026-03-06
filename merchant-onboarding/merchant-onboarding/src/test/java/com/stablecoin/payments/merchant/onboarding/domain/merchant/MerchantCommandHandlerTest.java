@@ -5,8 +5,6 @@ import com.stablecoin.payments.merchant.onboarding.domain.exceptions.MerchantNot
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.command.ApplyMerchantCommand;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.ApprovedCorridor;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.EntityType;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
-import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybVerification;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.RateLimitTier;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantActivatedEvent;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.events.MerchantAppliedEvent;
@@ -54,6 +52,8 @@ class MerchantCommandHandlerTest {
     private DocumentStore documentStore;
     @Mock
     private ApprovedCorridorRepository approvedCorridorRepository;
+    @Mock
+    private OnboardingWorkflowPort onboardingWorkflowPort;
 
     @InjectMocks
     private MerchantCommandHandler handler;
@@ -64,7 +64,8 @@ class MerchantCommandHandlerTest {
         // given
         var command = new ApplyMerchantCommand(
                 "Acme Ltd", "Acme", "REG-123", "GB", EntityType.PRIVATE_LIMITED,
-                "https://acme.com", "USD", null, null, List.of("GB->US"));
+                "https://acme.com", "USD", "admin@acme.com", "Admin User",
+                null, null, List.of("GB->US"));
         given(merchantRepository.existsByRegistrationNumberAndCountry("REG-123", "GB"))
                 .willReturn(false);
         given(merchantRepository.save(any(Merchant.class)))
@@ -72,7 +73,8 @@ class MerchantCommandHandlerTest {
 
         var expectedMerchant = Merchant.createNew(
                 "Acme Ltd", "Acme", "REG-123", "GB", EntityType.PRIVATE_LIMITED,
-                "https://acme.com", "USD", null, null, List.of("GB->US"));
+                "https://acme.com", "USD", "admin@acme.com", "Admin User",
+                null, null, List.of("GB->US"));
 
         var expectedEvent = MerchantAppliedEvent.builder()
                 .eventType(MerchantAppliedEvent.EVENT_TYPE)
@@ -92,21 +94,12 @@ class MerchantCommandHandlerTest {
     }
 
     @Test
-    @DisplayName("should start KYB verification")
+    @DisplayName("should start KYB verification via onboarding workflow")
     void shouldStartKyb() {
         // given
         var merchant = MerchantFixtures.appliedMerchant();
         var merchantId = merchant.getMerchantId();
         given(merchantRepository.findById(merchantId)).willReturn(Optional.of(merchant));
-        given(kybProvider.submit(any(), any(), any(), any()))
-                .willReturn(KybVerification.builder()
-                        .kybId(UUID.randomUUID())
-                        .merchantId(merchantId)
-                        .provider("mock")
-                        .providerRef("ref-123")
-                        .status(KybStatus.IN_PROGRESS)
-                        .initiatedAt(Instant.now())
-                        .build());
         given(merchantRepository.save(any(Merchant.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
@@ -118,6 +111,7 @@ class MerchantCommandHandlerTest {
 
         // then
         then(merchantRepository).should().save(eqIgnoringTimestamps(expectedMerchant));
+        then(onboardingWorkflowPort).should().startOnboarding(merchantId);
     }
 
     @Test
@@ -139,6 +133,11 @@ class MerchantCommandHandlerTest {
                 .eventType(MerchantActivatedEvent.EVENT_TYPE)
                 .merchantId(merchantId)
                 .legalName(merchant.getLegalName())
+                .companyName(merchant.getLegalName())
+                .primaryContactEmail(merchant.getPrimaryContactEmail())
+                .primaryContactName(merchant.getPrimaryContactName())
+                .country(merchant.getRegistrationCountry())
+                .scopes(scopes)
                 .riskTier(merchant.getRiskTier() != null ? merchant.getRiskTier().name() : null)
                 .rateLimitTier(RateLimitTier.GROWTH.name())
                 .allowedScopes(scopes)

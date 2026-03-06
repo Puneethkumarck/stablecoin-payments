@@ -64,6 +64,12 @@ public class MerchantEntity {
     @Column(name = "primary_currency", nullable = false, length = 3)
     private String primaryCurrency;
 
+    @Column(name = "primary_contact_email")
+    private String primaryContactEmail;
+
+    @Column(name = "primary_contact_name")
+    private String primaryContactName;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", nullable = false)

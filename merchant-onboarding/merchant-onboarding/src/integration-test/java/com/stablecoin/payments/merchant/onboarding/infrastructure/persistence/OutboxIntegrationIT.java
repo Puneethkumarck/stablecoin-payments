@@ -105,6 +105,8 @@ class OutboxIntegrationIT extends AbstractIntegrationTest {
                     "entityType": "PRIVATE_LIMITED",
                     "websiteUrl": "https://test.com",
                     "primaryCurrency": "USD",
+                    "primaryContactEmail": "test@example.com",
+                    "primaryContactName": "Test Contact",
                     "registeredAddress": {
                         "streetLine1": "1 Test Lane",
                         "city": "London",

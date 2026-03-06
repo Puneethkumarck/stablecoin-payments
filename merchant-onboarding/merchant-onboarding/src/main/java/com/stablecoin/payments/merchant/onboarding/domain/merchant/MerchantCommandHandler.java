@@ -37,6 +37,7 @@ public class MerchantCommandHandler {
     private final CorridorEntitlementService corridorEntitlementService;
     private final DocumentStore documentStore;
     private final ApprovedCorridorRepository approvedCorridorRepository;
+    private final OnboardingWorkflowPort onboardingWorkflowPort;
 
     @Transactional
     public Merchant apply(ApplyMerchantCommand command) {
@@ -54,6 +55,8 @@ public class MerchantCommandHandler {
                 command.entityType(),
                 command.websiteUrl(),
                 command.primaryCurrency(),
+                command.primaryContactEmail(),
+                command.primaryContactName(),
                 command.registeredAddress(),
                 command.beneficialOwners(),
                 command.requestedCorridors()
@@ -80,15 +83,9 @@ public class MerchantCommandHandler {
     public void startKyb(UUID merchantId) {
         var merchant = findOrThrow(merchantId);
         merchant.startKyb();
-
-        var kyb = kybProvider.submit(
-                merchant.getMerchantId(),
-                merchant.getLegalName(),
-                merchant.getRegistrationNumber(),
-                merchant.getRegistrationCountry());
-
         merchantRepository.save(merchant);
-        log.info("KYB started merchantId={} kybId={} providerRef={}", merchantId, kyb.kybId(), kyb.providerRef());
+        onboardingWorkflowPort.startOnboarding(merchantId);
+        log.info("KYB started merchantId={} — onboarding workflow queued", merchantId);
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +118,11 @@ public class MerchantCommandHandler {
                 .merchantId(saved.getMerchantId())
                 .correlationId(correlationId())
                 .legalName(saved.getLegalName())
+                .companyName(saved.getLegalName())
+                .primaryContactEmail(saved.getPrimaryContactEmail())
+                .primaryContactName(saved.getPrimaryContactName())
+                .country(saved.getRegistrationCountry())
+                .scopes(saved.getAllowedScopes())
                 .riskTier(saved.getRiskTier() != null ? saved.getRiskTier().name() : null)
                 .rateLimitTier(saved.getRateLimitTier().name())
                 .allowedScopes(saved.getAllowedScopes())

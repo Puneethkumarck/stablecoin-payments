@@ -48,6 +48,7 @@ class MerchantTeamServiceTest {
     @Mock PermissionCacheProvider permissionCacheProvider;
     @Mock InvitationTokenGenerator tokenGenerator;
     @Mock EmailHasher emailHasher;
+    @Mock PasswordHasher passwordHasher;
 
     @InjectMocks MerchantTeamService service;
 
@@ -178,6 +179,7 @@ class MerchantTeamServiceTest {
                     .build();
 
             given(tokenGenerator.hash("plain-token")).willReturn("hashed-token");
+            given(passwordHasher.hash("raw-password")).willReturn("bcrypt-hashed-password");
             given(invitationRepository.findByTokenHash("hashed-token")).willReturn(Optional.of(invitation));
             given(roleRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of(adminRole, viewerRole));
             given(userRepository.findByMerchantId(MERCHANT_ID)).willReturn(List.of(adminUser, invitedUser));
@@ -188,10 +190,10 @@ class MerchantTeamServiceTest {
             var expectedUser = invitedUser.toBuilder()
                     .status(UserStatus.ACTIVE)
                     .fullName("Invited User")
-                    .passwordHash("pass-hash")
+                    .passwordHash("bcrypt-hashed-password")
                     .build();
 
-            service.acceptInvitation("plain-token", "Invited User", "pass-hash");
+            service.acceptInvitation("plain-token", "Invited User", "raw-password");
 
             then(userRepository).should().save(eqIgnoringTimestamps(expectedUser));
         }

@@ -61,6 +61,8 @@ public class Merchant {
     private final EntityType entityType;
     private final String websiteUrl;
     private final String primaryCurrency;
+    private final String primaryContactEmail;
+    private final String primaryContactName;
     private final BusinessAddress registeredAddress;
     private final List<BeneficialOwner> beneficialOwners;
     private final List<String> requestedCorridors;
@@ -84,6 +86,8 @@ public class Merchant {
             EntityType entityType,
             String websiteUrl,
             String primaryCurrency,
+            String primaryContactEmail,
+            String primaryContactName,
             BusinessAddress registeredAddress,
             List<BeneficialOwner> beneficialOwners,
             List<String> requestedCorridors) {
@@ -96,6 +100,8 @@ public class Merchant {
                 .entityType(entityType)
                 .websiteUrl(websiteUrl)
                 .primaryCurrency(primaryCurrency)
+                .primaryContactEmail(primaryContactEmail)
+                .primaryContactName(primaryContactName)
                 .registeredAddress(registeredAddress)
                 .beneficialOwners(beneficialOwners != null ? new ArrayList<>(beneficialOwners) : new ArrayList<>())
                 .requestedCorridors(requestedCorridors != null ? new ArrayList<>(requestedCorridors) : new ArrayList<>())

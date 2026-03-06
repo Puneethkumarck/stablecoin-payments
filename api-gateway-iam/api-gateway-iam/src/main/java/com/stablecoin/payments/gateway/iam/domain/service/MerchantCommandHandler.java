@@ -93,7 +93,12 @@ public class MerchantCommandHandler {
     }
 
     public void activateAndProvisionOAuthClient(UUID externalId, String companyName,
-                                                 List<String> scopes) {
+                                                 String country, List<String> scopes) {
+        var existing = merchantRepository.findByExternalId(externalId);
+        if (existing.isEmpty()) {
+            register(externalId, companyName, country, scopes, List.of());
+            log.info("Auto-registered merchant from activated event externalId={}", externalId);
+        }
         var merchant = activate(externalId);
 
         var effectiveScopes = (scopes != null && !scopes.isEmpty())
