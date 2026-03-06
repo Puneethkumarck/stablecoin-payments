@@ -1,12 +1,12 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Stablecoin Payments — Local Infrastructure (mirrors docker-compose.dev.yml)
+# StableBridge Platform — Local Infrastructure (mirrors docker-compose.dev.yml)
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ─────────────────────────────────────────────
 # Locals — Docker Desktop project grouping
 # ─────────────────────────────────────────────
 locals {
-  project_name = "stablecoin-payments"
+  project_name = "stablebridge-platform"
 }
 
 # ─────────────────────────────────────────────

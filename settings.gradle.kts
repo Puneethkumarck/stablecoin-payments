@@ -1,4 +1,4 @@
-rootProject.name = "stablecoin-payments"
+rootProject.name = "stablebridge-platform"
 
 buildCache {
     local {

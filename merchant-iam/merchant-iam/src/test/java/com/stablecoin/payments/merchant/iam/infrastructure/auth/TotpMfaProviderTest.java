@@ -27,7 +27,7 @@ class TotpMfaProviderTest {
 
         assertThat(uri).contains("otpauth://totp/");
         assertThat(uri).contains("user%40test.com");
-        assertThat(uri).contains("Stablecoin");
+        assertThat(uri).contains("StableBridge");
         assertThat(uri).contains("secret=");
     }
 
