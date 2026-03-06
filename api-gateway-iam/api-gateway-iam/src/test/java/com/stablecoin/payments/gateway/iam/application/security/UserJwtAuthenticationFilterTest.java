@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserJwtAuthenticationFilterTest {
 
-    private static final String S13_ISSUER = "https://api.stablecoin-payments.dev";
+    private static final String S13_ISSUER = "https://api.stablebridge.dev";
     private static final String AUDIENCE = "payment-platform";
 
     @Mock
@@ -176,7 +176,7 @@ class UserJwtAuthenticationFilterTest {
 
         @Test
         void shouldPassThroughForNonS13Issuer() throws Exception {
-            var token = buildToken("https://gateway.stablecoin-payments.dev", AUDIENCE,
+            var token = buildToken("https://gateway.stablebridge.dev", AUDIENCE,
                     Instant.now().plusSeconds(3600), UUID.randomUUID(), UUID.randomUUID());
             request.addHeader("Authorization", "Bearer " + token);
 

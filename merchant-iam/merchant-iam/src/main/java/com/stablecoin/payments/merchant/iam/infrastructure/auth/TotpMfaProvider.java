@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TotpMfaProvider implements MfaProvider {
 
-    private static final String ISSUER = "Stablecoin Payments";
+    private static final String ISSUER = "StableBridge";
     private static final int DIGITS = 6;
     private static final int PERIOD = 30;
 

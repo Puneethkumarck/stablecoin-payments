@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a defect or unexpected behaviour in stablecoin-payments
+about: Report a defect or unexpected behaviour in stablebridge-platform
 title: "fix: <short description of the bug>"
 labels: ["bug", "needs-triage"]
 assignees: Puneethkumarck

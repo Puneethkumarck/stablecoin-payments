@@ -1,8 +1,8 @@
 # ─────────────────────────────────────────────
-# Project root — must point to the stablecoin-payments repo root
+# Project root — must point to the stablebridge-platform repo root
 # ─────────────────────────────────────────────
 variable "project_root" {
-  description = "Absolute path to the stablecoin-payments repository root"
+  description = "Absolute path to the stablebridge-platform repository root"
   type        = string
 }
 

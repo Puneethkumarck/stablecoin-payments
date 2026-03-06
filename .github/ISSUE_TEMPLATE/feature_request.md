@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Propose a new feature or enhancement for stablecoin-payments
+about: Propose a new feature or enhancement for stablebridge-platform
 title: "feat: <short description of the feature>"
 labels: ["feature", "needs-triage"]
 assignees: Puneethkumarck

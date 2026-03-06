@@ -57,12 +57,12 @@ spring:
 api-gateway-iam:
   jwt:
     private-key-base64: ${JWT_PRIVATE_KEY_BASE64:}
-    issuer: ${JWT_ISSUER:https://gateway.stablecoin-payments.dev}
+    issuer: ${JWT_ISSUER:https://gateway.stablebridge.dev}
     audience: ${JWT_AUDIENCE:payment-platform}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL:3600}
   merchant-iam:
     base-url: ${MERCHANT_IAM_BASE_URL:http://localhost:8083}
-    issuer: ${MERCHANT_IAM_ISSUER:https://api.stablecoin-payments.dev}
+    issuer: ${MERCHANT_IAM_ISSUER:https://api.stablebridge.dev}
     audience: ${MERCHANT_IAM_AUDIENCE:payment-platform}
     jwks-cache-ttl-hours: ${MERCHANT_IAM_JWKS_CACHE_TTL_HOURS:24}
   rate-limit:

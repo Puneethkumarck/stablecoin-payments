@@ -1,4 +1,4 @@
--- Stablecoin Payments Platform — Local Dev Database Init
+-- StableBridge Platform — Local Dev Database Init
 -- Creates one database per service (mirrors production per-service DB isolation)
 -- Run automatically on first postgres container startup.
 

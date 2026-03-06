@@ -31,18 +31,18 @@ public class SmtpEmailSenderAdapter implements EmailSenderProvider {
         var message = new SimpleMailMessage();
         message.setFrom(emailProperties.from());
         message.setTo(email);
-        message.setSubject("You've been invited to join " + merchantName + " on Stablecoin Payments");
+        message.setSubject("You've been invited to join " + merchantName + " on StableBridge");
         message.setText("""
                 Hi %s,
 
-                You've been invited to join %s on the Stablecoin Payments platform.
+                You've been invited to join %s on the StableBridge platform.
 
                 Accept your invitation before it expires on %s:
                 %s
 
                 If you did not expect this invitation, you can safely ignore this email.
 
-                The Stablecoin Payments Team
+                The StableBridge Team
                 """.formatted(fullName, merchantName, expiryFormatted, acceptUrl));
 
         log.info("Sending invitation email to={} merchant={}", email, merchantName);
