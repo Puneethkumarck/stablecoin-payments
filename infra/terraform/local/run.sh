@@ -2,7 +2,7 @@
 set -euo pipefail
 
 #
-# Stablecoin Payments — Local Infrastructure & Services Manager
+# StableBridge Platform — Local Infrastructure & Services Manager
 #
 # Usage:
 #   ./run.sh up                Start infrastructure + build & launch all services
@@ -58,9 +58,9 @@ ensure_tfvars() {
   if grep -q "REPLACE" "$tfvars" 2>/dev/null; then
     info "Setting project_root in terraform.tfvars..."
     if [[ "$(uname)" == "Darwin" ]]; then
-      sed -i '' "s|/REPLACE/WITH/YOUR/PATH/TO/stablecoin-payments|${PROJECT_ROOT}|g" "$tfvars"
+      sed -i '' "s|/REPLACE/WITH/YOUR/PATH/TO/stablebridge-platform|${PROJECT_ROOT}|g" "$tfvars"
     else
-      sed -i "s|/REPLACE/WITH/YOUR/PATH/TO/stablecoin-payments|${PROJECT_ROOT}|g" "$tfvars"
+      sed -i "s|/REPLACE/WITH/YOUR/PATH/TO/stablebridge-platform|${PROJECT_ROOT}|g" "$tfvars"
     fi
     ok "project_root set to: $PROJECT_ROOT"
   fi
@@ -242,7 +242,7 @@ cmd_down() {
 cmd_status() {
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
-  echo "║           Stablecoin Payments — Infrastructure             ║"
+  echo "║           StableBridge Platform — Infrastructure             ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
 
@@ -291,7 +291,7 @@ cmd_status() {
 
   echo ""
   echo "╔══════════════════════════════════════════════════════════════╗"
-  echo "║           Stablecoin Payments — Application Services       ║"
+  echo "║           StableBridge Platform — Application Services       ║"
   echo "╚══════════════════════════════════════════════════════════════╝"
   echo ""
 

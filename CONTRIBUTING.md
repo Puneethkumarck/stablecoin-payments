@@ -1,4 +1,4 @@
-# Contributing to stablecoin-payments
+# Contributing to stablebridge-platform
 
 Thank you for your interest in contributing. This document covers everything you need to get the project running locally, understand the development workflow, and submit high-quality pull requests.
 
@@ -39,8 +39,8 @@ Ensure you have the following installed:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Puneethkumarck/stablecoin-payments.git
-cd stablecoin-payments
+git clone https://github.com/Puneethkumarck/stablebridge-platform.git
+cd stablebridge-platform
 
 # 2. Start local infrastructure (Postgres, Temporal, etc.)
 docker compose -f docker-compose.dev.yml up -d
@@ -59,7 +59,7 @@ The service will start on `http://localhost:8080` by default.
 ## Project Structure
 
 ```
-stablecoin-payments/
+stablebridge-platform/
 ├── merchant-onboarding/      # Merchant onboarding service (KYB, onboarding workflows)
 ├── merchant-iam/             # Identity and access management service
 ├── infra/local/              # Local infrastructure configuration (Docker, DB migrations)

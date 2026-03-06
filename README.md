@@ -1,4 +1,4 @@
-# Stablecoin Payments Platform
+# StableBridge Platform
 
 Cross-border B2B payment platform using a fiat-to-stablecoin-to-fiat ("sandwich") model. Converts sender fiat currency to USDC on-chain, transfers via blockchain, and converts back to recipient fiat currency.
 
@@ -32,7 +32,7 @@ Cross-border B2B payment platform using a fiat-to-stablecoin-to-fiat ("sandwich"
 ## Project Structure
 
 ```
-stablecoin-payments/
+stablebridge-platform/
 ├── merchant-onboarding/           # S11 - Merchant Onboarding
 │   ├── merchant-onboarding-api/   # Request/response DTOs
 │   ├── merchant-onboarding-client/# Feign client for inter-service calls

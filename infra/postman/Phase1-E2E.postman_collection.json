@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
     "name": "Phase 1 - E2E Integration Tests",
-    "description": "End-to-end integration tests for Stablecoin Payments Platform Phase 1.\n\nCovers the full merchant lifecycle across S11 (Onboarding), S13 (Merchant IAM), and S10 (API Gateway).\n\nPrerequisites:\n- All services running via docker-compose.dev.yml\n- S11 on port 8081, S13 on port 8083, S10 on port 8080\n- Mailpit on port 8025\n- Kafka, PostgreSQL, Redis, Temporal all healthy\n\nRun folders in order (01 through 07). Each folder builds on state created by previous folders.",
+    "description": "End-to-end integration tests for StableBridge Platform Phase 1.\n\nCovers the full merchant lifecycle across S11 (Onboarding), S13 (Merchant IAM), and S10 (API Gateway).\n\nPrerequisites:\n- All services running via docker-compose.dev.yml\n- S11 on port 8081, S13 on port 8083, S10 on port 8080\n- Mailpit on port 8025\n- Kafka, PostgreSQL, Redis, Temporal all healthy\n\nRun folders in order (01 through 07). Each folder builds on state created by previous folders.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [

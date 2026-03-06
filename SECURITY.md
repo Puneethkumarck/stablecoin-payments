@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We are actively maintaining the following versions of `stablecoin-payments`:
+We are actively maintaining the following versions of `stablebridge-platform`:
 
 | Version | Supported          |
 |---------|--------------------|
@@ -13,7 +13,7 @@ We are actively maintaining the following versions of `stablecoin-payments`:
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-`stablecoin-payments` handles financial transactions and merchant identity data. We take all security disclosures seriously and ask that you follow responsible disclosure practices.
+`stablebridge-platform` handles financial transactions and merchant identity data. We take all security disclosures seriously and ask that you follow responsible disclosure practices.
 
 ### How to Report
 
@@ -21,7 +21,7 @@ We are actively maintaining the following versions of `stablecoin-payments`:
    Go to [Security Advisories](../../security/advisories/new) and submit a private report. This keeps the details confidential until a fix is ready.
 
 2. **Email fallback**: If you are unable to use GitHub's reporting tool, email **punith.564@gmail.com** with:
-   - Subject: `[SECURITY] stablecoin-payments - <brief description>`
+   - Subject: `[SECURITY] stablebridge-platform - <brief description>`
    - A clear description of the vulnerability
    - Steps to reproduce
    - Potential impact assessment

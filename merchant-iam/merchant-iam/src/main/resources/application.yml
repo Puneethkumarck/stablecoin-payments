@@ -69,7 +69,7 @@ spring:
 merchant-iam:
   jwt:
     private-key-base64: ${JWT_PRIVATE_KEY_BASE64:}
-    issuer: ${JWT_ISSUER:https://api.stablecoin-payments.dev}
+    issuer: ${JWT_ISSUER:https://api.stablebridge.dev}
     audience: ${JWT_AUDIENCE:payment-platform}
     access-token-ttl-seconds: ${JWT_ACCESS_TTL:3600}
     refresh-token-ttl-seconds: ${JWT_REFRESH_TTL:86400}
@@ -79,7 +79,7 @@ merchant-iam:
     session-cleanup:
       fixed-delay-ms: ${SESSION_CLEANUP_JOB_DELAY_MS:3600000}
   email:
-    from: ${EMAIL_FROM:noreply@stablecoin-payments.dev}
+    from: ${EMAIL_FROM:noreply@stablebridge.dev}
     invitation-base-url: ${INVITATION_BASE_URL:http://localhost:3000/invite}
 
 namastack:

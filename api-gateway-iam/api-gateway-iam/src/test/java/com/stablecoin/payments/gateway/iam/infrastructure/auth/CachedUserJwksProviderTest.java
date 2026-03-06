@@ -40,7 +40,7 @@ class CachedUserJwksProviderTest {
     void setUp() {
         var properties = new MerchantIamProperties(
                 "http://localhost:8083",
-                "https://api.stablecoin-payments.dev",
+                "https://api.stablebridge.dev",
                 "payment-platform",
                 24);
         provider = new CachedUserJwksProvider(merchantIamClient, redis, properties);
