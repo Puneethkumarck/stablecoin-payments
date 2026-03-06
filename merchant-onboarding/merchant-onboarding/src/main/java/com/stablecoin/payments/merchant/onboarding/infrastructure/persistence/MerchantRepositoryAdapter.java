@@ -2,11 +2,15 @@ package com.stablecoin.payments.merchant.onboarding.infrastructure.persistence;
 
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.Merchant;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantRepository;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.PagedResult;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.entity.MerchantJpaRepository;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.mapper.MerchantEntityMapper;
 import com.stablecoin.payments.merchant.onboarding.infrastructure.persistence.mapper.MerchantEntityUpdater;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -45,5 +49,23 @@ public class MerchantRepositoryAdapter implements MerchantRepository {
     @Override
     public boolean existsByRegistrationNumberAndCountry(String registrationNumber, String country) {
         return jpa.existsByRegistrationNumberAndRegistrationCountry(registrationNumber, country);
+    }
+
+    @Override
+    public PagedResult<Merchant> findAll(int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var result = jpa.findAll(pageable);
+        return new PagedResult<>(
+                result.getContent().stream().map(mapper::toDomain).toList(),
+                result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
+    }
+
+    @Override
+    public PagedResult<Merchant> findAllByStatus(MerchantStatus status, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var result = jpa.findByStatus(status, pageable);
+        return new PagedResult<>(
+                result.getContent().stream().map(mapper::toDomain).toList(),
+                result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 }

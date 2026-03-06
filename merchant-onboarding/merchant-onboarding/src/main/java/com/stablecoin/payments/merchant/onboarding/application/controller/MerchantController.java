@@ -13,7 +13,10 @@ import com.stablecoin.payments.merchant.onboarding.api.response.DocumentUploadRe
 import com.stablecoin.payments.merchant.onboarding.api.response.KybStatusResponse;
 import com.stablecoin.payments.merchant.onboarding.api.response.MerchantApplicationResponse;
 import com.stablecoin.payments.merchant.onboarding.api.response.MerchantResponse;
+import com.stablecoin.payments.merchant.onboarding.api.response.PageResponse;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.MerchantCommandHandler;
+import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.MerchantStatus;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,6 +43,21 @@ public class MerchantController {
 
     private final MerchantCommandHandler commandHandler;
     private final MerchantRequestResponseMapper mapper;
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('merchant:read')")
+    @Operation(summary = "List merchants with pagination and optional status filter")
+    public PageResponse<MerchantResponse> listMerchants(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) MerchantStatus status) {
+        var result = commandHandler.listMerchants(status, page, size);
+        var merchants = result.content().stream()
+                .map(mapper::toMerchantResponse)
+                .toList();
+        return new PageResponse<>(merchants, new PageResponse.Page(
+                result.pageNumber(), result.pageSize(), result.totalElements(), result.totalPages()));
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
