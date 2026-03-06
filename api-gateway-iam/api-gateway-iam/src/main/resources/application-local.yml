@@ -1,0 +1,15 @@
+app:
+  security:
+    enabled: false
+
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+
+logging:
+  level:
+    com.stablecoin.payments: DEBUG
+    org.springframework.security: DEBUG

@@ -1,3 +1,7 @@
+app:
+  security:
+    enabled: false
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/s11_merchant_onboarding

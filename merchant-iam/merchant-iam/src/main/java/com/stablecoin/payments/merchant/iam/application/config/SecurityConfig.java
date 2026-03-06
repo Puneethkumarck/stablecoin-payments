@@ -3,9 +3,9 @@ package com.stablecoin.payments.merchant.iam.application.config;
 import com.stablecoin.payments.merchant.iam.application.security.JwtAuthenticationFilter;
 import com.stablecoin.payments.merchant.iam.domain.team.JwtTokenIssuer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -18,7 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    @Profile("!local")
+    @ConditionalOnProperty(name = "app.security.enabled", havingValue = "true", matchIfMissing = true)
     @ConditionalOnMissingBean(name = "testSecurityFilterChain")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationFilter jwtFilter) throws Exception {
@@ -39,7 +39,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Profile("local")
+    @ConditionalOnProperty(name = "app.security.enabled", havingValue = "false")
     public SecurityFilterChain localSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)

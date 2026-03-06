@@ -3,6 +3,14 @@
 # Requires: ONFIDO_SANDBOX_TOKEN, COMPANIES_HOUSE_API_KEY env vars
 # Webhooks: ngrok http 8081 → register URL in Onfido dashboard
 
+app:
+  security:
+    enabled: false
+  kyb:
+    provider: onfido
+  company-registry:
+    provider: companies-house
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/s11_merchant_onboarding

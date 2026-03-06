@@ -16,12 +16,13 @@ import org.springframework.context.annotation.Configuration;
  * Registers fallback (mock/in-memory) adapters for outbound ports when no real implementation is available.
  * <p>
  * {@code @ConditionalOnMissingBean} on {@code @Bean} methods is evaluated <b>after</b> all component scanning, so it
- * reliably detects real adapters such as {@code @Profile("sandbox")} beans.
+ * reliably detects real adapters activated via {@code @ConditionalOnProperty}.
  * <p>
  * <b>When does each adapter win?</b>
  * <ul>
- * <li>Default / local / test — no real adapter scanned → fallback registered</li>
- * <li>Sandbox profile — {@code OnfidoKybAdapter} + {@code CompaniesHouseAdapter} scanned → fallbacks skipped</li>
+ * <li>Default / local / test — no real adapter activated → fallback registered</li>
+ * <li>{@code app.kyb.provider=onfido} — {@code OnfidoKybAdapter} activated → fallback skipped</li>
+ * <li>{@code app.company-registry.provider=companies-house} — {@code CompaniesHouseAdapter} activated → fallback skipped</li>
  * <li>Integration tests — {@code @MockBean} overrides → fallbacks skipped</li>
  * </ul>
  */

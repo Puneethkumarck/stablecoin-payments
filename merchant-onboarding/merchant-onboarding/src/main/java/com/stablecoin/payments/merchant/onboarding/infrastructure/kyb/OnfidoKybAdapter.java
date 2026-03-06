@@ -5,7 +5,7 @@ import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.Do
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybStatus;
 import com.stablecoin.payments.merchant.onboarding.domain.merchant.model.core.KybVerification;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -33,7 +33,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-@Profile("sandbox")
+@ConditionalOnProperty(name = "app.kyb.provider", havingValue = "onfido")
 public class OnfidoKybAdapter implements KybProvider {
 
   private final RestClient restClient;
