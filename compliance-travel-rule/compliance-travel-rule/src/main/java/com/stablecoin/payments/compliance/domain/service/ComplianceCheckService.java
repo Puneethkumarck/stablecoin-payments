@@ -5,6 +5,7 @@ import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
 import com.stablecoin.payments.compliance.domain.model.KycResult;
 import com.stablecoin.payments.compliance.domain.model.KycStatus;
 import com.stablecoin.payments.compliance.domain.model.Money;
+import com.stablecoin.payments.compliance.domain.model.RiskBand;
 import com.stablecoin.payments.compliance.domain.model.RiskScore;
 import com.stablecoin.payments.compliance.domain.model.SanctionsResult;
 import com.stablecoin.payments.compliance.domain.model.TravelRulePackage;
@@ -69,9 +70,21 @@ public class ComplianceCheckService {
         return check.amlClear(amlResult);
     }
 
+    /**
+     * Records the risk score on the compliance check.
+     * CRITICAL band blocks the payment and routes to MANUAL_REVIEW.
+     * All other bands proceed to TRAVEL_RULE_PACKAGING.
+     */
     public ComplianceCheck recordRiskScore(ComplianceCheck check, RiskScore riskScore) {
         log.info("Recording risk score for check={}, score={}, band={}",
                 check.checkId(), riskScore.score(), riskScore.band());
+
+        if (riskScore.band() == RiskBand.CRITICAL) {
+            log.warn("Critical risk score for check={}, score={} — blocking payment",
+                    check.checkId(), riskScore.score());
+            return check.riskCritical(riskScore);
+        }
+
         return check.riskScored(riskScore);
     }
 

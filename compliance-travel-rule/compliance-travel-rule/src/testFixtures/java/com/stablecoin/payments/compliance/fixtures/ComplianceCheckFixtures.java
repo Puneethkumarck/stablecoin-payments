@@ -2,10 +2,12 @@ package com.stablecoin.payments.compliance.fixtures;
 
 import com.stablecoin.payments.compliance.domain.model.AmlResult;
 import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
+import com.stablecoin.payments.compliance.domain.model.CustomerRiskProfile;
 import com.stablecoin.payments.compliance.domain.model.KycResult;
 import com.stablecoin.payments.compliance.domain.model.KycStatus;
 import com.stablecoin.payments.compliance.domain.model.KycTier;
 import com.stablecoin.payments.compliance.domain.model.Money;
+import com.stablecoin.payments.compliance.domain.model.RiskScoringContext;
 import com.stablecoin.payments.compliance.domain.model.SanctionsResult;
 import com.stablecoin.payments.compliance.domain.model.TransmissionStatus;
 import com.stablecoin.payments.compliance.domain.model.TravelRulePackage;
@@ -78,6 +80,67 @@ public final class ComplianceCheckFixtures {
                 .beneficiaryData("{\"name\":\"Hans Mueller\"}")
                 .protocol(TravelRuleProtocol.IVMS101)
                 .transmissionStatus(TransmissionStatus.PENDING)
+                .build();
+    }
+
+    /**
+     * Walks a check to RISK_SCORING status with configurable KYC tier, amount, countries, and AML result.
+     */
+    public static ComplianceCheck aCheckInRiskScoringStatus(KycTier kycTier, BigDecimal amount,
+                                                             String sourceCurrency,
+                                                             String sourceCountry, String targetCountry,
+                                                             boolean amlFlagged) {
+        var kycResult = KycResult.builder()
+                .kycResultId(UUID.randomUUID())
+                .checkId(UUID.randomUUID())
+                .senderKycTier(kycTier)
+                .senderStatus(KycStatus.VERIFIED)
+                .recipientStatus(KycStatus.VERIFIED)
+                .provider("onfido")
+                .checkedAt(Instant.now())
+                .build();
+
+        var sanctionsResult = SanctionsResult.builder()
+                .sanctionsResultId(UUID.randomUUID())
+                .checkId(UUID.randomUUID())
+                .senderScreened(true)
+                .recipientScreened(true)
+                .senderHit(false)
+                .recipientHit(false)
+                .listsChecked(List.of("OFAC", "EU"))
+                .provider("chainalysis")
+                .screenedAt(Instant.now())
+                .build();
+
+        var amlResult = AmlResult.builder()
+                .amlResultId(UUID.randomUUID())
+                .checkId(UUID.randomUUID())
+                .flagged(amlFlagged)
+                .flagReasons(amlFlagged ? List.of("high_risk_jurisdiction") : List.of())
+                .provider("chainalysis")
+                .screenedAt(Instant.now())
+                .build();
+
+        var sourceAmount = new Money(amount, sourceCurrency);
+
+        return ComplianceCheck.initiate(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+                        sourceAmount, sourceCountry, targetCountry, "EUR")
+                .startKyc()
+                .passKyc(kycResult)
+                .sanctionsClear(sanctionsResult)
+                .amlClear(amlResult);
+    }
+
+    /**
+     * Creates a RiskScoringContext with the given check, optional profile, and transaction count.
+     */
+    public static RiskScoringContext aRiskScoringContext(ComplianceCheck check,
+                                                         CustomerRiskProfile profile,
+                                                         int recentTransactionCount) {
+        return RiskScoringContext.builder()
+                .check(check)
+                .customerProfile(profile)
+                .recentTransactionCount(recentTransactionCount)
                 .build();
     }
 }

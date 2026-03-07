@@ -9,6 +9,7 @@ public enum ComplianceCheckTrigger {
     AML_CLEAR,
     AML_FLAGGED,
     RISK_SCORED,
+    RISK_CRITICAL,
     TRAVEL_RULE_COMPLETE,
     TRAVEL_RULE_FAILED,
     ESCALATE_MANUAL_REVIEW

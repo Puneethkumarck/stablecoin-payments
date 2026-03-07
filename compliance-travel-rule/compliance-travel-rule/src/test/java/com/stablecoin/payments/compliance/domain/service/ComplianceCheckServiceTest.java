@@ -334,13 +334,56 @@ class ComplianceCheckServiceTest {
     class RecordRiskScore {
 
         @Test
-        @DisplayName("should transition to TRAVEL_RULE_PACKAGING")
+        @DisplayName("should transition to TRAVEL_RULE_PACKAGING for LOW risk")
         void should_transitionToTravelRulePackaging_when_riskScored() {
             var check = createPendingCheck();
             check = service.recordKycResult(check, verifiedKycResult());
             check = service.recordSanctionsResult(check, clearSanctionsResult());
             check = service.recordAmlResult(check, clearAmlResult());
             var riskScore = lowRiskScore();
+
+            var result = service.recordRiskScore(check, riskScore);
+
+            var expected = check.riskScored(riskScore);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should transition to MANUAL_REVIEW for CRITICAL risk")
+        void should_transitionToManualReview_when_criticalRiskScore() {
+            var check = createPendingCheck();
+            check = service.recordKycResult(check, verifiedKycResult());
+            check = service.recordSanctionsResult(check, clearSanctionsResult());
+            check = service.recordAmlResult(check, clearAmlResult());
+            var riskScore = RiskScore.builder()
+                    .score(85)
+                    .band(RiskBand.CRITICAL)
+                    .factors(List.of("aml_flagged", "high_risk_corridor", "new_customer"))
+                    .build();
+
+            var result = service.recordRiskScore(check, riskScore);
+
+            var expected = check.riskCritical(riskScore);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("completedAt")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should transition to TRAVEL_RULE_PACKAGING for HIGH risk (not CRITICAL)")
+        void should_transitionToTravelRulePackaging_when_highRiskScore() {
+            var check = createPendingCheck();
+            check = service.recordKycResult(check, verifiedKycResult());
+            check = service.recordSanctionsResult(check, clearSanctionsResult());
+            check = service.recordAmlResult(check, clearAmlResult());
+            var riskScore = RiskScore.builder()
+                    .score(60)
+                    .band(RiskBand.HIGH)
+                    .factors(List.of("aml_flagged", "cross_border"))
+                    .build();
 
             var result = service.recordRiskScore(check, riskScore);
 
