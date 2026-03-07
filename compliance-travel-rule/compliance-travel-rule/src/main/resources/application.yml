@@ -112,6 +112,23 @@ springdoc:
     description: Compliance checks, sanctions screening, AML analysis, and FATF Travel Rule enforcement
     version: 1.0.0
 
+app:
+  compliance:
+    risk-scoring:
+      kyc-tier1-penalty: 20
+      high-value-penalty: 15
+      aml-flag-penalty: 30
+      cross-border-penalty: 10
+      new-customer-penalty: 15
+      high-corridor-risk-penalty: 20
+      amount-to-limit-ratio-penalty: 10
+      high-velocity-penalty: 15
+      corridor-risk-scores:
+        US-IR: 25
+        US-KP: 30
+        US-SY: 25
+        US-CU: 20
+
 logging:
   level:
     com.stablecoin.payments: INFO

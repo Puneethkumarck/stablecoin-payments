@@ -24,6 +24,7 @@ import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTri
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.ESCALATE_MANUAL_REVIEW;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_FAILED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_PASSED;
+import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_CRITICAL;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_SCORED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.SANCTIONS_CLEAR;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.START_KYC;
@@ -455,6 +456,50 @@ class ComplianceCheckTest {
             var failed = check.failTravelRule(null);
 
             assertThat(failed.errorMessage()).isEqualTo("Travel rule transmission failed");
+        }
+
+        @Test
+        @DisplayName("should transition RISK_SCORING -> MANUAL_REVIEW via riskCritical")
+        void should_manualReview_when_riskCritical() {
+            var check = createPendingCheck()
+                    .startKyc()
+                    .passKyc(passingKycResult())
+                    .sanctionsClear(clearSanctionsResult())
+                    .amlClear(clearAmlResult());
+            var criticalScore = RiskScore.builder()
+                    .score(85)
+                    .band(RiskBand.CRITICAL)
+                    .factors(List.of("aml_flagged", "high_risk_corridor", "new_customer"))
+                    .build();
+
+            var result = check.riskCritical(criticalScore);
+
+            var expected = check.toBuilder()
+                    .status(MANUAL_REVIEW)
+                    .overallResult(OverallResult.MANUAL_REVIEW)
+                    .riskScore(criticalScore)
+                    .errorCode("CO-4001")
+                    .errorMessage("Critical risk score — manual review required")
+                    .build();
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("completedAt")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should throw when riskCritical receives null score")
+        void should_throw_when_riskCriticalReceivesNull() {
+            var check = createPendingCheck()
+                    .startKyc()
+                    .passKyc(passingKycResult())
+                    .sanctionsClear(clearSanctionsResult())
+                    .amlClear(clearAmlResult());
+
+            assertThatThrownBy(() -> check.riskCritical(null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Risk score is required");
         }
     }
 

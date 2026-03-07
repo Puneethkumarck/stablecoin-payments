@@ -26,6 +26,7 @@ import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTri
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.ESCALATE_MANUAL_REVIEW;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_FAILED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_PASSED;
+import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_CRITICAL;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_SCORED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.SANCTIONS_CLEAR;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.SANCTIONS_HIT_DETECTED;
@@ -80,6 +81,8 @@ public record ComplianceCheck(
                     new StateTransition<>(AML_SCREENING, AML_CLEAR, RISK_SCORING),
                     new StateTransition<>(RISK_SCORING, RISK_SCORED, TRAVEL_RULE_PACKAGING),
                     new StateTransition<>(TRAVEL_RULE_PACKAGING, TRAVEL_RULE_COMPLETE, PASSED),
+                    // Risk critical path
+                    new StateTransition<>(RISK_SCORING, RISK_CRITICAL, MANUAL_REVIEW),
                     // Failure paths
                     new StateTransition<>(KYC_IN_PROGRESS, KYC_FAILED, FAILED),
                     new StateTransition<>(SANCTIONS_SCREENING, SANCTIONS_HIT_DETECTED, SANCTIONS_HIT),
@@ -264,6 +267,26 @@ public record ComplianceCheck(
         return toBuilder()
                 .status(nextStatus)
                 .riskScore(score)
+                .build();
+    }
+
+    /**
+     * Records a CRITICAL risk score. Transitions RISK_SCORING -> MANUAL_REVIEW.
+     * CRITICAL scores block payment and require manual review to override.
+     */
+    public ComplianceCheck riskCritical(RiskScore score) {
+        assertNotTerminal();
+        if (score == null) {
+            throw new IllegalArgumentException("Risk score is required");
+        }
+        var nextStatus = STATE_MACHINE.transition(status, RISK_CRITICAL);
+        return toBuilder()
+                .status(nextStatus)
+                .riskScore(score)
+                .overallResult(OverallResult.MANUAL_REVIEW)
+                .errorCode("CO-4001")
+                .errorMessage("Critical risk score — manual review required")
+                .completedAt(Instant.now())
                 .build();
     }
 
