@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {
+      "id": "check-sandbox-kyc-001",
+      "status": "complete",
+      "result": "clear",
+      "applicantId": "applicant-sandbox-001",
+      "reportIds": [
+        "report-sandbox-001"
+      ]
+    }
+  ]
+}
