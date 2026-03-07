@@ -1,6 +1,7 @@
 package com.stablecoin.payments.compliance.infrastructure.provider.worldcheck;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.stablecoin.payments.compliance.domain.model.SanctionsResult;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -54,7 +56,6 @@ class WorldCheckSanctionsAdapterTest {
         @Test
         @DisplayName("should screen both sender and recipient with no hits")
         void noHitsReturned() {
-            // given
             wireMock.stubFor(post(urlEqualTo("/v2/cases/screeningRequest"))
                     .willReturn(aResponse()
                             .withStatus(200)
@@ -68,24 +69,24 @@ class WorldCheckSanctionsAdapterTest {
                                 }
                                 """)));
 
-            var senderId = UUID.randomUUID();
-            var recipientId = UUID.randomUUID();
+            var result = adapter.screen(UUID.randomUUID(), UUID.randomUUID());
 
-            // when
-            var result = adapter.screen(senderId, recipientId);
-
-            // then
-            assertThat(result.senderScreened()).isTrue();
-            assertThat(result.recipientScreened()).isTrue();
-            assertThat(result.senderHit()).isFalse();
-            assertThat(result.recipientHit()).isFalse();
-            assertThat(result.hitDetails()).isNull();
-            assertThat(result.listsChecked()).containsExactly("OFAC_SDN", "EU_CONSOLIDATED", "UN");
-            assertThat(result.provider()).isEqualTo("world-check");
+            var expected = SanctionsResult.builder()
+                    .senderScreened(true)
+                    .recipientScreened(true)
+                    .senderHit(false)
+                    .recipientHit(false)
+                    .hitDetails(null)
+                    .listsChecked(List.of("OFAC_SDN", "EU_CONSOLIDATED", "UN"))
+                    .provider("world-check")
+                    .build();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("sanctionsResultId", "checkId", "providerRef", "screenedAt")
+                    .isEqualTo(expected);
             assertThat(result.providerRef()).startsWith("wc:");
             assertThat(result.screenedAt()).isNotNull();
 
-            // Verify both sender and recipient were screened (2 API calls)
             wireMock.verify(2, postRequestedFor(urlEqualTo("/v2/cases/screeningRequest")));
         }
     }
@@ -95,9 +96,8 @@ class WorldCheckSanctionsAdapterTest {
     class HitDetected {
 
         @Test
-        @DisplayName("should detect sender hit and strip PII from details")
-        void senderHitDetected() {
-            // given
+        @DisplayName("should detect hit and strip PII from details")
+        void hitDetectedWithPiiStripped() {
             wireMock.stubFor(post(urlEqualTo("/v2/cases/screeningRequest"))
                     .willReturn(aResponse()
                             .withStatus(200)
@@ -121,28 +121,32 @@ class WorldCheckSanctionsAdapterTest {
                                 }
                                 """)));
 
-            var senderId = UUID.randomUUID();
-            var recipientId = UUID.randomUUID();
+            var result = adapter.screen(UUID.randomUUID(), UUID.randomUUID());
 
-            // when
-            var result = adapter.screen(senderId, recipientId);
+            var expected = SanctionsResult.builder()
+                    .senderScreened(true)
+                    .recipientScreened(true)
+                    .senderHit(true)
+                    .recipientHit(true)
+                    .listsChecked(List.of("OFAC_SDN", "EU_CONSOLIDATED", "UN"))
+                    .provider("world-check")
+                    .build();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("sanctionsResultId", "checkId", "providerRef", "screenedAt", "hitDetails")
+                    .isEqualTo(expected);
 
-            // then
-            assertThat(result.senderHit()).isTrue();
-            assertThat(result.recipientHit()).isTrue(); // both get same response
-            assertThat(result.hitDetails()).isNotNull();
-            // PII stripped: hitDetails should NOT contain actual names
-            assertThat(result.hitDetails()).doesNotContain("John Doe");
-            assertThat(result.hitDetails()).doesNotContain("John D.");
-            // But should contain match metadata
-            assertThat(result.hitDetails()).contains("STRONG");
-            assertThat(result.hitDetails()).contains("OFAC_SDN");
+            // PII stripped: no personal names, only match metadata
+            assertThat(result.hitDetails())
+                    .doesNotContain("John Doe")
+                    .doesNotContain("John D.")
+                    .contains("STRONG")
+                    .contains("OFAC_SDN");
         }
 
         @Test
         @DisplayName("should detect weak match as no hit")
         void weakMatchIsNotHit() {
-            // given
             wireMock.stubFor(post(urlEqualTo("/v2/cases/screeningRequest"))
                     .willReturn(aResponse()
                             .withStatus(200)
@@ -166,13 +170,21 @@ class WorldCheckSanctionsAdapterTest {
                                 }
                                 """)));
 
-            // when
             var result = adapter.screen(UUID.randomUUID(), UUID.randomUUID());
 
-            // then
-            assertThat(result.senderHit()).isFalse();
-            assertThat(result.recipientHit()).isFalse();
-            assertThat(result.hitDetails()).isNull();
+            var expected = SanctionsResult.builder()
+                    .senderScreened(true)
+                    .recipientScreened(true)
+                    .senderHit(false)
+                    .recipientHit(false)
+                    .hitDetails(null)
+                    .listsChecked(List.of("OFAC_SDN", "EU_CONSOLIDATED", "UN"))
+                    .provider("world-check")
+                    .build();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("sanctionsResultId", "checkId", "providerRef", "screenedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -183,11 +195,9 @@ class WorldCheckSanctionsAdapterTest {
         @Test
         @DisplayName("should throw when API returns server error")
         void serverError() {
-            // given
             wireMock.stubFor(post(urlEqualTo("/v2/cases/screeningRequest"))
                     .willReturn(aResponse().withStatus(500)));
 
-            // when / then
             assertThatThrownBy(() -> adapter.screen(UUID.randomUUID(), UUID.randomUUID()))
                     .isInstanceOf(Exception.class);
         }
@@ -195,11 +205,9 @@ class WorldCheckSanctionsAdapterTest {
         @Test
         @DisplayName("should throw when API returns 401 unauthorized")
         void unauthorizedError() {
-            // given
             wireMock.stubFor(post(urlEqualTo("/v2/cases/screeningRequest"))
                     .willReturn(aResponse().withStatus(401)));
 
-            // when / then
             assertThatThrownBy(() -> adapter.screen(UUID.randomUUID(), UUID.randomUUID()))
                     .isInstanceOf(Exception.class);
         }
