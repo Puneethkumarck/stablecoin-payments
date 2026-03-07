@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static com.stablecoin.payments.compliance.fixtures.CustomerRiskProfileFixtures.BASE_TIME;
@@ -33,6 +34,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(profile);
     }
 
@@ -62,6 +64,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .ignoringFields("updatedAt")
                 .isEqualTo(updated);
     }
@@ -88,6 +91,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(profile);
     }
 
@@ -102,6 +106,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(profile);
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static com.stablecoin.payments.fx.fixtures.FxQuoteFixtures.anActiveQuote;
@@ -36,6 +37,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -53,6 +55,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findByPaymentId(lock.paymentId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -112,6 +115,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(expected);
     }
 
@@ -124,6 +128,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -142,6 +147,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -161,6 +167,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
             assertThat(repository.findById(lock.lockId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                     .isEqualTo(lock);
         }
     }

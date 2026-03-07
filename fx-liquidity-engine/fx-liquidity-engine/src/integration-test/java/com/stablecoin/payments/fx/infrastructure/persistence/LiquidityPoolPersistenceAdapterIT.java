@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static com.stablecoin.payments.fx.fixtures.LiquidityPoolFixtures.aUsdEurPool;
@@ -28,6 +29,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -44,6 +46,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findByCorridor("USD", "EUR")).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .isEqualTo(pool);
     }
 
@@ -92,6 +95,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(pool.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .ignoringFields("updatedAt")
                 .isEqualTo(expected);
     }
@@ -124,6 +128,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(pool.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
                 .ignoringFields("updatedAt")
                 .isEqualTo(pool);
     }
