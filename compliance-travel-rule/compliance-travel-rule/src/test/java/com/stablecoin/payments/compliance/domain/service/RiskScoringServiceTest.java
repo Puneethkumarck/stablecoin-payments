@@ -1,10 +1,7 @@
 package com.stablecoin.payments.compliance.domain.service;
 
-import com.stablecoin.payments.compliance.domain.model.CustomerRiskProfile;
 import com.stablecoin.payments.compliance.domain.model.KycTier;
-import com.stablecoin.payments.compliance.domain.model.RiskBand;
 import com.stablecoin.payments.compliance.domain.model.RiskScore;
-import com.stablecoin.payments.compliance.domain.model.RiskScoringContext;
 import com.stablecoin.payments.compliance.domain.model.RiskScoringWeights;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

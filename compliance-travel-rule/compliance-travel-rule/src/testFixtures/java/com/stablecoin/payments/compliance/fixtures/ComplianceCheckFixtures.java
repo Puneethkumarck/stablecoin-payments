@@ -2,6 +2,7 @@ package com.stablecoin.payments.compliance.fixtures;
 
 import com.stablecoin.payments.compliance.domain.model.AmlResult;
 import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
+import com.stablecoin.payments.compliance.domain.model.CustomerRiskProfile;
 import com.stablecoin.payments.compliance.domain.model.KycResult;
 import com.stablecoin.payments.compliance.domain.model.KycStatus;
 import com.stablecoin.payments.compliance.domain.model.KycTier;
@@ -12,7 +13,6 @@ import com.stablecoin.payments.compliance.domain.model.TransmissionStatus;
 import com.stablecoin.payments.compliance.domain.model.TravelRulePackage;
 import com.stablecoin.payments.compliance.domain.model.TravelRuleProtocol;
 import com.stablecoin.payments.compliance.domain.model.VaspInfo;
-import com.stablecoin.payments.compliance.domain.model.CustomerRiskProfile;
 
 import java.math.BigDecimal;
 import java.time.Instant;

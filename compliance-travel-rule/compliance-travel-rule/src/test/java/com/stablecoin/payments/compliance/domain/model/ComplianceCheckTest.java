@@ -24,7 +24,6 @@ import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTri
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.ESCALATE_MANUAL_REVIEW;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_FAILED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.KYC_PASSED;
-import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_CRITICAL;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.RISK_SCORED;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.SANCTIONS_CLEAR;
 import static com.stablecoin.payments.compliance.domain.model.ComplianceCheckTrigger.START_KYC;
