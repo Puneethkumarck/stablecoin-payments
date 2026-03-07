@@ -10,8 +10,9 @@ tone_instructions: |
   Prioritise security issues first, then correctness, then design.
 
 reviews:
-  # Request changes for critical issues; leave comments for suggestions
-  request_changes_workflow: true
+  # Comment-only workflow — never block PR merges.
+  # Claude Code autofix agent reads these comments and fixes critical/major issues.
+  request_changes_workflow: false
 
   # Post a high-level summary on every PR
   high_level_summary: true
