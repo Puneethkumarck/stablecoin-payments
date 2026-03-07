@@ -42,7 +42,7 @@ class RedisRateCacheAdapterTest {
     class Put {
 
         @Test
-        @DisplayName("should store rate in Redis with TTL")
+        @DisplayName("should store rate in Redis with correct key and TTL")
         void storesWithTtl() {
             var rate = CorridorRate.builder()
                     .fromCurrency("USD").toCurrency("EUR")
@@ -59,9 +59,12 @@ class RedisRateCacheAdapterTest {
             then(valueOps).should().set(keyCaptor.capture(), jsonCaptor.capture(), ttlCaptor.capture());
 
             assertThat(keyCaptor.getValue()).isEqualTo("fx:rate:USD:EUR");
-            assertThat(jsonCaptor.getValue()).contains("\"fromCurrency\":\"USD\"");
-            assertThat(jsonCaptor.getValue()).contains("\"rate\":0.92");
             assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofSeconds(5));
+            assertThat(jsonCaptor.getValue())
+                    .contains("\"fromCurrency\":\"USD\"")
+                    .contains("\"toCurrency\":\"EUR\"")
+                    .contains("\"rate\":0.92")
+                    .contains("\"provider\":\"refinitiv\"");
         }
     }
 
@@ -91,12 +94,21 @@ class RedisRateCacheAdapterTest {
             var result = cache.get("USD", "EUR");
 
             assertThat(result).isPresent();
-            var rate = result.get();
-            assertThat(rate.fromCurrency()).isEqualTo("USD");
-            assertThat(rate.toCurrency()).isEqualTo("EUR");
-            assertThat(rate.rate()).isEqualByComparingTo("0.92");
-            assertThat(rate.provider()).isEqualTo("refinitiv");
-            assertThat(rate.ageMs()).isLessThanOrEqualTo(5000);
+            var expected = CorridorRate.builder()
+                    .fromCurrency("USD")
+                    .toCurrency("EUR")
+                    .rate(new BigDecimal("0.92"))
+                    .spreadBps(30)
+                    .feeBps(30)
+                    .provider("refinitiv")
+                    .ageMs(0)
+                    .build();
+            assertThat(result.get())
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("ageMs")
+                    .isEqualTo(expected);
+            assertThat(result.get().ageMs()).isBetween(0, 5000);
         }
 
         @Test

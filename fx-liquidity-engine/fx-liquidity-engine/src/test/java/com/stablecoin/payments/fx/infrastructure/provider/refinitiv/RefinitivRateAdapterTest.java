@@ -1,12 +1,15 @@
 package com.stablecoin.payments.fx.infrastructure.provider.refinitiv;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.stablecoin.payments.fx.domain.model.CorridorRate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -65,14 +68,21 @@ class RefinitivRateAdapterTest {
             var result = adapter.getRate("USD", "EUR");
 
             assertThat(result).isPresent();
-            var rate = result.get();
-            assertThat(rate.fromCurrency()).isEqualTo("USD");
-            assertThat(rate.toCurrency()).isEqualTo("EUR");
-            assertThat(rate.rate()).isEqualByComparingTo("0.92");
-            assertThat(rate.provider()).isEqualTo("refinitiv");
-            assertThat(rate.ageMs()).isLessThanOrEqualTo(5000);
-            assertThat(rate.spreadBps()).isEqualTo(30);
-            assertThat(rate.feeBps()).isEqualTo(30);
+            var expected = CorridorRate.builder()
+                    .fromCurrency("USD")
+                    .toCurrency("EUR")
+                    .rate(new BigDecimal("0.92"))
+                    .spreadBps(30)
+                    .feeBps(30)
+                    .provider("refinitiv")
+                    .ageMs(0)
+                    .build();
+            assertThat(result.get())
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("ageMs")
+                    .isEqualTo(expected);
+            assertThat(result.get().ageMs()).isBetween(0, 5000);
 
             wireMock.verify(1, getRequestedFor(urlEqualTo("/data/pricing/v1/rates/USDEUR")));
         }
