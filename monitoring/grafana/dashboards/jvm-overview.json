@@ -1,0 +1,156 @@
+{
+  "uid": "sp-jvm-overview",
+  "title": "JVM Overview",
+  "tags": ["jvm", "stablecoin-payments"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "application",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(jvm_memory_used_bytes, application)",
+        "multi": true,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": "Prometheus",
+        "query": "label_values(jvm_memory_used_bytes{application=~\"$application\"}, instance)",
+        "multi": true,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Heap Memory Used vs Max",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_memory_used_bytes{application=~\"$application\", instance=~\"$instance\", area=\"heap\"}", "legendFormat": "{{application}} used" },
+        { "expr": "jvm_memory_max_bytes{application=~\"$application\", instance=~\"$instance\", area=\"heap\"}", "legendFormat": "{{application}} max" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "Heap Usage %",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_memory_used_bytes{application=~\"$application\", instance=~\"$instance\", area=\"heap\"} / jvm_memory_max_bytes{application=~\"$application\", instance=~\"$instance\", area=\"heap\"} * 100", "legendFormat": "{{application}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 70, "color": "yellow" }, { "value": 85, "color": "red" }] } } }
+    },
+    {
+      "title": "Non-Heap Memory",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_memory_used_bytes{application=~\"$application\", instance=~\"$instance\", area=\"nonheap\"}", "legendFormat": "{{application}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "title": "Process CPU Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "process_cpu_usage{application=~\"$application\", instance=~\"$instance\"} * 100", "legendFormat": "{{application}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "title": "Live Threads",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_threads_live_threads{application=~\"$application\", instance=~\"$instance\"}", "legendFormat": "{{application}}" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 100, "color": "yellow" }, { "value": 200, "color": "red" }] } } }
+    },
+    {
+      "title": "Thread States",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_threads_states_threads{application=~\"$application\", instance=~\"$instance\"}", "legendFormat": "{{application}} {{state}}" }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": { "defaults": { "custom": { "stacking": { "mode": "normal" } } } }
+    },
+    {
+      "title": "GC Pause Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_count{application=~\"$application\", instance=~\"$instance\"}[1m])", "legendFormat": "{{application}} {{cause}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "title": "GC Pause Duration",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_sum{application=~\"$application\", instance=~\"$instance\"}[1m])", "legendFormat": "{{application}} {{cause}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(http_server_requests_seconds_count{application=~\"$application\", instance=~\"$instance\", uri!~\"/actuator.*\"}[1m])", "legendFormat": "{{application}} {{method}} {{uri}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "title": "HTTP P95 Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{application=~\"$application\", instance=~\"$instance\", uri!~\"/actuator.*\"}[5m]))", "legendFormat": "{{application}} {{method}} {{uri}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "title": "HTTP Error Rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(http_server_requests_seconds_count{application=~\"$application\", instance=~\"$instance\", status=~\"5..\"}[1m])", "legendFormat": "{{application}} {{status}} {{uri}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "title": "HTTP P50 Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{application=~\"$application\", instance=~\"$instance\", uri!~\"/actuator.*\"}[5m]))", "legendFormat": "{{application}} {{method}} {{uri}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ],
+  "schemaVersion": 39
+}
