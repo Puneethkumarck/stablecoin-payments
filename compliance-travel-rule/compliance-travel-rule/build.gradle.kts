@@ -120,6 +120,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
+    testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
     "integrationTestImplementation"(testFixtures(project))
     "integrationTestImplementation"("org.testcontainers:postgresql:$testcontainersVersion")
     "integrationTestImplementation"("org.testcontainers:kafka:$testcontainersVersion")

@@ -1,0 +1,16 @@
+{
+  "caseId": "test-sanctioned-entity",
+  "caseSystemId": "WC-2024-002",
+  "status": "COMPLETED",
+  "results": [
+    {
+      "referenceId": "REF-001",
+      "matchStrength": "STRONG",
+      "matchedTerm": "[REDACTED]",
+      "matchedNameType": "PRIMARY",
+      "submittedTerm": "[REDACTED]",
+      "matchedLists": ["OFAC_SDN"],
+      "categories": ["SANCTIONS"]
+    }
+  ]
+}
