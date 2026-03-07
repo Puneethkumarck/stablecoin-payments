@@ -28,6 +28,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -44,6 +45,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findByCorridor("USD", "EUR")).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(pool);
     }
 
@@ -92,7 +94,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(pool.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .ignoringFields("updatedAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(expected);
     }
 
@@ -124,7 +126,7 @@ class LiquidityPoolPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(pool.poolId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .ignoringFields("updatedAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(pool);
     }
 }

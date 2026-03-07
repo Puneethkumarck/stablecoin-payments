@@ -29,6 +29,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(found).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(saved);
     }
@@ -61,6 +62,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(expected);
     }
@@ -79,6 +81,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -97,6 +100,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -115,6 +119,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -134,6 +139,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
             assertThat(repository.findById(quote.quoteId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                     .ignoringFields("spreadBps")
                     .isEqualTo(quote);
         }

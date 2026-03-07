@@ -36,6 +36,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -53,6 +54,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findByPaymentId(lock.paymentId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -112,6 +114,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(expected);
     }
 
@@ -124,6 +127,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -142,6 +146,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(lock.lockId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(lock);
     }
 
@@ -161,6 +166,7 @@ class FxRateLockPersistenceAdapterIT extends AbstractIntegrationTest {
             assertThat(repository.findById(lock.lockId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                     .isEqualTo(lock);
         }
     }

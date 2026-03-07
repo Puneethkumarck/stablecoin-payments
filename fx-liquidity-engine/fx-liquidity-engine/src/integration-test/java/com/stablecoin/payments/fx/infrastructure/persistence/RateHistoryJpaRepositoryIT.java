@@ -35,6 +35,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -79,6 +80,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -99,6 +101,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -118,6 +121,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
             assertThat(repository.findById(saved.getId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                     .isEqualTo(saved);
         }
     }

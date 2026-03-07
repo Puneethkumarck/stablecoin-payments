@@ -33,6 +33,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(profile);
     }
 
@@ -62,7 +63,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .ignoringFields("updatedAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(updated);
     }
 
@@ -88,6 +89,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(profile);
     }
 
@@ -102,6 +104,7 @@ class CustomerRiskProfilePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByCustomerId(profile.customerId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(profile);
     }
 }

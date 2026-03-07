@@ -62,7 +62,9 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
         if (!MUTATING_METHODS.contains(request.getMethod())) {
             return false;
         }
-        var path = request.getServletPath();
+        var uri = request.getRequestURI();
+        var contextPath = request.getContextPath();
+        var path = contextPath.isEmpty() ? uri : uri.substring(contextPath.length());
         if (EXEMPT_PREFIXES.stream().anyMatch(path::startsWith)) {
             return false;
         }
