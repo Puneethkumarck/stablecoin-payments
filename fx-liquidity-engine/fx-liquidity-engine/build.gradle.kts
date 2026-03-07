@@ -36,6 +36,8 @@ tasks.register<Test>("integrationTest") {
     classpath = integrationTestSourceSet.runtimeClasspath
     shouldRunAfter(tasks.test)
     configure<JacocoTaskExtension> { isEnabled = false }
+    failOnNoDiscoveredTests = false
+    exclude("**/Abstract*", "**/config/**")
 }
 
 val businessTestSourceSet: SourceSet = sourceSets.create("businessTest") {
@@ -56,6 +58,7 @@ tasks.register<Test>("businessTest") {
     shouldRunAfter(tasks.named("integrationTest"))
     failOnNoDiscoveredTests = false
     configure<JacocoTaskExtension> { isEnabled = false }
+    failOnNoDiscoveredTests = false
 }
 
 val lombokVersion: String by project
