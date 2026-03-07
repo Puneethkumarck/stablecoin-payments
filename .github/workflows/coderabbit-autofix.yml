@@ -1,0 +1,139 @@
+name: CodeRabbit Autofix
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+# Prevent concurrent autofix runs on the same PR
+concurrency:
+  group: coderabbit-autofix-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  autofix:
+    # Trigger on any CodeRabbit review (comment-only, never changes_requested)
+    # Claude triages comments and only fixes critical/major issues
+    if: >
+      github.event.review.user.login == 'coderabbitai[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Check for bot commit (loop prevention)
+        id: loop-check
+        run: |
+          LAST_AUTHOR=$(git log -1 --format='%an')
+          echo "Last commit author: $LAST_AUTHOR"
+          if [[ "$LAST_AUTHOR" == *"[bot]"* || "$LAST_AUTHOR" == "github-actions"* || "$LAST_AUTHOR" == "Claude"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping autofix — last commit was from a bot to prevent loops."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Java
+        if: steps.loop-check.outputs.skip != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        if: steps.loop-check.outputs.skip != 'true'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+          gradle-home-cache-cleanup: true
+
+      - name: Run Claude Code Autofix
+        if: steps.loop-check.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            contents: write
+            pull-requests: write
+          prompt: |
+            CodeRabbit has reviewed PR #${{ github.event.pull_request.number }}.
+
+            ## Step 1 — Read CodeRabbit review comments
+
+            Fetch all review comments from CodeRabbit's review:
+            ```
+            gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments \
+              --jq '.[] | select(.user.login == "coderabbitai[bot]") | {path, line, body}'
+            ```
+            Also read the review body itself:
+            ```
+            gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews/${{ github.event.review.id }} \
+              --jq '{body, state}'
+            ```
+
+            ## Step 2 — Triage by severity
+
+            Classify each comment:
+            - **Critical**: Security vulnerabilities, data loss risks, injection flaws, broken authentication, race conditions
+            - **Major**: Bugs, correctness errors, significant design flaws, performance regressions, missing error handling that could cause crashes
+            - **Minor/Suggestion**: Style preferences, documentation, naming suggestions, minor refactors, optional improvements
+
+            Only fix **Critical** and **Major** issues. Skip minor suggestions entirely.
+
+            ## Step 3 — Fix each critical/major issue
+
+            For each issue:
+            1. Read the relevant source file to understand full context
+            2. Apply the minimal fix that addresses the issue
+            3. Follow the project's coding standards (read CLAUDE.md)
+            4. Do NOT make unrelated changes or "improvements" while fixing
+
+            ## Step 4 — Validate
+
+            After all fixes:
+            1. Run `./gradlew spotlessApply` to fix formatting
+            2. Run `./gradlew spotlessCheck` to verify
+            3. If the changed files belong to a specific service, run its unit tests:
+               `./gradlew :<service>:<service>:test`
+
+            ## Step 5 — Commit and push
+
+            If any fixes were made:
+            1. Stage only the files you changed: `git add <specific-files>`
+            2. Commit with message: `fix: address CodeRabbit critical/major review findings`
+            3. Push to the PR branch
+
+            If no critical/major issues were found, do NOT commit anything.
+
+            ## Step 6 — Comment summary
+
+            Leave a PR comment using `gh pr comment` with this structure:
+
+            ```
+            ## CodeRabbit Autofix Summary
+
+            ### Fixed (Critical/Major)
+            - [List each fix with file:line and one-line description]
+
+            ### Skipped (Intentionally)
+            - [Any critical/major issues that were too risky to auto-fix, with reason]
+
+            ### Ignored (Minor/Suggestions)
+            - [Count of minor suggestions not addressed]
+            ```
+
+            ## Rules
+            - Follow CLAUDE.md coding standards strictly
+            - If a CodeRabbit suggestion conflicts with CLAUDE.md, follow CLAUDE.md
+            - Keep fixes minimal and focused — do not refactor surrounding code
+            - If unsure about a fix, skip it and note it in the summary
+            - Never force-push or rewrite history
