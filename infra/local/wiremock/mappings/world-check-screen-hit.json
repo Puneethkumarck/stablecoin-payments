@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/v2/cases/screeningRequest",
+    "bodyPatterns": [
+      {
+        "contains": "sanctioned"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "sanctions/world-check-hit.json"
+  },
+  "priority": 5
+}
