@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+
 import java.util.UUID;
 
 import static com.stablecoin.payments.fx.fixtures.FxQuoteFixtures.anActiveQuote;
@@ -30,7 +30,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(found).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(saved);
     }
@@ -63,7 +63,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(expected);
     }
@@ -82,7 +82,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -101,7 +101,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -120,7 +120,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(repository.findById(quote.quoteId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .ignoringFields("spreadBps")
                 .isEqualTo(quote);
     }
@@ -140,7 +140,7 @@ class FxQuotePersistenceAdapterIT extends AbstractIntegrationTest {
             assertThat(repository.findById(quote.quoteId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                     .ignoringFields("spreadBps")
                     .isEqualTo(quote);
         }

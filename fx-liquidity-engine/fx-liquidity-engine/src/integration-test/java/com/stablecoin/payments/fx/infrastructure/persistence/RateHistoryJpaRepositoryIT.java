@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 import static com.stablecoin.payments.fx.fixtures.RateHistoryFixtures.aRateEntry;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +35,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -81,7 +80,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -102,7 +101,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
         assertThat(repository.findById(saved.getId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -122,7 +121,7 @@ class RateHistoryJpaRepositoryIT extends AbstractIntegrationTest {
             assertThat(repository.findById(saved.getId())).isPresent().get()
                     .usingRecursiveComparison()
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .ignoringFieldsOfTypes(Instant.class)
                     .isEqualTo(saved);
         }
     }

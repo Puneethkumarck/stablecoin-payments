@@ -20,7 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -50,8 +50,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(saved.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -64,8 +63,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findByPaymentId(check.paymentId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
     }
 
@@ -105,8 +103,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(check);
     }
 
@@ -133,8 +130,8 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt", "sanctionsResult.hitDetails")
+                .ignoringFieldsOfTypes(Instant.class)
+                .ignoringFields("sanctionsResult.hitDetails")
                 .isEqualTo(check);
     }
 
@@ -158,8 +155,8 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt", "amlResult.chainAnalysis")
+                .ignoringFieldsOfTypes(Instant.class)
+                .ignoringFields("amlResult.chainAnalysis")
                 .isEqualTo(check);
     }
 
@@ -185,8 +182,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(check);
     }
 
@@ -217,8 +213,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt", "completedAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(check);
     }
 
@@ -236,8 +231,7 @@ class ComplianceCheckPersistenceAdapterIT extends AbstractIntegrationTest {
         assertThat(adapter.findById(check.checkId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
-                .withComparatorForType((a, b) -> a.truncatedTo(ChronoUnit.MICROS).compareTo(b.truncatedTo(ChronoUnit.MICROS)), Instant.class)
-                .ignoringFields("createdAt")
+                .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(check);
     }
 
