@@ -54,6 +54,7 @@ tasks.register<Test>("businessTest") {
     testClassesDirs = businessTestSourceSet.output.classesDirs
     classpath = businessTestSourceSet.runtimeClasspath
     shouldRunAfter(tasks.named("integrationTest"))
+    failOnNoDiscoveredTests = false
     configure<JacocoTaskExtension> { isEnabled = false }
 }
 

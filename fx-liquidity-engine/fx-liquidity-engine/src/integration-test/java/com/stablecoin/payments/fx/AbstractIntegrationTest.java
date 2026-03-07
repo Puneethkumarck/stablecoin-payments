@@ -43,7 +43,8 @@ public abstract class AbstractIntegrationTest {
                     fx_quotes,
                     rate_history,
                     liquidity_pools,
-                    hedging_positions
+                    hedging_positions,
+                    fx_outbox_record
                 CASCADE
                 """);
     }

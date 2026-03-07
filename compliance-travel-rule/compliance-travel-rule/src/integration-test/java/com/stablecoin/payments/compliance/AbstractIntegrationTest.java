@@ -1,9 +1,12 @@
 package com.stablecoin.payments.compliance;
 
 import com.stablecoin.payments.compliance.config.TestSecurityConfig;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -11,6 +14,7 @@ import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+@SuppressWarnings("resource")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("integration-test")
 @AutoConfigureMockMvc
@@ -29,6 +33,24 @@ public abstract class AbstractIntegrationTest {
     static {
         POSTGRES.start();
         KAFKA.start();
+    }
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void cleanDatabase() {
+        jdbcTemplate.execute("""
+                TRUNCATE TABLE
+                    travel_rule_packages,
+                    aml_results,
+                    sanctions_results,
+                    kyc_results,
+                    compliance_checks,
+                    customer_risk_profiles,
+                    compliance_outbox_record
+                CASCADE
+                """);
     }
 
     @DynamicPropertySource

@@ -54,6 +54,7 @@ tasks.register<Test>("businessTest") {
     testClassesDirs = businessTestSourceSet.output.classesDirs
     classpath = businessTestSourceSet.runtimeClasspath
     shouldRunAfter(tasks.named("integrationTest"))
+    failOnNoDiscoveredTests = false
     configure<JacocoTaskExtension> { isEnabled = false }
 }
 
@@ -114,6 +115,7 @@ dependencies {
     // Test fixtures
     testFixturesImplementation("org.assertj:assertj-core")
     testFixturesImplementation("org.mockito:mockito-core")
+    testFixturesImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")

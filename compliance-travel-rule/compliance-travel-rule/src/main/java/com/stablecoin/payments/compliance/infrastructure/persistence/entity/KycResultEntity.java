@@ -53,9 +53,10 @@ public class KycResultEntity {
     @Column(name = "provider_ref", nullable = false, length = 200)
     private String providerRef;
 
+    @Builder.Default
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_response", nullable = false, columnDefinition = "jsonb")
-    private String rawResponse;
+    private String rawResponse = "{}";
 
     @Column(name = "checked_at", nullable = false)
     private Instant checkedAt;
