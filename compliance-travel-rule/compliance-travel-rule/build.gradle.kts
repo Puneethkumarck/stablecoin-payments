@@ -87,6 +87,9 @@ dependencies {
     implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("org.springframework.boot:spring-boot-starter-security")
 
+    // Redis — KYC cache
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
     // Kafka via Spring Cloud Stream
     implementation("org.springframework.cloud:spring-cloud-stream")
     implementation("org.springframework.cloud:spring-cloud-stream-binder-kafka")
