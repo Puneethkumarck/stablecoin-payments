@@ -4,10 +4,12 @@ import com.stablecoin.payments.fx.domain.model.FxQuote;
 import com.stablecoin.payments.fx.domain.model.FxRateLock;
 import com.stablecoin.payments.fx.domain.model.LiquidityPool;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
 @Slf4j
+@Service
 public class LockService {
 
     public record LockResult(FxQuote lockedQuote, FxRateLock lock, LiquidityPool updatedPool) {}
