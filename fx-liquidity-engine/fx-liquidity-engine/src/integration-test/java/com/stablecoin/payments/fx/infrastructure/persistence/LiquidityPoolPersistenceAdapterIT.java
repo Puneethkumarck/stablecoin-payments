@@ -9,7 +9,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-
 import java.util.UUID;
 
 import static com.stablecoin.payments.fx.fixtures.LiquidityPoolFixtures.aUsdEurPool;
