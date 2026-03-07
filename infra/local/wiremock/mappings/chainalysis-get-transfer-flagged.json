@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/v2/users/.*flagged.*/transfers"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "bodyFileName": "aml/chainalysis-flagged.json"
+  },
+  "priority": 5
+}
