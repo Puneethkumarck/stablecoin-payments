@@ -7,11 +7,13 @@ import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import io.temporal.worker.WorkerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration
+@ConditionalOnProperty(name = "app.temporal.client.enabled", havingValue = "true", matchIfMissing = true)
 public class TemporalConfig {
 
     public static final String TASK_QUEUE = "payment-orchestrator-queue";

@@ -165,7 +165,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             log.error("FX lock failed with exception for paymentId={}",
                     request.paymentId(), e);
             publishEvent(PaymentEventRequest.failed(request.paymentId(),
-                    request.correlationId(), "FX_LOCKING", reason, "FX_LOCK_ERROR"));
+                    request.correlationId(), "COMPLIANCE_CHECK", reason, "FX_LOCK_ERROR"));
             return PaymentResult.failed(request.paymentId(), reason);
         }
 
@@ -175,7 +175,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             log.info("FX lock rejected for paymentId={}: {}",
                     request.paymentId(), fxResult.failureReason());
             publishEvent(PaymentEventRequest.failed(request.paymentId(),
-                    request.correlationId(), "FX_LOCKING", reason, "FX_LOCK_REJECTED"));
+                    request.correlationId(), "COMPLIANCE_CHECK", reason, "FX_LOCK_REJECTED"));
             return PaymentResult.failed(request.paymentId(), reason);
         }
 
