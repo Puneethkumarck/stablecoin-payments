@@ -59,7 +59,9 @@ public class ComplianceCheckPersistenceAdapter implements ComplianceCheckReposit
             if (existingKyc.isPresent()) {
                 savedKyc = existingKyc.get();
             } else {
-                savedKyc = kycJpa.save(kycMapper.toEntity(check.kycResult()));
+                var kycEntity = kycMapper.toEntity(check.kycResult());
+                kycEntity.setCheckId(check.checkId());
+                savedKyc = kycJpa.save(kycEntity);
             }
         }
 
@@ -69,7 +71,9 @@ public class ComplianceCheckPersistenceAdapter implements ComplianceCheckReposit
             if (existingSanctions.isPresent()) {
                 savedSanctions = existingSanctions.get();
             } else {
-                savedSanctions = sanctionsJpa.save(sanctionsMapper.toEntity(check.sanctionsResult()));
+                var sanctionsEntity = sanctionsMapper.toEntity(check.sanctionsResult());
+                sanctionsEntity.setCheckId(check.checkId());
+                savedSanctions = sanctionsJpa.save(sanctionsEntity);
             }
         }
 
@@ -79,7 +83,9 @@ public class ComplianceCheckPersistenceAdapter implements ComplianceCheckReposit
             if (existingAml.isPresent()) {
                 savedAml = existingAml.get();
             } else {
-                savedAml = amlJpa.save(amlMapper.toEntity(check.amlResult()));
+                var amlEntity = amlMapper.toEntity(check.amlResult());
+                amlEntity.setCheckId(check.checkId());
+                savedAml = amlJpa.save(amlEntity);
             }
         }
 
