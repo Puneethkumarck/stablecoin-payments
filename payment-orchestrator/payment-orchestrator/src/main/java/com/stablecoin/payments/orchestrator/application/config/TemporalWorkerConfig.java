@@ -2,6 +2,7 @@ package com.stablecoin.payments.orchestrator.application.config;
 
 import com.stablecoin.payments.orchestrator.domain.workflow.PaymentWorkflowImpl;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceCheckActivity;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.EventPublishingActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActivity;
 import io.temporal.worker.Worker;
 import io.temporal.worker.WorkerFactory;
@@ -25,12 +26,14 @@ public class TemporalWorkerConfig {
     @Bean
     public Worker paymentWorker(WorkerFactory workerFactory,
                                 ComplianceCheckActivity complianceCheckActivity,
-                                FxLockActivity fxLockActivity) {
+                                FxLockActivity fxLockActivity,
+                                EventPublishingActivity eventPublishingActivity) {
         var worker = workerFactory.newWorker(TASK_QUEUE);
         worker.registerWorkflowImplementationTypes(PaymentWorkflowImpl.class);
-        worker.registerActivitiesImplementations(complianceCheckActivity, fxLockActivity);
+        worker.registerActivitiesImplementations(
+                complianceCheckActivity, fxLockActivity, eventPublishingActivity);
         log.info("Temporal worker registered on queue={} with PaymentWorkflow, "
-                + "ComplianceCheckActivity, FxLockActivity", TASK_QUEUE);
+                + "ComplianceCheckActivity, FxLockActivity, EventPublishingActivity", TASK_QUEUE);
         workerFactory.start();
         return worker;
     }

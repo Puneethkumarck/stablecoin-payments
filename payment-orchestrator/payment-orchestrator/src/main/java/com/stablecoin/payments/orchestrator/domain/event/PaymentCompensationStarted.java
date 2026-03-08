@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record PaymentCompensationStarted(
         UUID paymentId,
+        UUID correlationId,
         String compensationReason,
         Instant startedAt
 ) {

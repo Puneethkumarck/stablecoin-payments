@@ -1,10 +1,12 @@
 package com.stablecoin.payments.orchestrator.domain.service;
 
+import com.stablecoin.payments.orchestrator.domain.event.PaymentInitiated;
 import com.stablecoin.payments.orchestrator.domain.model.Corridor;
 import com.stablecoin.payments.orchestrator.domain.model.Money;
 import com.stablecoin.payments.orchestrator.domain.model.Payment;
 import com.stablecoin.payments.orchestrator.domain.model.PaymentNotCancellableException;
 import com.stablecoin.payments.orchestrator.domain.model.PaymentNotFoundException;
+import com.stablecoin.payments.orchestrator.domain.port.PaymentEventPublisher;
 import com.stablecoin.payments.orchestrator.domain.port.PaymentRepository;
 import com.stablecoin.payments.orchestrator.domain.workflow.PaymentWorkflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,6 +40,7 @@ import static com.stablecoin.payments.orchestrator.application.config.TemporalCo
 public class PaymentCommandHandler {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentEventPublisher eventPublisher;
     private final WorkflowClient workflowClient;
 
     /**
@@ -87,6 +91,18 @@ public class PaymentCommandHandler {
                     .orElseThrow(() -> ex);
             return new InitiateResult(concurrent, true);
         }
+
+        eventPublisher.publish(new PaymentInitiated(
+                saved.paymentId(),
+                saved.idempotencyKey(),
+                saved.correlationId(),
+                saved.senderId(),
+                saved.recipientId(),
+                saved.sourceAmount(),
+                saved.targetCurrency(),
+                saved.corridor(),
+                Instant.now()
+        ));
 
         startWorkflow(saved, sourceCountry, targetCountry);
 

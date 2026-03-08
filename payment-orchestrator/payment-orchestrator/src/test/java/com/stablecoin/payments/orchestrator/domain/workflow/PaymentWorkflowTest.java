@@ -3,10 +3,12 @@ package com.stablecoin.payments.orchestrator.domain.workflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceCheckActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceResult;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.EventPublishingActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxReleaseRequest;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.PaymentEventRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentResult;
 import io.temporal.client.WorkflowClient;
@@ -44,11 +46,12 @@ class PaymentWorkflowTest {
 
     private final ComplianceCheckActivity complianceActivity = mock(ComplianceCheckActivity.class);
     private final FxLockActivity fxLockActivity = mock(FxLockActivity.class);
+    private final EventPublishingActivity eventPublishingActivity = mock(EventPublishingActivity.class);
 
     @RegisterExtension
     public TestWorkflowExtension testWorkflow = TestWorkflowExtension.newBuilder()
             .setWorkflowTypes(PaymentWorkflowImpl.class)
-            .setActivityImplementations(complianceActivity, fxLockActivity)
+            .setActivityImplementations(complianceActivity, fxLockActivity, eventPublishingActivity)
             .build();
 
     @Nested
@@ -80,6 +83,7 @@ class PaymentWorkflowTest {
 
             then(complianceActivity).should().checkCompliance(any(ComplianceRequest.class));
             then(fxLockActivity).should().lockFxRate(any(FxLockRequest.class));
+            then(eventPublishingActivity).should(never()).publishPaymentEvent(any());
         }
     }
 
@@ -103,6 +107,12 @@ class PaymentWorkflowTest {
                     .isEqualTo(expected);
 
             then(fxLockActivity).should(never()).lockFxRate(any());
+
+            var expectedEvent = PaymentEventRequest.failed(
+                    PAYMENT_ID, aPaymentRequest().correlationId(),
+                    "COMPLIANCE_CHECK", "Compliance check failed: PEP match",
+                    "COMPLIANCE_REJECTED");
+            then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
 
         @Test
@@ -123,6 +133,12 @@ class PaymentWorkflowTest {
                     .isEqualTo(expected);
 
             then(fxLockActivity).should(never()).lockFxRate(any());
+
+            var expectedEvent = PaymentEventRequest.failed(
+                    PAYMENT_ID, aPaymentRequest().correlationId(),
+                    "COMPLIANCE_CHECK", "Compliance check failed: OFAC sanctions list match",
+                    "COMPLIANCE_REJECTED");
+            then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
     }
 
@@ -149,6 +165,12 @@ class PaymentWorkflowTest {
             assertThat(result)
                     .usingRecursiveComparison()
                     .isEqualTo(expected);
+
+            var expectedEvent = PaymentEventRequest.failed(
+                    PAYMENT_ID, aPaymentRequest().correlationId(),
+                    "FX_LOCKING", "FX rate lock failed: No liquidity for USD/EUR",
+                    "FX_LOCK_REJECTED");
+            then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
     }
 
@@ -187,6 +209,11 @@ class PaymentWorkflowTest {
 
             then(fxLockActivity).should().releaseLock(new FxReleaseRequest(
                     LOCK_ID, PAYMENT_ID, "Customer requested cancellation"));
+
+            var expectedEvent = PaymentEventRequest.cancelled(
+                    PAYMENT_ID, aPaymentRequest().correlationId(),
+                    "Customer requested cancellation");
+            then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
 
         @Test
@@ -213,6 +240,10 @@ class PaymentWorkflowTest {
 
             then(fxLockActivity).should(never()).lockFxRate(any());
             then(fxLockActivity).should(never()).releaseLock(any());
+
+            var expectedEvent = PaymentEventRequest.cancelled(
+                    PAYMENT_ID, aPaymentRequest().correlationId(), "Changed mind");
+            then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
 
         @Test
