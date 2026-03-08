@@ -1,5 +1,7 @@
 package com.stablecoin.payments.orchestrator;
 
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -33,6 +35,21 @@ public abstract class AbstractIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @BeforeEach
+    void cleanDatabase() {
+        jdbcTemplate.execute("""
+                TRUNCATE TABLE
+                    payment_audit_log,
+                    payments,
+                    orchestrator_outbox_record
+                CASCADE
+                """);
+        entityManager.clear();
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
