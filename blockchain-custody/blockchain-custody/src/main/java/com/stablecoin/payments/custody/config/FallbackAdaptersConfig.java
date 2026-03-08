@@ -4,7 +4,11 @@ import com.stablecoin.payments.custody.domain.model.ChainId;
 import com.stablecoin.payments.custody.domain.model.StablecoinTicker;
 import com.stablecoin.payments.custody.domain.port.ChainFeeProvider;
 import com.stablecoin.payments.custody.domain.port.ChainHealthProvider;
+import com.stablecoin.payments.custody.domain.port.CustodyEngine;
 import com.stablecoin.payments.custody.domain.port.NonceRepository;
+import com.stablecoin.payments.custody.domain.port.SignRequest;
+import com.stablecoin.payments.custody.domain.port.SignResult;
+import com.stablecoin.payments.custody.domain.port.TransactionStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -62,6 +66,36 @@ public class FallbackAdaptersConfig {
     public NonceRepository fallbackNonceRepository() {
         log.info("Using fallback NonceRepository (in-memory, no advisory locks)");
         return new InMemoryNonceRepository();
+    }
+
+    /**
+     * Fallback custody engine for dev/test environments without Fireblocks.
+     * Returns deterministic dev results.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CustodyEngine fallbackCustodyEngine() {
+        log.info("Using fallback CustodyEngine (dev mode)");
+        return new CustodyEngine() {
+            @Override
+            public SignResult signAndSubmit(SignRequest request) {
+                log.warn("[FALLBACK-CUSTODY] Dev custody for transferId={}", request.transferId());
+                return new SignResult(
+                        "0x" + UUID.randomUUID().toString().replace("-", ""),
+                        "dev-tx-" + UUID.randomUUID()
+                );
+            }
+
+            @Override
+            public TransactionStatus getTransactionStatus(String txId) {
+                log.warn("[FALLBACK-CUSTODY] Dev status for txId={}", txId);
+                return new TransactionStatus(
+                        "COMPLETED",
+                        "0x" + UUID.randomUUID().toString().replace("-", ""),
+                        10
+                );
+            }
+        };
     }
 
     static class InMemoryNonceRepository implements NonceRepository {

@@ -104,7 +104,13 @@ app:
   security:
     enabled: false
   custody:
-    provider: dev
+    provider: dev  # 'fireblocks' in production
+    fireblocks:
+      base-url: ${FIREBLOCKS_BASE_URL:https://sandbox-api.fireblocks.io}
+      api-key: ${FIREBLOCKS_API_KEY:fireblocks-dev-key}
+      api-secret: ${FIREBLOCKS_API_SECRET:}
+      vault-account-id: ${FIREBLOCKS_VAULT_ACCOUNT_ID:0}
+      timeout-seconds: 30
   chains:
     base:
       min-confirmations: 1
