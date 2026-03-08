@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.BASE_CHAIN;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.CORRELATION_ID;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.IDEMPOTENCY_KEY;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.RECIPIENT_ID;
@@ -25,9 +26,8 @@ import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.SEND
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.SOURCE_AMOUNT;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.SOURCE_CURRENCY;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.TARGET_CURRENCY;
-import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.US_TO_DE;
-import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.BASE_CHAIN;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.TX_HASH;
+import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.US_TO_DE;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.aCompletedPayment;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.aValidFxRate;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.anInitiatedPayment;
