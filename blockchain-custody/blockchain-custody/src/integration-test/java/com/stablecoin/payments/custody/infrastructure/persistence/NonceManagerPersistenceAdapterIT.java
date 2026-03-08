@@ -1,7 +1,6 @@
 package com.stablecoin.payments.custody.infrastructure.persistence;
 
 import com.stablecoin.payments.custody.AbstractIntegrationTest;
-import com.stablecoin.payments.custody.domain.model.ChainId;
 import com.stablecoin.payments.custody.domain.port.NonceRepository;
 import com.stablecoin.payments.custody.domain.port.WalletRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +15,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static com.stablecoin.payments.custody.fixtures.NonceFixtures.CHAIN_BASE;
+import static com.stablecoin.payments.custody.fixtures.NonceFixtures.CHAIN_ETHEREUM;
 import static com.stablecoin.payments.custody.fixtures.WalletFixtures.anActiveWallet;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,30 +32,33 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final ChainId CHAIN_BASE = new ChainId("base");
-    private static final ChainId CHAIN_ETHEREUM = new ChainId("ethereum");
-
     // -- Nonce Assignment -------------------------------------------------
 
     @Test
     @DisplayName("should return 0 for first nonce and create row")
     void shouldReturnZeroForFirstNonce() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         var nonce = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         assertThat(nonce).isZero();
     }
 
     @Test
     @DisplayName("should increment nonce sequentially")
     void shouldIncrementNonceSequentially() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         var nonce0 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         var nonce1 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         var nonce2 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         assertThat(nonce0).isZero();
         assertThat(nonce1).isEqualTo(1L);
         assertThat(nonce2).isEqualTo(2L);
@@ -63,12 +67,15 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should maintain separate nonces per chain")
     void shouldMaintainSeparateNoncesPerChain() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         var baseNonce0 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         var ethNonce0 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_ETHEREUM);
         var baseNonce1 = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         assertThat(baseNonce0).isZero();
         assertThat(ethNonce0).isZero();
         assertThat(baseNonce1).isEqualTo(1L);
@@ -79,23 +86,28 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should return empty when no nonce row exists")
     void shouldReturnEmptyWhenNoNonceRowExists() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         var result = nonceRepository.getCurrentNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         assertThat(result).isEmpty();
     }
 
     @Test
     @DisplayName("should return current nonce after increments")
     void shouldReturnCurrentNonceAfterIncrements() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // when
         var result = nonceRepository.getCurrentNonce(wallet.walletId(), CHAIN_BASE);
 
-        // After 2 increments, current_nonce in DB should be 2
+        // then — after 2 increments, current_nonce in DB should be 2
         assertThat(result).isPresent().hasValue(2L);
     }
 
@@ -104,10 +116,13 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should create nonce row on first assignment")
     void shouldCreateNonceRowOnFirstAssignment() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         var count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM wallet_nonces WHERE wallet_id = ? AND chain_id = ?",
                 Integer.class,
@@ -119,12 +134,15 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should not duplicate rows on repeated assignments")
     void shouldNotDuplicateRowsOnRepeatedAssignments() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
+        // when
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
         nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
+        // then
         var count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM wallet_nonces WHERE wallet_id = ? AND chain_id = ?",
                 Integer.class,
@@ -138,20 +156,20 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should assign unique nonces under concurrent load")
     void shouldAssignUniqueNoncesUnderConcurrentLoad() throws Exception {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
         var walletId = wallet.walletId();
         int threadCount = 5;
         var latch = new CountDownLatch(threadCount);
-
         var executor = Executors.newFixedThreadPool(threadCount);
         @SuppressWarnings("unchecked")
         Future<Long>[] futures = new Future[threadCount];
 
+        // when — 5 threads race to assign nonces concurrently
         for (int i = 0; i < threadCount; i++) {
             futures[i] = executor.submit(() -> {
                 latch.countDown();
                 latch.await(5, TimeUnit.SECONDS);
-                // Each call runs in its own REQUIRES_NEW transaction via the adapter
                 return nonceRepository.assignNextNonce(walletId, CHAIN_BASE);
             });
         }
@@ -160,12 +178,10 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
         for (int i = 0; i < threadCount; i++) {
             assignedNonces.add(futures[i].get(10, TimeUnit.SECONDS));
         }
-
         executor.shutdown();
 
-        // All nonces should be unique (0, 1, 2, 3, 4 in some order)
+        // then — all nonces should be unique (0, 1, 2, 3, 4 in some order)
         assertThat(assignedNonces).hasSize(threadCount);
-        // The final current_nonce in DB should be threadCount
         var finalNonce = nonceRepository.getCurrentNonce(walletId, CHAIN_BASE);
         assertThat(finalNonce).isPresent().hasValue((long) threadCount);
     }
@@ -175,13 +191,13 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should use advisory lock based on wallet id hash")
     void shouldUseAdvisoryLockBasedOnWalletIdHash() {
+        // given
         var wallet = walletRepository.save(anActiveWallet());
 
-        // Assign a nonce (which acquires and releases advisory lock internally)
+        // when — assign a nonce (acquires and releases advisory lock internally)
         var nonce = nonceRepository.assignNextNonce(wallet.walletId(), CHAIN_BASE);
 
-        // After the method returns, the lock should be released (tx committed)
-        // Verify by checking that we can acquire the same lock again
+        // then — after method returns, the lock should be released (tx committed)
         var canAcquire = jdbcTemplate.queryForObject(
                 "SELECT pg_try_advisory_xact_lock(hashtext(?))",
                 Boolean.class,
@@ -195,8 +211,10 @@ class NonceManagerPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should return empty for non-existent wallet nonce")
     void shouldReturnEmptyForNonExistentWalletNonce() {
+        // when
         var result = nonceRepository.getCurrentNonce(UUID.randomUUID(), CHAIN_BASE);
 
+        // then
         assertThat(result).isEmpty();
     }
 }
