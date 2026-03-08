@@ -35,9 +35,23 @@ public class FxRateLockApplicationService {
     private final EventPublisher<Object> eventPublisher;
     private final FxResponseMapper responseMapper;
 
+    /**
+     * Result of a lock-rate operation, indicating whether the lock was newly created
+     * or returned from an existing idempotent match.
+     */
+    public record LockRateResult(FxRateLockResponse response, boolean created) {}
+
     @Transactional
-    public FxRateLockResponse lockRate(UUID quoteId, FxRateLockRequest request) {
+    public LockRateResult lockRate(UUID quoteId, FxRateLockRequest request) {
         log.info("Locking rate for quote={} payment={}", quoteId, request.paymentId());
+
+        // Idempotency: check if a lock already exists for this paymentId
+        var existingLock = lockRepository.findByPaymentId(request.paymentId());
+        if (existingLock.isPresent()) {
+            log.info("Idempotent lock return for payment={} lockId={}",
+                    request.paymentId(), existingLock.get().lockId());
+            return new LockRateResult(responseMapper.toResponse(existingLock.get()), false);
+        }
 
         // Load and validate quote
         var quote = quoteRepository.findById(quoteId)
@@ -73,7 +87,7 @@ public class FxRateLockApplicationService {
         log.info("Rate locked: lockId={} rate={} expires={}",
                 savedLock.lockId(), savedLock.lockedRate(), savedLock.expiresAt());
 
-        return responseMapper.toResponse(savedLock);
+        return new LockRateResult(responseMapper.toResponse(savedLock), true);
     }
 
     private void validateQuote(FxQuote quote) {

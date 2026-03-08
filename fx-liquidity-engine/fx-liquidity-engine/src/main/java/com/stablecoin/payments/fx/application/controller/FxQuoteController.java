@@ -10,12 +10,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -43,10 +43,11 @@ public class FxQuoteController {
     }
 
     @PostMapping("/lock/{quoteId}")
-    @ResponseStatus(HttpStatus.CREATED)
-    public FxRateLockResponse lockRate(@PathVariable UUID quoteId,
-                                       @Valid @RequestBody FxRateLockRequest request) {
+    public ResponseEntity<FxRateLockResponse> lockRate(@PathVariable UUID quoteId,
+                                                        @Valid @RequestBody FxRateLockRequest request) {
         log.info("POST /v1/fx/lock/{} paymentId={}", quoteId, request.paymentId());
-        return rateLockApplicationService.lockRate(quoteId, request);
+        var result = rateLockApplicationService.lockRate(quoteId, request);
+        var status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.response());
     }
 }

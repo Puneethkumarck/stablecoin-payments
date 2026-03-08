@@ -6,6 +6,7 @@ import com.stablecoin.payments.fx.api.response.FxQuoteResponse;
 import com.stablecoin.payments.fx.api.response.FxRateLockResponse;
 import com.stablecoin.payments.fx.application.service.FxQuoteApplicationService;
 import com.stablecoin.payments.fx.application.service.FxRateLockApplicationService;
+import com.stablecoin.payments.fx.application.service.FxRateLockApplicationService.LockRateResult;
 import com.stablecoin.payments.fx.domain.exception.QuoteAlreadyLockedException;
 import com.stablecoin.payments.fx.domain.exception.QuoteExpiredException;
 import com.stablecoin.payments.fx.domain.exception.QuoteNotFoundException;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -131,30 +133,61 @@ class FxQuoteControllerTest {
     class LockRate {
 
         @Test
-        @DisplayName("should delegate to application service and return lock response")
-        void shouldLockRate() {
+        @DisplayName("should return 201 Created for new lock")
+        void shouldReturn201ForNewLock() {
             // given
             var quoteId = UUID.randomUUID();
             var paymentId = UUID.randomUUID();
             var correlationId = UUID.randomUUID();
             var request = new FxRateLockRequest(paymentId, correlationId, "US", "DE");
             var now = Instant.now();
-            var expectedResponse = new FxRateLockResponse(
+            var lockResponse = new FxRateLockResponse(
                     UUID.randomUUID(), quoteId, paymentId,
                     "USD", "EUR",
                     new BigDecimal("10000.00"), new BigDecimal("9200.00"),
                     new BigDecimal("0.92"), 30, new BigDecimal("30.00"),
                     now, now.plusSeconds(30));
 
-            given(rateLockApplicationService.lockRate(quoteId, request)).willReturn(expectedResponse);
+            given(rateLockApplicationService.lockRate(quoteId, request))
+                    .willReturn(new LockRateResult(lockResponse, true));
 
             // when
             var result = controller.lockRate(quoteId, request);
 
             // then
-            assertThat(result)
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+            assertThat(result.getBody())
                     .usingRecursiveComparison()
-                    .isEqualTo(expectedResponse);
+                    .isEqualTo(lockResponse);
+        }
+
+        @Test
+        @DisplayName("should return 200 OK for idempotent lock")
+        void shouldReturn200ForIdempotentLock() {
+            // given
+            var quoteId = UUID.randomUUID();
+            var paymentId = UUID.randomUUID();
+            var correlationId = UUID.randomUUID();
+            var request = new FxRateLockRequest(paymentId, correlationId, "US", "DE");
+            var now = Instant.now();
+            var lockResponse = new FxRateLockResponse(
+                    UUID.randomUUID(), quoteId, paymentId,
+                    "USD", "EUR",
+                    new BigDecimal("10000.00"), new BigDecimal("9200.00"),
+                    new BigDecimal("0.92"), 30, new BigDecimal("30.00"),
+                    now, now.plusSeconds(30));
+
+            given(rateLockApplicationService.lockRate(quoteId, request))
+                    .willReturn(new LockRateResult(lockResponse, false));
+
+            // when
+            var result = controller.lockRate(quoteId, request);
+
+            // then
+            assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(result.getBody())
+                    .usingRecursiveComparison()
+                    .isEqualTo(lockResponse);
         }
 
         @Test

@@ -91,6 +91,7 @@ class FxRateLockApplicationServiceTest {
                     lock.sourceAmount(), lock.targetAmount(), lock.lockedRate(),
                     lock.feeBps(), lock.feeAmount(), lock.lockedAt(), lock.expiresAt());
 
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.of(quote));
             given(poolRepository.findByCorridor("USD", "EUR")).willReturn(Optional.of(pool));
             given(lockService.lockRate(quote, PAYMENT_ID, CORRELATION_ID,
@@ -104,11 +105,45 @@ class FxRateLockApplicationServiceTest {
             var result = service.lockRate(quoteId, request);
 
             // then
+            var expected = new FxRateLockApplicationService.LockRateResult(expectedResponse, true);
             assertThat(result)
                     .usingRecursiveComparison()
-                    .isEqualTo(expectedResponse);
+                    .isEqualTo(expected);
 
             then(eventPublisher).should().publish(any(FxRateLocked.class));
+        }
+
+        @Test
+        void shouldReturnExistingLockForSamePaymentId() {
+            // given
+            var quoteId = UUID.randomUUID();
+            var existingLock = anActiveLock(quoteId, PAYMENT_ID);
+            var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
+                    SOURCE_COUNTRY, TARGET_COUNTRY);
+
+            var expectedResponse = new FxRateLockResponse(
+                    existingLock.lockId(), existingLock.quoteId(), existingLock.paymentId(),
+                    existingLock.fromCurrency(), existingLock.toCurrency(),
+                    existingLock.sourceAmount(), existingLock.targetAmount(),
+                    existingLock.lockedRate(), existingLock.feeBps(), existingLock.feeAmount(),
+                    existingLock.lockedAt(), existingLock.expiresAt());
+
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.of(existingLock));
+            given(responseMapper.toResponse(existingLock)).willReturn(expectedResponse);
+
+            // when
+            var result = service.lockRate(quoteId, request);
+
+            // then
+            var expected = new FxRateLockApplicationService.LockRateResult(expectedResponse, false);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
+
+            then(quoteRepository).should(never()).findById(any());
+            then(lockService).should(never()).lockRate(any(), any(), any(), any(), any(), any());
+            then(lockRepository).should(never()).save(any());
+            then(eventPublisher).should(never()).publish(any());
         }
 
         @Test
@@ -117,6 +152,7 @@ class FxRateLockApplicationServiceTest {
             var quoteId = UUID.randomUUID();
             var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
                     SOURCE_COUNTRY, TARGET_COUNTRY);
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.empty());
 
             // when/then
@@ -135,6 +171,7 @@ class FxRateLockApplicationServiceTest {
             var quoteId = expiredQuote.quoteId();
             var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
                     SOURCE_COUNTRY, TARGET_COUNTRY);
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.of(expiredQuote));
 
             // when/then
@@ -153,6 +190,7 @@ class FxRateLockApplicationServiceTest {
             var quoteId = lockedQuote.quoteId();
             var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
                     SOURCE_COUNTRY, TARGET_COUNTRY);
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.of(lockedQuote));
 
             // when/then
@@ -171,6 +209,7 @@ class FxRateLockApplicationServiceTest {
             var quoteId = quote.quoteId();
             var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
                     SOURCE_COUNTRY, TARGET_COUNTRY);
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.of(quote));
             given(poolRepository.findByCorridor("USD", "EUR")).willReturn(Optional.empty());
 
@@ -191,6 +230,7 @@ class FxRateLockApplicationServiceTest {
             var lowPool = aPoolWithLowBalance();
             var request = new FxRateLockRequest(PAYMENT_ID, CORRELATION_ID,
                     SOURCE_COUNTRY, TARGET_COUNTRY);
+            given(lockRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
             given(quoteRepository.findById(quoteId)).willReturn(Optional.of(quote));
             given(poolRepository.findByCorridor("USD", "EUR")).willReturn(Optional.of(lowPool));
 

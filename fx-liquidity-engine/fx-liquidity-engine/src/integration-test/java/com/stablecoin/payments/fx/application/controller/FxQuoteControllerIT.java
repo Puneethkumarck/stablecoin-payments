@@ -318,5 +318,44 @@ class FxQuoteControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.code", is("FX-0001")))
                     .andExpect(jsonPath("$.message", is("Idempotency-Key header is required for mutating requests")));
         }
+
+        @Test
+        @DisplayName("should return 200 OK for idempotent lock with same paymentId")
+        void shouldReturn200ForIdempotentLock() throws Exception {
+            var quote = anActiveQuote();
+            var saved = quoteRepository.save(quote);
+            poolRepository.save(aUsdEurPool());
+
+            var paymentId = UUID.randomUUID();
+            var correlationId = UUID.randomUUID();
+            var requestBody = """
+                    {
+                        "paymentId": "%s",
+                        "correlationId": "%s",
+                        "sourceCountry": "US",
+                        "targetCountry": "DE"
+                    }
+                    """.formatted(paymentId, correlationId);
+
+            // First request: should return 201 Created
+            mockMvc.perform(post("/v1/fx/lock/{quoteId}", saved.quoteId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
+                            .content(requestBody))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.lockId", notNullValue()))
+                    .andExpect(jsonPath("$.paymentId", is(paymentId.toString())));
+
+            // Second request with same paymentId: should return 200 OK
+            mockMvc.perform(post("/v1/fx/lock/{quoteId}", saved.quoteId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
+                            .content(requestBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.lockId", notNullValue()))
+                    .andExpect(jsonPath("$.paymentId", is(paymentId.toString())))
+                    .andExpect(jsonPath("$.fromCurrency", is("USD")))
+                    .andExpect(jsonPath("$.toCurrency", is("EUR")));
+        }
     }
 }
