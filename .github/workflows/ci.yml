@@ -67,6 +67,12 @@ jobs:
               - 'settings.gradle.kts'
               - 'gradle/**'
               - 'gradle.properties'
+            payment-orchestrator:payment-orchestrator:
+              - 'payment-orchestrator/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle/**'
+              - 'gradle.properties'
 
   test:
     needs: [spotless, changes]
@@ -100,6 +106,20 @@ jobs:
             :${{ matrix.service }}:integrationTest \
             :${{ matrix.service }}:businessTest \
             --build-cache --parallel
+
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [spotless, test]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.spotless.result }}" == "failure" || "${{ needs.test.result }}" == "failure" ]]; then
+            echo "CI failed"
+            exit 1
+          fi
+          echo "CI passed"
 
   sonar:
     needs: test
