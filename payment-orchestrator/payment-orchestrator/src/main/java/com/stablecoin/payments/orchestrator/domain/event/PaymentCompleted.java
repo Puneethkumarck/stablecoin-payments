@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record PaymentCompleted(
         UUID paymentId,
+        UUID correlationId,
         Money sourceAmount,
         Money targetAmount,
         FxRate fxRate,

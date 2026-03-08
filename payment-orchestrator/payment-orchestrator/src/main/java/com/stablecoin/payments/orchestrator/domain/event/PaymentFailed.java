@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record PaymentFailed(
         UUID paymentId,
+        UUID correlationId,
         PaymentState failedState,
         String reason,
         String errorCode,

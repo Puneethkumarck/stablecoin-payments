@@ -1,11 +1,13 @@
 package com.stablecoin.payments.orchestrator.domain.service;
 
+import com.stablecoin.payments.orchestrator.domain.event.PaymentInitiated;
 import com.stablecoin.payments.orchestrator.domain.model.Corridor;
 import com.stablecoin.payments.orchestrator.domain.model.Money;
 import com.stablecoin.payments.orchestrator.domain.model.Payment;
 import com.stablecoin.payments.orchestrator.domain.model.PaymentNotCancellableException;
 import com.stablecoin.payments.orchestrator.domain.model.PaymentNotFoundException;
 import com.stablecoin.payments.orchestrator.domain.model.PaymentState;
+import com.stablecoin.payments.orchestrator.domain.port.PaymentEventPublisher;
 import com.stablecoin.payments.orchestrator.domain.port.PaymentRepository;
 import com.stablecoin.payments.orchestrator.domain.workflow.PaymentWorkflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
@@ -54,6 +56,9 @@ class PaymentCommandHandlerTest {
     private PaymentRepository paymentRepository;
 
     @Mock
+    private PaymentEventPublisher eventPublisher;
+
+    @Mock
     private WorkflowClient workflowClient;
 
     @InjectMocks
@@ -99,6 +104,19 @@ class PaymentCommandHandlerTest {
                     .isEqualTo(expectedPayment);
 
             then(paymentRepository).should().save(eqIgnoring(expectedPayment, "paymentId"));
+
+            var eventCaptor = ArgumentCaptor.forClass(Object.class);
+            then(eventPublisher).should().publish(eventCaptor.capture());
+            var publishedEvent = (PaymentInitiated) eventCaptor.getValue();
+            var expectedEvent = new PaymentInitiated(
+                    result.payment().paymentId(), IDEMPOTENCY_KEY, CORRELATION_ID,
+                    SENDER_ID, RECIPIENT_ID, new Money(SOURCE_AMOUNT_VALUE, SOURCE_CURRENCY),
+                    TARGET_CURRENCY, new Corridor(SOURCE_COUNTRY, TARGET_COUNTRY), null);
+            assertThat(publishedEvent)
+                    .usingRecursiveComparison()
+                    .ignoringFields("initiatedAt")
+                    .isEqualTo(expectedEvent);
+
             then(workflowClient).should().newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
         }
 
@@ -125,6 +143,7 @@ class PaymentCommandHandlerTest {
                     .isEqualTo(existingPayment);
 
             then(paymentRepository).should(never()).save(any());
+            then(eventPublisher).should(never()).publish(any());
             then(workflowClient).should(never()).newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
         }
 
@@ -155,6 +174,7 @@ class PaymentCommandHandlerTest {
                     .usingRecursiveComparison()
                     .isEqualTo(existingPayment);
 
+            then(eventPublisher).should(never()).publish(any());
             then(workflowClient).should(never()).newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
         }
     }

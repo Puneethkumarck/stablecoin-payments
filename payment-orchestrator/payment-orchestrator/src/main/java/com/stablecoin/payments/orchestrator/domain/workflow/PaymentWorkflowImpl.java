@@ -3,10 +3,12 @@ package com.stablecoin.payments.orchestrator.domain.workflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceCheckActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceResult;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.EventPublishingActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxReleaseRequest;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.PaymentEventRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.ChainConfirmedSignal;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.FiatCollectedSignal;
@@ -69,6 +71,18 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                             .build())
                     .build());
 
+    private final EventPublishingActivity eventPublishingActivity = Workflow.newActivityStub(
+            EventPublishingActivity.class,
+            ActivityOptions.newBuilder()
+                    .setStartToCloseTimeout(Duration.ofSeconds(10))
+                    .setRetryOptions(RetryOptions.newBuilder()
+                            .setMaximumAttempts(3)
+                            .setInitialInterval(Duration.ofSeconds(1))
+                            .setMaximumInterval(Duration.ofSeconds(5))
+                            .setBackoffCoefficient(2.0)
+                            .build())
+                    .build());
+
     // Workflow state — deterministic, no external I/O
     private String currentState = "INITIATED";
     private boolean cancelRequested;
@@ -104,18 +118,22 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             ));
         } catch (Exception e) {
             currentState = "FAILED";
+            var reason = "Compliance check failed: " + e.getMessage();
             log.error("Compliance check failed with exception for paymentId={}",
                     request.paymentId(), e);
-            return PaymentResult.failed(request.paymentId(),
-                    "Compliance check failed: " + e.getMessage());
+            publishEvent(PaymentEventRequest.failed(request.paymentId(),
+                    request.correlationId(), "COMPLIANCE_CHECK", reason, "COMPLIANCE_ERROR"));
+            return PaymentResult.failed(request.paymentId(), reason);
         }
 
         if (complianceResult.status() != ComplianceResult.ComplianceStatus.PASSED) {
             currentState = "FAILED";
+            var reason = "Compliance check failed: " + complianceResult.failureReason();
             log.info("Compliance check rejected for paymentId={}: {}",
                     request.paymentId(), complianceResult.failureReason());
-            return PaymentResult.failed(request.paymentId(),
-                    "Compliance check failed: " + complianceResult.failureReason());
+            publishEvent(PaymentEventRequest.failed(request.paymentId(),
+                    request.correlationId(), "COMPLIANCE_CHECK", reason, "COMPLIANCE_REJECTED"));
+            return PaymentResult.failed(request.paymentId(), reason);
         }
 
         // No compensation needed for compliance — it's a read-only check
@@ -143,18 +161,22 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             ));
         } catch (Exception e) {
             currentState = "FAILED";
+            var reason = "FX rate lock failed: " + e.getMessage();
             log.error("FX lock failed with exception for paymentId={}",
                     request.paymentId(), e);
-            return PaymentResult.failed(request.paymentId(),
-                    "FX rate lock failed: " + e.getMessage());
+            publishEvent(PaymentEventRequest.failed(request.paymentId(),
+                    request.correlationId(), "FX_LOCKING", reason, "FX_LOCK_ERROR"));
+            return PaymentResult.failed(request.paymentId(), reason);
         }
 
         if (fxResult.status() != FxLockResult.FxLockStatus.LOCKED) {
             currentState = "FAILED";
+            var reason = "FX rate lock failed: " + fxResult.failureReason();
             log.info("FX lock rejected for paymentId={}: {}",
                     request.paymentId(), fxResult.failureReason());
-            return PaymentResult.failed(request.paymentId(),
-                    "FX rate lock failed: " + fxResult.failureReason());
+            publishEvent(PaymentEventRequest.failed(request.paymentId(),
+                    request.correlationId(), "FX_LOCKING", reason, "FX_LOCK_REJECTED"));
+            return PaymentResult.failed(request.paymentId(), reason);
         }
 
         // FX lock succeeded — push compensation (release lock) onto stack
@@ -219,6 +241,9 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         log.info("Cancellation requested for paymentId={}, reason={}, compensationSteps={}",
                 request.paymentId(), reason, compensationStack.size());
 
+        publishEvent(PaymentEventRequest.cancelled(
+                request.paymentId(), request.correlationId(), reason));
+
         // Unwind compensation stack in LIFO order
         while (!compensationStack.isEmpty()) {
             var step = compensationStack.pop();
@@ -242,6 +267,18 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         } catch (Exception e) {
             log.error("Compensation step failed: {} for paymentId={}, error={}",
                     step, paymentId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Fire-and-forget event publishing. Failures are logged but do not block the saga.
+     */
+    private void publishEvent(PaymentEventRequest request) {
+        try {
+            eventPublishingActivity.publishPaymentEvent(request);
+        } catch (Exception e) {
+            log.warn("Event publishing failed for paymentId={}, eventType={}: {}",
+                    request.paymentId(), request.eventType(), e.getMessage());
         }
     }
 }

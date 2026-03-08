@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record PaymentStateAdvanced(
         UUID paymentId,
+        UUID correlationId,
         PaymentState fromState,
         PaymentState toState,
         Instant advancedAt,
