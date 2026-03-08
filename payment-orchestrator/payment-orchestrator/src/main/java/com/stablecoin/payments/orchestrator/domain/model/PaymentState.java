@@ -1,0 +1,17 @@
+package com.stablecoin.payments.orchestrator.domain.model;
+
+public enum PaymentState {
+    INITIATED,
+    COMPLIANCE_CHECK,
+    FX_LOCKED,
+    FIAT_COLLECTION_PENDING,
+    FIAT_COLLECTED,
+    ON_CHAIN_SUBMITTED,
+    ON_CHAIN_CONFIRMED,
+    OFF_RAMP_INITIATED,
+    SETTLED,
+    COMPLETED,
+    FAILED,
+    COMPENSATING_FIAT_REFUND,
+    COMPENSATING_STABLECOIN_RETURN
+}
