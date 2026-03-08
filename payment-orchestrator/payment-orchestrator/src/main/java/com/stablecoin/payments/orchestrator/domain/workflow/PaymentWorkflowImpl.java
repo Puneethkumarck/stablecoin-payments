@@ -64,7 +64,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                             .setInitialInterval(Duration.ofSeconds(1))
                             .setBackoffCoefficient(2.0)
                             .setDoNotRetry(
-                                    "INSUFFICIENT_BALANCE",
+                                    "INSUFFICIENT_LIQUIDITY",
                                     IllegalArgumentException.class.getName()
                             )
                             .build())
