@@ -48,10 +48,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                             .setMaximumAttempts(3)
                             .setInitialInterval(Duration.ofSeconds(1))
                             .setBackoffCoefficient(2.0)
-                            .setDoNotRetry(
-                                    "SANCTIONS_HIT",
-                                    IllegalArgumentException.class.getName()
-                            )
+                            .setDoNotRetry(IllegalArgumentException.class.getName())
                             .build())
                     .build());
 
@@ -63,10 +60,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                             .setMaximumAttempts(3)
                             .setInitialInterval(Duration.ofSeconds(1))
                             .setBackoffCoefficient(2.0)
-                            .setDoNotRetry(
-                                    "INSUFFICIENT_LIQUIDITY",
-                                    IllegalArgumentException.class.getName()
-                            )
+                            .setDoNotRetry(IllegalArgumentException.class.getName())
                             .build())
                     .build());
 
@@ -134,6 +128,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         FxLockResult fxResult;
         try {
             fxResult = fxLockActivity.lockFxRate(new FxLockRequest(
+                    request.idempotencyKey(),
                     request.paymentId(),
                     request.sourceCurrency(),
                     request.targetCurrency(),

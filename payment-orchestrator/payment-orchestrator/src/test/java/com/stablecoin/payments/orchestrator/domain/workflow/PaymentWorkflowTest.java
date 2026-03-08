@@ -97,7 +97,7 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo("FAILED");
+            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
             assertThat(result.failureReason()).contains("Compliance check failed");
             assertThat(result.failureReason()).contains("PEP match");
 
@@ -115,7 +115,7 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo("FAILED");
+            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
             assertThat(result.failureReason()).contains("Compliance check failed");
 
             then(fxLockActivity).should(never()).lockFxRate(any());
@@ -140,7 +140,7 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo("FAILED");
+            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
             assertThat(result.failureReason()).contains("FX rate lock failed");
             assertThat(result.failureReason()).contains("No liquidity for USD/EUR");
         }
@@ -176,7 +176,7 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo("FAILED");
+            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
             assertThat(result.failureReason()).contains("Cancelled");
             assertThat(result.failureReason()).contains("Customer requested cancellation");
         }
@@ -202,7 +202,7 @@ class PaymentWorkflowTest {
             var result = getResult(workflowClient);
 
             // After completion, the state should be COMPLETED
-            assertThat(result.status()).isEqualTo("COMPLETED");
+            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.COMPLETED);
         }
     }
 

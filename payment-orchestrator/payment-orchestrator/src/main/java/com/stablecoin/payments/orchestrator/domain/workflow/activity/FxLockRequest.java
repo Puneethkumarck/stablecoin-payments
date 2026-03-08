@@ -10,6 +10,7 @@ import java.util.UUID;
  * S6 FX & Liquidity Engine to lock an exchange rate.
  */
 public record FxLockRequest(
+        String idempotencyKey,
         UUID paymentId,
         String sourceCurrency,
         String targetCurrency,
