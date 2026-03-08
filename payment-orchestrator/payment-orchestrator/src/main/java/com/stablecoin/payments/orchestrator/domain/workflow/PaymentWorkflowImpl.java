@@ -6,6 +6,7 @@ import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceR
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxReleaseRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.ChainConfirmedSignal;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.FiatCollectedSignal;
@@ -19,6 +20,7 @@ import org.slf4j.Logger;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.UUID;
 
 /**
  * Deterministic Temporal workflow implementation for the cross-border payment saga.
@@ -202,11 +204,14 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         return currentState;
     }
 
+    private static final String RELEASE_FX_LOCK_PREFIX = "RELEASE_FX_LOCK:";
+
     /**
      * Runs compensation stack in LIFO order and returns a FAILED result.
      * <p>
-     * Currently logs compensation steps. Actual compensation activities
-     * (e.g., release FX lock, refund fiat) will be added in Phase 3.
+     * Each compensation step is parsed and the corresponding activity is invoked.
+     * Compensation failures are logged but do not prevent remaining compensations
+     * from executing — the saga always reaches FAILED state.
      */
     private PaymentResult handleCancellation(PaymentRequest request) {
         currentState = "COMPENSATING";
@@ -218,11 +223,25 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         while (!compensationStack.isEmpty()) {
             var step = compensationStack.pop();
             log.info("Compensating step: {} for paymentId={}", step, request.paymentId());
-            // Phase 3: execute compensation activities here
-            // e.g., if step starts with "RELEASE_FX_LOCK:" → call fxLockActivity.releaseLock(quoteId)
+            executeCompensationStep(step, request.paymentId(), reason);
         }
 
         currentState = "FAILED";
         return PaymentResult.failed(request.paymentId(), "Cancelled: " + reason);
+    }
+
+    private void executeCompensationStep(String step, UUID paymentId, String reason) {
+        try {
+            if (step.startsWith(RELEASE_FX_LOCK_PREFIX)) {
+                var lockId = UUID.fromString(step.substring(RELEASE_FX_LOCK_PREFIX.length()));
+                fxLockActivity.releaseLock(new FxReleaseRequest(lockId, paymentId, reason));
+                log.info("Successfully released FX lock {} for paymentId={}", lockId, paymentId);
+            } else {
+                log.warn("Unknown compensation step: {} for paymentId={}", step, paymentId);
+            }
+        } catch (Exception e) {
+            log.error("Compensation step failed: {} for paymentId={}, error={}",
+                    step, paymentId, e.getMessage(), e);
+        }
     }
 }

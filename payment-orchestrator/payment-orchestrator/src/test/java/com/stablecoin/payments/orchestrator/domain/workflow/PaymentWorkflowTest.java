@@ -6,6 +6,7 @@ import com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceR
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActivity;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult;
+import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxReleaseRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentResult;
 import io.temporal.client.WorkflowClient;
@@ -33,6 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
@@ -154,17 +157,14 @@ class PaymentWorkflowTest {
     class CancelSignal {
 
         @Test
-        @DisplayName("should run compensation when cancel signal received after FX lock")
-        void shouldCompensateOnCancelAfterFxLock(WorkflowClient workflowClient,
-                                                  Worker worker) {
-            // Set up: compliance passes, FX locks, but then cancel
+        @DisplayName("should release FX lock when cancel signal received after FX lock succeeds")
+        void shouldReleaseFxLockOnCancelAfterFxLock(WorkflowClient workflowClient,
+                                                     Worker worker) {
             given(complianceActivity.checkCompliance(any()))
                     .willReturn(new ComplianceResult(CHECK_ID, PASSED, null));
 
-            // FX lock will succeed, but we send cancel before it returns
             given(fxLockActivity.lockFxRate(any()))
                     .willAnswer(invocation -> {
-                        // Send cancel signal during FX lock activity execution
                         var stub = workflowClient.newWorkflowStub(
                                 PaymentWorkflow.class,
                                 "payment-" + PAYMENT_ID);
@@ -184,6 +184,71 @@ class PaymentWorkflowTest {
             assertThat(result)
                     .usingRecursiveComparison()
                     .isEqualTo(expected);
+
+            then(fxLockActivity).should().releaseLock(new FxReleaseRequest(
+                    LOCK_ID, PAYMENT_ID, "Customer requested cancellation"));
+        }
+
+        @Test
+        @DisplayName("should not call releaseLock when cancel before FX lock")
+        void shouldNotReleaseLockWhenCancelBeforeFxLock(WorkflowClient workflowClient,
+                                                        Worker worker) {
+            given(complianceActivity.checkCompliance(any()))
+                    .willAnswer(invocation -> {
+                        var stub = workflowClient.newWorkflowStub(
+                                PaymentWorkflow.class,
+                                "payment-" + PAYMENT_ID);
+                        stub.cancelPayment(new CancelRequest(
+                                PAYMENT_ID, "Changed mind", "customer"));
+                        return new ComplianceResult(CHECK_ID, PASSED, null);
+                    });
+
+            var workflow = startWorkflow(workflowClient, worker);
+            var result = getResult(workflowClient);
+
+            var expected = PaymentResult.failed(PAYMENT_ID, "Cancelled: Changed mind");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
+
+            then(fxLockActivity).should(never()).lockFxRate(any());
+            then(fxLockActivity).should(never()).releaseLock(any());
+        }
+
+        @Test
+        @DisplayName("should return FAILED even when compensation activity throws")
+        void shouldReturnFailedWhenCompensationThrows(WorkflowClient workflowClient,
+                                                       Worker worker) {
+            given(complianceActivity.checkCompliance(any()))
+                    .willReturn(new ComplianceResult(CHECK_ID, PASSED, null));
+
+            given(fxLockActivity.lockFxRate(any()))
+                    .willAnswer(invocation -> {
+                        var stub = workflowClient.newWorkflowStub(
+                                PaymentWorkflow.class,
+                                "payment-" + PAYMENT_ID);
+                        stub.cancelPayment(new CancelRequest(
+                                PAYMENT_ID, "Timeout", "system"));
+                        return new FxLockResult(
+                                LOCK_ID, QUOTE_ID, new BigDecimal("0.92"),
+                                new BigDecimal("920.00"), "EUR",
+                                LOCKED, null);
+                    });
+
+            willThrow(new RuntimeException("FX engine unavailable"))
+                    .given(fxLockActivity).releaseLock(any());
+
+            var workflow = startWorkflow(workflowClient, worker);
+            var result = getResult(workflowClient);
+
+            var expected = PaymentResult.failed(PAYMENT_ID, "Cancelled: Timeout");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
+
+            // Temporal retries the activity (maxAttempts=3) before propagating the failure
+            then(fxLockActivity).should(atLeast(1)).releaseLock(new FxReleaseRequest(
+                    LOCK_ID, PAYMENT_ID, "Timeout"));
         }
     }
 
