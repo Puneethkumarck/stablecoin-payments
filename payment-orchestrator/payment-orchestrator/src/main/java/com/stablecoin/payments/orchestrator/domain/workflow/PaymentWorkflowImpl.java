@@ -44,11 +44,13 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
             ComplianceCheckActivity.class,
             ActivityOptions.newBuilder()
                     .setStartToCloseTimeout(Duration.ofSeconds(30))
+                    .setHeartbeatTimeout(Duration.ofSeconds(10))
                     .setRetryOptions(RetryOptions.newBuilder()
                             .setMaximumAttempts(3)
                             .setInitialInterval(Duration.ofSeconds(1))
+                            .setMaximumInterval(Duration.ofSeconds(5))
                             .setBackoffCoefficient(2.0)
-                            .setDoNotRetry(IllegalArgumentException.class.getName())
+                            .setDoNotRetry("SANCTIONS_HIT", "CORRIDOR_NOT_SUPPORTED")
                             .build())
                     .build());
 
@@ -59,8 +61,9 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
                     .setRetryOptions(RetryOptions.newBuilder()
                             .setMaximumAttempts(3)
                             .setInitialInterval(Duration.ofSeconds(1))
+                            .setMaximumInterval(Duration.ofSeconds(5))
                             .setBackoffCoefficient(2.0)
-                            .setDoNotRetry(IllegalArgumentException.class.getName())
+                            .setDoNotRetry("INSUFFICIENT_LIQUIDITY", "CORRIDOR_NOT_SUPPORTED")
                             .build())
                     .build());
 
@@ -153,7 +156,7 @@ public class PaymentWorkflowImpl implements PaymentWorkflow {
         }
 
         // FX lock succeeded — push compensation (release lock) onto stack
-        compensationStack.push("RELEASE_FX_LOCK:" + fxResult.quoteId());
+        compensationStack.push("RELEASE_FX_LOCK:" + fxResult.lockId());
         currentState = "FX_LOCKED";
         log.info("FX rate locked for paymentId={}, quoteId={}, rate={}",
                 request.paymentId(), fxResult.quoteId(), fxResult.lockedRate());

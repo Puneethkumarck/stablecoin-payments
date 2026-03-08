@@ -7,7 +7,6 @@ import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockActiv
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
-import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentRequest;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentResult;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -19,13 +18,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceResult.ComplianceStatus.FAILED;
 import static com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceResult.ComplianceStatus.PASSED;
 import static com.stablecoin.payments.orchestrator.domain.workflow.activity.ComplianceResult.ComplianceStatus.SANCTIONS_HIT;
 import static com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult.FxLockStatus.INSUFFICIENT_LIQUIDITY;
 import static com.stablecoin.payments.orchestrator.domain.workflow.activity.FxLockResult.FxLockStatus.LOCKED;
+import static com.stablecoin.payments.orchestrator.fixtures.WorkflowFixtures.CHECK_ID;
+import static com.stablecoin.payments.orchestrator.fixtures.WorkflowFixtures.LOCK_ID;
+import static com.stablecoin.payments.orchestrator.fixtures.WorkflowFixtures.PAYMENT_ID;
+import static com.stablecoin.payments.orchestrator.fixtures.WorkflowFixtures.QUOTE_ID;
+import static com.stablecoin.payments.orchestrator.fixtures.WorkflowFixtures.aPaymentRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -35,12 +38,6 @@ import static org.mockito.Mockito.never;
 
 @DisplayName("PaymentWorkflow")
 class PaymentWorkflowTest {
-
-    private static final UUID PAYMENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    private static final UUID SENDER_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
-    private static final UUID RECIPIENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
-    private static final UUID QUOTE_ID = UUID.fromString("00000000-0000-0000-0000-000000000099");
-    private static final UUID CHECK_ID = UUID.fromString("00000000-0000-0000-0000-000000000088");
 
     private final ComplianceCheckActivity complianceActivity = mock(ComplianceCheckActivity.class);
     private final FxLockActivity fxLockActivity = mock(FxLockActivity.class);
@@ -63,7 +60,7 @@ class PaymentWorkflowTest {
                     .willReturn(new ComplianceResult(CHECK_ID, PASSED, null));
             given(fxLockActivity.lockFxRate(any()))
                     .willReturn(new FxLockResult(
-                            QUOTE_ID, new BigDecimal("0.92"),
+                            LOCK_ID, QUOTE_ID, new BigDecimal("0.92"),
                             new BigDecimal("920.00"), "EUR",
                             LOCKED, null));
 
@@ -138,7 +135,7 @@ class PaymentWorkflowTest {
                     .willReturn(new ComplianceResult(CHECK_ID, PASSED, null));
             given(fxLockActivity.lockFxRate(any()))
                     .willReturn(new FxLockResult(
-                            null, null, null, null,
+                            null, null, null, null, null,
                             INSUFFICIENT_LIQUIDITY, "No liquidity for USD/EUR"));
 
             var workflow = startWorkflow(workflowClient, worker);
@@ -174,7 +171,7 @@ class PaymentWorkflowTest {
                         stub.cancelPayment(new CancelRequest(
                                 PAYMENT_ID, "Customer requested cancellation", "customer"));
                         return new FxLockResult(
-                                QUOTE_ID, new BigDecimal("0.92"),
+                                LOCK_ID, QUOTE_ID, new BigDecimal("0.92"),
                                 new BigDecimal("920.00"), "EUR",
                                 LOCKED, null);
                     });
@@ -202,7 +199,7 @@ class PaymentWorkflowTest {
                     .willReturn(new ComplianceResult(CHECK_ID, PASSED, null));
             given(fxLockActivity.lockFxRate(any()))
                     .willReturn(new FxLockResult(
-                            QUOTE_ID, new BigDecimal("0.92"),
+                            LOCK_ID, QUOTE_ID, new BigDecimal("0.92"),
                             new BigDecimal("920.00"), "EUR",
                             LOCKED, null));
 
@@ -231,20 +228,5 @@ class PaymentWorkflowTest {
     private PaymentResult getResult(WorkflowClient client) {
         return client.newUntypedWorkflowStub("payment-" + PAYMENT_ID)
                 .getResult(PaymentResult.class);
-    }
-
-    private PaymentRequest aPaymentRequest() {
-        return new PaymentRequest(
-                PAYMENT_ID,
-                "idem-key-123",
-                UUID.fromString("00000000-0000-0000-0000-000000000010"),
-                SENDER_ID,
-                RECIPIENT_ID,
-                new BigDecimal("1000.00"),
-                "USD",
-                "EUR",
-                "US",
-                "DE"
-        );
     }
 }

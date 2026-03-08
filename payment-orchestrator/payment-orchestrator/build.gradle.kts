@@ -73,6 +73,8 @@ val springdocVersion: String by project
 
 dependencies {
     implementation(project(":payment-orchestrator:payment-orchestrator-api"))
+    implementation(project(":compliance-travel-rule:compliance-travel-rule-client"))
+    implementation(project(":fx-liquidity-engine:fx-liquidity-engine-client"))
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -120,6 +122,8 @@ dependencies {
     // Test Fixtures
     testFixturesImplementation("org.assertj:assertj-core")
     testFixturesImplementation("org.mockito:mockito-core")
+    testFixturesImplementation(project(":compliance-travel-rule:compliance-travel-rule-client"))
+    testFixturesImplementation(project(":fx-liquidity-engine:fx-liquidity-engine-client"))
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
