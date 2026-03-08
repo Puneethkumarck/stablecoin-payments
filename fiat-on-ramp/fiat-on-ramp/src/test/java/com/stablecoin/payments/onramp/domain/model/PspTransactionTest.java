@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static com.stablecoin.payments.onramp.domain.model.PspTransactionDirection.DEBIT;
 import static com.stablecoin.payments.onramp.fixtures.CollectionOrderFixtures.aMoney;

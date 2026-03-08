@@ -71,6 +71,7 @@ class CollectionOrderTest {
             assertThat(order)
                     .usingRecursiveComparison()
                     .ignoringFields("collectionId", "createdAt", "updatedAt", "expiresAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(expected);
         }
 
@@ -187,6 +188,7 @@ class CollectionOrderTest {
             assertThat(result)
                     .usingRecursiveComparison()
                     .ignoringFields("status", "updatedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(order);
         }
 
@@ -228,8 +230,13 @@ class CollectionOrderTest {
 
             var result = order.confirmCollection(collectedAmount);
 
-            assertThat(result.collectedAmount()).isEqualTo(collectedAmount);
-            assertThat(result.pspSettledAt()).isNotNull();
+            var expected = order.confirmCollection(collectedAmount);
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("collectionId", "createdAt", "updatedAt", "expiresAt", "pspSettledAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
     }
 
@@ -258,8 +265,13 @@ class CollectionOrderTest {
 
             var result = order.failCollection(FAILURE_REASON, ERROR_CODE);
 
-            assertThat(result.failureReason()).isEqualTo(FAILURE_REASON);
-            assertThat(result.errorCode()).isEqualTo(ERROR_CODE);
+            var expected = order.failCollection(FAILURE_REASON, ERROR_CODE);
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("collectionId", "createdAt", "updatedAt", "expiresAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -336,9 +348,11 @@ class CollectionOrderTest {
                     .startRefundProcessing()
                     .completeRefund();
 
-            assertThat(refunded.paymentId()).isEqualTo(collected.paymentId());
-            assertThat(refunded.correlationId()).isEqualTo(collected.correlationId());
-            assertThat(refunded.amount()).isEqualTo(collected.amount());
+            assertThat(refunded)
+                    .usingRecursiveComparison()
+                    .ignoringFields("status", "updatedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(collected);
         }
     }
 
