@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
@@ -245,7 +246,8 @@ class PaymentWorkflowTest {
                     .usingRecursiveComparison()
                     .isEqualTo(expected);
 
-            then(fxLockActivity).should().releaseLock(new FxReleaseRequest(
+            // Temporal retries the activity (maxAttempts=3) before propagating the failure
+            then(fxLockActivity).should(atLeast(1)).releaseLock(new FxReleaseRequest(
                     LOCK_ID, PAYMENT_ID, "Timeout"));
         }
     }
