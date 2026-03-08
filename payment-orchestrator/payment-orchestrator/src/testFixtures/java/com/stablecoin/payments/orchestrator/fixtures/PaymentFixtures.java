@@ -5,6 +5,7 @@ import com.stablecoin.payments.orchestrator.domain.model.Corridor;
 import com.stablecoin.payments.orchestrator.domain.model.FxRate;
 import com.stablecoin.payments.orchestrator.domain.model.Money;
 import com.stablecoin.payments.orchestrator.domain.model.Payment;
+import com.stablecoin.payments.orchestrator.domain.service.PaymentCommandHandler;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.UUID;
 public final class PaymentFixtures {
 
     public static final Money SOURCE_AMOUNT = new Money(new BigDecimal("1000.00"), "USD");
+    public static final BigDecimal SOURCE_AMOUNT_VALUE = new BigDecimal("1000.00");
     public static final Corridor US_TO_DE = new Corridor("US", "DE");
     public static final String IDEMPOTENCY_KEY = "idem-key-123";
     public static final UUID CORRELATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -26,10 +28,26 @@ public final class PaymentFixtures {
     public static final UUID RECIPIENT_ID = UUID.fromString("00000000-0000-0000-0000-000000000003");
     public static final String SOURCE_CURRENCY = "USD";
     public static final String TARGET_CURRENCY = "EUR";
+    public static final String SOURCE_COUNTRY = "US";
+    public static final String TARGET_COUNTRY = "DE";
     public static final ChainId BASE_CHAIN = new ChainId("base");
     public static final String TX_HASH = "0xabc123def456";
 
     private PaymentFixtures() {}
+
+    /**
+     * Creates an {@link PaymentCommandHandler.InitiateResult} representing a new payment.
+     */
+    public static PaymentCommandHandler.InitiateResult anInitiateResult() {
+        return new PaymentCommandHandler.InitiateResult(anInitiatedPayment(), false);
+    }
+
+    /**
+     * Creates an {@link PaymentCommandHandler.InitiateResult} representing an idempotent replay.
+     */
+    public static PaymentCommandHandler.InitiateResult anIdempotentReplayResult() {
+        return new PaymentCommandHandler.InitiateResult(anInitiatedPayment(), true);
+    }
 
     public static FxRate aValidFxRate() {
         var now = Instant.now();

@@ -127,6 +127,8 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
