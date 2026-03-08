@@ -168,7 +168,7 @@ class PaymentWorkflowTest {
 
             var expectedEvent = PaymentEventRequest.failed(
                     PAYMENT_ID, aPaymentRequest().correlationId(),
-                    "FX_LOCKING", "FX rate lock failed: No liquidity for USD/EUR",
+                    "COMPLIANCE_CHECK", "FX rate lock failed: No liquidity for USD/EUR",
                     "FX_LOCK_REJECTED");
             then(eventPublishingActivity).should().publishPaymentEvent(expectedEvent);
         }
