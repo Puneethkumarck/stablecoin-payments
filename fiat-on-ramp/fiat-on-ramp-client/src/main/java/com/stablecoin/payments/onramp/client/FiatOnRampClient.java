@@ -1,11 +1,13 @@
 package com.stablecoin.payments.onramp.client;
 
 import com.stablecoin.payments.onramp.api.CollectionResponse;
+import com.stablecoin.payments.onramp.api.RefundRequest;
 import com.stablecoin.payments.onramp.api.RefundResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
@@ -19,6 +21,8 @@ public interface FiatOnRampClient {
     @GetMapping(value = "/v1/collections", produces = "application/json")
     CollectionResponse getCollectionByPaymentId(@RequestParam("paymentId") UUID paymentId);
 
-    @PostMapping(value = "/v1/collections/{collectionId}/refunds", produces = "application/json")
-    RefundResponse initiateRefund(@PathVariable("collectionId") UUID collectionId);
+    @PostMapping(value = "/v1/collections/{collectionId}/refunds",
+            consumes = "application/json", produces = "application/json")
+    RefundResponse initiateRefund(@PathVariable("collectionId") UUID collectionId,
+                                  @RequestBody RefundRequest request);
 }
