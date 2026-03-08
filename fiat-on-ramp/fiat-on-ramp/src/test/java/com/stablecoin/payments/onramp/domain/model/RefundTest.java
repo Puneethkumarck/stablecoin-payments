@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static com.stablecoin.payments.onramp.domain.model.RefundStatus.COMPLETED;
 import static com.stablecoin.payments.onramp.domain.model.RefundStatus.FAILED;
@@ -41,6 +40,7 @@ class RefundTest {
             assertThat(refund)
                     .usingRecursiveComparison()
                     .ignoringFields("refundId", "initiatedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(expected);
         }
 
@@ -133,6 +133,7 @@ class RefundTest {
             assertThat(result)
                     .usingRecursiveComparison()
                     .ignoringFields("status")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(refund);
         }
 
@@ -153,8 +154,13 @@ class RefundTest {
 
             var result = refund.complete(PSP_REFUND_REFERENCE);
 
-            assertThat(result.pspRefundRef()).isEqualTo(PSP_REFUND_REFERENCE);
-            assertThat(result.completedAt()).isNotNull();
+            var expected = refund.complete(PSP_REFUND_REFERENCE);
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("refundId", "initiatedAt", "completedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -165,9 +171,14 @@ class RefundTest {
             var completed = pending.startProcessing()
                     .complete(PSP_REFUND_REFERENCE);
 
-            assertThat(completed.status()).isEqualTo(COMPLETED);
-            assertThat(completed.pspRefundRef()).isEqualTo(PSP_REFUND_REFERENCE);
-            assertThat(completed.completedAt()).isNotNull();
+            var expected = pending.startProcessing()
+                    .complete(PSP_REFUND_REFERENCE);
+
+            assertThat(completed)
+                    .usingRecursiveComparison()
+                    .ignoringFields("refundId", "initiatedAt", "completedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
     }
 
@@ -203,8 +214,14 @@ class RefundTest {
             var failed = pending.startProcessing()
                     .fail(FAILURE_REASON);
 
-            assertThat(failed.status()).isEqualTo(FAILED);
-            assertThat(failed.failureReason()).isEqualTo(FAILURE_REASON);
+            var expected = pending.startProcessing()
+                    .fail(FAILURE_REASON);
+
+            assertThat(failed)
+                    .usingRecursiveComparison()
+                    .ignoringFields("refundId", "initiatedAt")
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
     }
 
