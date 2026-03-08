@@ -3,7 +3,7 @@ package com.stablecoin.payments.fx.infrastructure.scheduling;
 import com.stablecoin.payments.fx.domain.event.FxRateExpired;
 import com.stablecoin.payments.fx.domain.model.FxRateLock;
 import com.stablecoin.payments.fx.domain.model.FxRateLockStatus;
-import com.stablecoin.payments.fx.domain.port.EventPublisher;
+import com.stablecoin.payments.fx.infrastructure.messaging.OutboxEventPublisher;
 import com.stablecoin.payments.fx.domain.port.FxRateLockRepository;
 import com.stablecoin.payments.fx.domain.port.LiquidityPoolRepository;
 import com.stablecoin.payments.fx.domain.service.LiquidityService;
@@ -46,7 +46,7 @@ class LockExpiryJobTest {
     private LiquidityService liquidityService;
 
     @Mock
-    private EventPublisher<FxRateExpired> eventPublisher;
+    private OutboxEventPublisher eventPublisher;
 
     @InjectMocks
     private LockExpiryJob lockExpiryJob;
