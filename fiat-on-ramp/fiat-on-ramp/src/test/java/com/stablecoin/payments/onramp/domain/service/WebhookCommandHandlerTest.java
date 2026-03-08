@@ -3,8 +3,8 @@ package com.stablecoin.payments.onramp.domain.service;
 import com.stablecoin.payments.onramp.domain.event.CollectionCompletedEvent;
 import com.stablecoin.payments.onramp.domain.event.CollectionFailedEvent;
 import com.stablecoin.payments.onramp.domain.exception.CollectionOrderNotFoundException;
-import com.stablecoin.payments.onramp.domain.model.CollectionStatus;
 import com.stablecoin.payments.onramp.domain.model.PspTransaction;
+import com.stablecoin.payments.onramp.domain.model.PspTransactionDirection;
 import com.stablecoin.payments.onramp.domain.port.CollectionEventPublisher;
 import com.stablecoin.payments.onramp.domain.port.CollectionOrderRepository;
 import com.stablecoin.payments.onramp.domain.port.PspTransactionRepository;
@@ -28,7 +28,6 @@ import static com.stablecoin.payments.onramp.fixtures.TestUtils.eqIgnoringTimest
 import static com.stablecoin.payments.onramp.fixtures.WebhookFixtures.aFailedCommand;
 import static com.stablecoin.payments.onramp.fixtures.WebhookFixtures.aMismatchCommand;
 import static com.stablecoin.payments.onramp.fixtures.WebhookFixtures.aSucceededCommand;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -55,7 +54,8 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should transition AWAITING_CONFIRMATION to COLLECTED and publish CollectionCompletedEvent")
-        void transitionsToCollectedAndPublishesEvent() {
+        void shouldTransitionToCollectedAndPublishEvent() {
+            // given
             var order = anAwaitingConfirmationOrder();
             var command = aSucceededCommand();
             var collected = order.confirmCollection(command.amount());
@@ -63,8 +63,10 @@ class WebhookCommandHandlerTest {
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
             given(orderRepository.save(eqIgnoringTimestamps(collected))).willReturn(collected);
 
+            // when
             handler.handleWebhook(command);
 
+            // then
             then(orderRepository).should().save(eqIgnoringTimestamps(collected));
             then(eventPublisher).should().publish(eqIgnoringTimestamps(
                     new CollectionCompletedEvent(
@@ -81,7 +83,8 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should detect amount mismatch and transition to AMOUNT_MISMATCH")
-        void detectsAmountMismatch() {
+        void shouldDetectAmountMismatch() {
+            // given
             var order = anAwaitingConfirmationOrder();
             var command = aMismatchCommand();
             var mismatch = order.detectAmountMismatch();
@@ -89,8 +92,10 @@ class WebhookCommandHandlerTest {
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
             given(orderRepository.save(eqIgnoringTimestamps(mismatch))).willReturn(mismatch);
 
+            // when
             handler.handleWebhook(command);
 
+            // then
             then(orderRepository).should().save(eqIgnoringTimestamps(mismatch));
             then(eventPublisher).should().publish(eqIgnoringTimestamps(
                     new CollectionFailedEvent(
@@ -109,7 +114,8 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should transition AWAITING_CONFIRMATION to COLLECTION_FAILED and publish event")
-        void transitionsAwaitingToCollectionFailed() {
+        void shouldTransitionAwaitingToCollectionFailed() {
+            // given
             var order = anAwaitingConfirmationOrder();
             var command = aFailedCommand();
             var failed = order.timeoutCollection("PSP payment failed: failed", "PSP_PAYMENT_FAILED");
@@ -117,8 +123,10 @@ class WebhookCommandHandlerTest {
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
             given(orderRepository.save(eqIgnoringTimestamps(failed))).willReturn(failed);
 
+            // when
             handler.handleWebhook(command);
 
+            // then
             then(orderRepository).should().save(eqIgnoringTimestamps(failed));
             then(eventPublisher).should().publish(eqIgnoringTimestamps(
                     new CollectionFailedEvent(
@@ -132,7 +140,8 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should transition PAYMENT_INITIATED to COLLECTION_FAILED using failCollection()")
-        void transitionsPaymentInitiatedToFailed() {
+        void shouldTransitionPaymentInitiatedToFailed() {
+            // given
             var order = aPaymentInitiatedOrder();
             var command = new WebhookCommand(
                     "evt_test_002",
@@ -142,18 +151,15 @@ class WebhookCommandHandlerTest {
                     order.amount(),
                     "failed",
                     "{}");
-
-            // Need an order with pspReference set so findByPspReference works.
-            // PaymentInitiated doesn't have pspReference set, but the handler looks it up.
-            // Let's set it via a builder proxy (the order in PAYMENT_INITIATED wouldn't normally
-            // have a pspReference, but for test purposes the repo returns it).
             var failed = order.failCollection("PSP payment failed: failed", "PSP_PAYMENT_FAILED");
 
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
             given(orderRepository.save(eqIgnoringTimestamps(failed))).willReturn(failed);
 
+            // when
             handler.handleWebhook(command);
 
+            // then
             then(orderRepository).should().save(eqIgnoringTimestamps(failed));
         }
     }
@@ -164,32 +170,36 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should skip webhook when order is already COLLECTED for succeeded event")
-        void skipsAlreadyCollectedOrder() {
+        void shouldSkipAlreadyCollectedOrder() {
+            // given
             var order = aCollectedOrder();
             var command = aSucceededCommand();
 
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
 
-            var result = handler.handleWebhook(command);
+            // when
+            handler.handleWebhook(command);
 
-            assertThat(result.status()).isEqualTo(CollectionStatus.COLLECTED);
+            // then — no save or event publish should occur
             then(orderRepository).should(never()).save(eqIgnoringTimestamps(order));
-            then(eventPublisher).should(never()).publish(eqIgnoringTimestamps(
-                    new CollectionCompletedEvent(null, null, null, null, null, null, null, null, null)));
+            then(eventPublisher).shouldHaveNoInteractions();
         }
 
         @Test
         @DisplayName("should skip webhook when order is already COLLECTION_FAILED for failed event")
-        void skipsAlreadyFailedOrder() {
+        void shouldSkipAlreadyFailedOrder() {
+            // given
             var order = aCollectionFailedOrder();
             var command = aFailedCommand();
 
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
 
-            var result = handler.handleWebhook(command);
+            // when
+            handler.handleWebhook(command);
 
-            assertThat(result.status()).isEqualTo(CollectionStatus.COLLECTION_FAILED);
+            // then — no save or event publish should occur
             then(orderRepository).should(never()).save(eqIgnoringTimestamps(order));
+            then(eventPublisher).shouldHaveNoInteractions();
         }
     }
 
@@ -199,11 +209,12 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should throw CollectionOrderNotFoundException when order not found")
-        void throwsWhenOrderNotFound() {
+        void shouldThrowWhenOrderNotFound() {
+            // given
             var command = aSucceededCommand();
-
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.empty());
 
+            // when/then
             assertThatThrownBy(() -> handler.handleWebhook(command))
                     .isInstanceOf(CollectionOrderNotFoundException.class)
                     .hasMessageContaining(PSP_REFERENCE);
@@ -211,7 +222,8 @@ class WebhookCommandHandlerTest {
 
         @Test
         @DisplayName("should record PspTransaction for every non-idempotent webhook")
-        void recordsPspTransaction() {
+        void shouldRecordPspTransaction() {
+            // given
             var order = anAwaitingConfirmationOrder();
             var command = aSucceededCommand();
             var collected = order.confirmCollection(command.amount());
@@ -219,14 +231,16 @@ class WebhookCommandHandlerTest {
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
             given(orderRepository.save(eqIgnoringTimestamps(collected))).willReturn(collected);
 
+            // when
             handler.handleWebhook(command);
 
+            // then
             then(pspTransactionRepository).should().save(
                     eqIgnoring(PspTransaction.create(
                             order.collectionId(),
                             order.psp().pspName(),
                             PSP_REFERENCE,
-                            com.stablecoin.payments.onramp.domain.model.PspTransactionDirection.DEBIT,
+                            PspTransactionDirection.DEBIT,
                             "payment_intent.succeeded",
                             command.amount(),
                             "succeeded",
@@ -234,8 +248,9 @@ class WebhookCommandHandlerTest {
         }
 
         @Test
-        @DisplayName("should ignore unrecognised event type and return order unchanged")
-        void ignoresUnrecognisedEventType() {
+        @DisplayName("should ignore unrecognised event type without saving or publishing")
+        void shouldIgnoreUnrecognisedEventType() {
+            // given
             var order = anAwaitingConfirmationOrder();
             var command = new WebhookCommand(
                     "evt_test_003",
@@ -248,10 +263,12 @@ class WebhookCommandHandlerTest {
 
             given(orderRepository.findByPspReference(PSP_REFERENCE)).willReturn(Optional.of(order));
 
-            var result = handler.handleWebhook(command);
+            // when
+            handler.handleWebhook(command);
 
-            assertThat(result.status()).isEqualTo(CollectionStatus.AWAITING_CONFIRMATION);
+            // then — no state change or event publish
             then(orderRepository).should(never()).save(eqIgnoringTimestamps(order));
+            then(eventPublisher).shouldHaveNoInteractions();
         }
     }
 }

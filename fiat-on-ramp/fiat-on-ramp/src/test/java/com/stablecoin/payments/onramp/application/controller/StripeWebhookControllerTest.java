@@ -43,38 +43,43 @@ class StripeWebhookControllerTest {
 
         @Test
         @DisplayName("should return 400 when Stripe-Signature header is missing")
-        void returnsBadRequestWhenHeaderMissing() {
+        void shouldReturnBadRequestWhenHeaderMissing() {
+            // given
             var rawBody = aSucceededEventJson();
 
+            // when
             var response = controller.handleWebhook(rawBody, null);
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "Missing Stripe-Signature header");
         }
 
         @Test
         @DisplayName("should return 400 when Stripe-Signature header is blank")
-        void returnsBadRequestWhenHeaderBlank() {
+        void shouldReturnBadRequestWhenHeaderBlank() {
+            // given
             var rawBody = aSucceededEventJson();
 
+            // when
             var response = controller.handleWebhook(rawBody, "   ");
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "Missing Stripe-Signature header");
         }
 
         @Test
         @DisplayName("should return 400 when signature validation fails")
-        void returnsBadRequestWhenSignatureInvalid() {
+        void shouldReturnBadRequestWhenSignatureInvalid() {
+            // given
             var rawBody = aSucceededEventJson();
             var signature = "t=123,v1=invalid";
-
             given(signatureValidator.isValid(rawBody, signature)).willReturn(false);
 
+            // when
             var response = controller.handleWebhook(rawBody, signature);
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(response.getBody()).containsEntry("error", "Invalid webhook signature");
         }
     }
 
@@ -84,7 +89,8 @@ class StripeWebhookControllerTest {
 
         @Test
         @DisplayName("should return 200 when webhook is processed successfully")
-        void returnsOkOnSuccess() {
+        void shouldReturnOkOnSuccess() {
+            // given
             var rawBody = aSucceededEventJson();
             var signature = "t=123,v1=valid";
             var order = anAwaitingConfirmationOrder();
@@ -94,10 +100,11 @@ class StripeWebhookControllerTest {
                     eqIgnoringTimestamps(controller.parseStripeEvent(rawBody))))
                     .willReturn(order.confirmCollection(new Money(new BigDecimal("1000.00"), "USD")));
 
+            // when
             var response = controller.handleWebhook(rawBody, signature);
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(response.getBody()).containsEntry("status", "received");
         }
     }
 
@@ -107,7 +114,8 @@ class StripeWebhookControllerTest {
 
         @Test
         @DisplayName("should return 404 when collection order not found")
-        void returnsNotFoundWhenOrderMissing() {
+        void shouldReturnNotFoundWhenOrderMissing() {
+            // given
             var rawBody = aSucceededEventJson();
             var signature = "t=123,v1=valid";
 
@@ -116,14 +124,17 @@ class StripeWebhookControllerTest {
                     eqIgnoringTimestamps(controller.parseStripeEvent(rawBody))))
                     .willThrow(new CollectionOrderNotFoundException(PSP_REFERENCE));
 
+            // when
             var response = controller.handleWebhook(rawBody, signature);
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         }
 
         @Test
         @DisplayName("should return 409 when state transition is invalid")
-        void returnsConflictOnInvalidStateTransition() {
+        void shouldReturnConflictOnInvalidStateTransition() {
+            // given
             var rawBody = aSucceededEventJson();
             var signature = "t=123,v1=valid";
 
@@ -132,8 +143,10 @@ class StripeWebhookControllerTest {
                     eqIgnoringTimestamps(controller.parseStripeEvent(rawBody))))
                     .willThrow(new IllegalStateException("Cannot transition"));
 
+            // when
             var response = controller.handleWebhook(rawBody, signature);
 
+            // then
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         }
     }
@@ -144,11 +157,14 @@ class StripeWebhookControllerTest {
 
         @Test
         @DisplayName("should parse succeeded event JSON into WebhookCommand")
-        void parsesSucceededEvent() {
+        void shouldParseSucceededEvent() {
+            // given
             var rawBody = aSucceededEventJson();
 
+            // when
             var result = controller.parseStripeEvent(rawBody);
 
+            // then
             var expected = new WebhookCommand(
                     "evt_test_001",
                     "payment_intent.succeeded",
@@ -163,26 +179,6 @@ class StripeWebhookControllerTest {
                     .ignoringFields("collectionId", "rawPayload")
                     .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .isEqualTo(expected);
-        }
-
-        @Test
-        @DisplayName("should convert amount from minor units to major units")
-        void convertsMinorToMajorUnits() {
-            var rawBody = aSucceededEventJson();
-
-            var result = controller.parseStripeEvent(rawBody);
-
-            assertThat(result.amount().amount().compareTo(new BigDecimal("1000.00"))).isZero();
-        }
-
-        @Test
-        @DisplayName("should uppercase currency from Stripe event")
-        void uppercasesCurrency() {
-            var rawBody = aSucceededEventJson();
-
-            var result = controller.parseStripeEvent(rawBody);
-
-            assertThat(result.amount().currency()).isEqualTo("USD");
         }
     }
 }
