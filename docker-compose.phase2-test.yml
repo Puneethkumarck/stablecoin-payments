@@ -1,0 +1,242 @@
+# Phase 2 Integration Test — Cross-Service Saga (S1 + S2 + S6)
+#
+# Usage:
+#   ./scripts/run-phase2-tests.sh
+#
+# Or manually:
+#   ./gradlew :payment-orchestrator:payment-orchestrator:jibDockerBuild \
+#             :compliance-travel-rule:compliance-travel-rule:jibDockerBuild \
+#             :fx-liquidity-engine:fx-liquidity-engine:jibDockerBuild
+#   docker compose -f docker-compose.phase2-test.yml up -d
+#   ./gradlew :phase2-integration-tests:test
+#   docker compose -f docker-compose.phase2-test.yml down -v
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────
+
+  postgres:
+    image: postgres:18-alpine
+    container_name: p2t-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: postgres
+    volumes:
+      - ./infra/local/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg17
+    container_name: p2t-timescaledb
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: fx_rates
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: p2t-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: p2t-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --kafka-addr=internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr=internal://redpanda:29092,external://localhost:9092
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  kafka-init:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: p2t-kafka-init
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      rpk --brokers redpanda:29092 topic create payment.initiated --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create compliance.result --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create fx.rate.locked --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create payment.completed --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create payment.failed --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create audit.event --partitions 3 --replicas 1 &&
+      rpk --brokers redpanda:29092 topic create merchant.activated --partitions 3 --replicas 1 &&
+      echo 'All topics created'
+      "
+    restart: on-failure
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: p2t-temporal
+    ports:
+      - "7233:7233"
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: dev
+      POSTGRES_PWD: dev
+      POSTGRES_SEEDS: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "temporal operator cluster health 2>/dev/null | grep -q 'OK' || exit 0"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: p2t-temporal-ui
+    ports:
+      - "8233:8080"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    depends_on:
+      - temporal
+
+  wiremock:
+    image: wiremock/wiremock:latest
+    container_name: p2t-wiremock
+    ports:
+      - "4444:8080"
+    volumes:
+      - ./infra/local/wiremock/mappings:/home/wiremock/mappings
+      - ./infra/local/wiremock/__files:/home/wiremock/__files
+    command: --verbose --global-response-templating
+
+  # ── Application Services ───────────────────────────────────────
+
+  compliance-travel-rule:
+    image: stablebridge/compliance-travel-rule:latest
+    container_name: p2t-compliance
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      wiremock:
+        condition: service_started
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      DB_URL: "jdbc:postgresql://postgres:5432/s2_compliance"
+      DB_USER: dev
+      DB_PASS: dev
+      KAFKA_BROKERS: "redpanda:29092"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      APP_SECURITY_ENABLED: "false"
+      # Use WorldCheck adapter → WireMock for sanctions testing
+      APP_SANCTIONS_PROVIDER: world-check
+      APP_SANCTIONS_WORLDCHECK_BASEURL: "http://wiremock:8080/v2"
+      APP_SANCTIONS_WORLDCHECK_APIKEY: "test-api-key"
+      APP_SANCTIONS_WORLDCHECK_TIMEOUTSECONDS: "30"
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/compliance/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  fx-liquidity-engine:
+    image: stablebridge/fx-liquidity-engine:latest
+    container_name: p2t-fx-engine
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      DB_URL: "jdbc:postgresql://timescaledb:5432/fx_rates"
+      DB_USER: dev
+      DB_PASS: dev
+      KAFKA_BROKERS: "redpanda:29092"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      APP_SECURITY_ENABLED: "false"
+    ports:
+      - "8084:8084"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/fx/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  payment-orchestrator:
+    image: stablebridge/payment-orchestrator:latest
+    container_name: p2t-orchestrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      compliance-travel-rule:
+        condition: service_healthy
+      fx-liquidity-engine:
+        condition: service_healthy
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms256m -Xmx512m"
+      DB_URL: "jdbc:postgresql://postgres:5432/s1_payment_orchestrator"
+      DB_USER: dev
+      DB_PASS: dev
+      KAFKA_BROKERS: "redpanda:29092"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      TEMPORAL_ADDRESS: "temporal:7233"
+      TEMPORAL_NAMESPACE: default
+      COMPLIANCE_SERVICE_URL: "http://compliance-travel-rule:8083/compliance"
+      FX_SERVICE_URL: "http://fx-liquidity-engine:8084/fx"
+      APP_SECURITY_ENABLED: "false"
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/orchestrator/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
