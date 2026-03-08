@@ -1,0 +1,134 @@
+spring:
+  application:
+    name: blockchain-custody
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/s4_blockchain_custody}
+    username: ${DB_USER:dev}
+    password: ${DB_PASS:dev}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_schema: public
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+    schemas: public
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+namastack:
+  outbox:
+    poll-interval: 2000
+    batch-size: 20
+    jdbc:
+      table-prefix: "custody_"
+      schema-initialization:
+        enabled: false
+    retry:
+      policy: exponential
+      max-retries: 5
+      exponential:
+        initial-delay: 1000
+        max-delay: 60000
+        multiplier: 2.0
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      group:
+        readiness:
+          include: db
+        liveness:
+          include: livenessState
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      service: blockchain-custody
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+server:
+  port: ${SERVER_PORT:8086}
+  servlet:
+    context-path: /custody
+  shutdown: graceful
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+  info:
+    title: S4 Blockchain & Custody API
+    description: On-chain stablecoin transfers, wallet management, and MPC custody
+    version: 1.0.0
+
+app:
+  security:
+    enabled: false
+  custody:
+    provider: dev
+  chains:
+    base:
+      min-confirmations: 1
+      avg-finality-s: 12
+      rpc-url: ${BASE_RPC_URL:https://base-sepolia.g.alchemy.com/v2/demo}
+    ethereum:
+      min-confirmations: 32
+      avg-finality-s: 300
+      rpc-url: ${ETH_RPC_URL:https://eth-sepolia.g.alchemy.com/v2/demo}
+    solana:
+      min-confirmations: 1
+      avg-finality-s: 5
+      rpc-url: ${SOL_RPC_URL:https://api.devnet.solana.com}
+  chain-selection:
+    cost-weight: 0.4
+    speed-weight: 0.35
+    reliability-weight: 0.25
+  transfer:
+    resubmit-timeout-s: 120
+    max-attempts: 3
+  balance:
+    low-alert-threshold-usd: 50000
+
+logging:
+  level:
+    com.stablecoin.payments: INFO
+    org.springframework.security: WARN

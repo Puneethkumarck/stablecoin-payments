@@ -29,3 +29,11 @@ include("fx-liquidity-engine:fx-liquidity-engine")
 include("payment-orchestrator:payment-orchestrator-api")
 include("payment-orchestrator:payment-orchestrator-client")
 include("payment-orchestrator:payment-orchestrator")
+
+include("fiat-on-ramp:fiat-on-ramp-api")
+include("fiat-on-ramp:fiat-on-ramp-client")
+include("fiat-on-ramp:fiat-on-ramp")
+
+include("blockchain-custody:blockchain-custody-api")
+include("blockchain-custody:blockchain-custody-client")
+include("blockchain-custody:blockchain-custody")
