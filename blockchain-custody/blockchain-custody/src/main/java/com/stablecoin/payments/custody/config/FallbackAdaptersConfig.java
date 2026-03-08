@@ -4,16 +4,19 @@ import com.stablecoin.payments.custody.domain.model.ChainId;
 import com.stablecoin.payments.custody.domain.model.StablecoinTicker;
 import com.stablecoin.payments.custody.domain.port.ChainFeeProvider;
 import com.stablecoin.payments.custody.domain.port.ChainHealthProvider;
+import com.stablecoin.payments.custody.domain.port.ChainRpcProvider;
 import com.stablecoin.payments.custody.domain.port.CustodyEngine;
 import com.stablecoin.payments.custody.domain.port.NonceRepository;
 import com.stablecoin.payments.custody.domain.port.SignRequest;
 import com.stablecoin.payments.custody.domain.port.SignResult;
+import com.stablecoin.payments.custody.domain.port.TransactionReceipt;
 import com.stablecoin.payments.custody.domain.port.TransactionStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -94,6 +97,37 @@ public class FallbackAdaptersConfig {
                         "0x" + UUID.randomUUID().toString().replace("-", ""),
                         10
                 );
+            }
+        };
+    }
+
+    /**
+     * Fallback chain RPC provider for dev/test environments without EVM RPC nodes.
+     * Returns deterministic mock data.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChainRpcProvider fallbackChainRpcProvider() {
+        log.info("Using fallback ChainRpcProvider (returns mock receipts)");
+        return new ChainRpcProvider() {
+            @Override
+            public TransactionReceipt getTransactionReceipt(ChainId chainId, String txHash) {
+                log.warn("[FALLBACK-RPC] Dev receipt for txHash={}", txHash);
+                return new TransactionReceipt(
+                        txHash, 100L, true,
+                        BigDecimal.valueOf(21000), BigDecimal.valueOf(20), 10);
+            }
+
+            @Override
+            public long getLatestBlockNumber(ChainId chainId) {
+                log.warn("[FALLBACK-RPC] Dev block number for chain={}", chainId.value());
+                return 1000L;
+            }
+
+            @Override
+            public BigDecimal getTokenBalance(ChainId chainId, String address, String tokenContract) {
+                log.warn("[FALLBACK-RPC] Dev balance for address={}", address);
+                return BigDecimal.valueOf(500000);
             }
         };
     }

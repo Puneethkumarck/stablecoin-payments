@@ -111,6 +111,21 @@ app:
       api-secret: ${FIREBLOCKS_API_SECRET:}
       vault-account-id: ${FIREBLOCKS_VAULT_ACCOUNT_ID:0}
       timeout-seconds: 30
+    evm:
+      enabled: false  # disabled by default for dev/test — enable in production
+      chains:
+        base:
+          rpc-url: ${BASE_RPC_URL:https://base-sepolia.g.alchemy.com/v2/demo}
+          chain-id: 84532
+          usdc-contract-address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          connect-timeout-ms: 5000
+          read-timeout-ms: 10000
+        ethereum:
+          rpc-url: ${ETH_RPC_URL:https://eth-sepolia.g.alchemy.com/v2/demo}
+          chain-id: 11155111
+          usdc-contract-address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+          connect-timeout-ms: 5000
+          read-timeout-ms: 10000
   chains:
     base:
       min-confirmations: 1
