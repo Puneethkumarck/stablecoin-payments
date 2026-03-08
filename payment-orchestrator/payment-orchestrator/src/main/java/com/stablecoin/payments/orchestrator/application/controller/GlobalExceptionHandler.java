@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 import java.util.Map;
@@ -101,6 +102,14 @@ public class GlobalExceptionHandler {
     public ApiError handlePaymentNotCancellable(PaymentNotCancellableException ex) {
         log.info("Payment not cancellable: {}", ex.getMessage());
         return ApiError.of(PAYMENT_NOT_CANCELLABLE, CONFLICT.getReasonPhrase(), ex.getMessage());
+    }
+
+    @ResponseStatus(BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ApiError handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.info("Type mismatch for parameter '{}': {}", ex.getName(), ex.getMessage());
+        return ApiError.of(VALIDATION_ERROR, BAD_REQUEST.getReasonPhrase(),
+                "Invalid value for parameter '" + ex.getName() + "'");
     }
 
     @ResponseStatus(UNPROCESSABLE_ENTITY)
