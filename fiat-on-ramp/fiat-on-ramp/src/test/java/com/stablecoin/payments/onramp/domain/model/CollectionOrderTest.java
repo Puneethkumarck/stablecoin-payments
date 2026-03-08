@@ -1,6 +1,5 @@
 package com.stablecoin.payments.onramp.domain.model;
 
-import com.stablecoin.payments.onramp.domain.statemachine.StateMachineException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
