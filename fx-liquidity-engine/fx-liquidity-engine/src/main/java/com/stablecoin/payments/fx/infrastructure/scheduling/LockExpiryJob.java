@@ -2,11 +2,11 @@ package com.stablecoin.payments.fx.infrastructure.scheduling;
 
 import com.stablecoin.payments.fx.domain.event.FxRateExpired;
 import com.stablecoin.payments.fx.domain.model.FxRateLock;
-import com.stablecoin.payments.fx.infrastructure.messaging.OutboxEventPublisher;
 import com.stablecoin.payments.fx.domain.port.FxRateLockRepository;
 import com.stablecoin.payments.fx.domain.port.LiquidityPoolRepository;
 import com.stablecoin.payments.fx.domain.service.LiquidityService;
 import com.stablecoin.payments.fx.domain.service.LockService;
+import com.stablecoin.payments.fx.infrastructure.messaging.OutboxEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
