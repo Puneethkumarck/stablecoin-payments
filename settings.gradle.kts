@@ -25,3 +25,7 @@ include("compliance-travel-rule:compliance-travel-rule")
 include("fx-liquidity-engine:fx-liquidity-engine-api")
 include("fx-liquidity-engine:fx-liquidity-engine-client")
 include("fx-liquidity-engine:fx-liquidity-engine")
+
+include("payment-orchestrator:payment-orchestrator-api")
+include("payment-orchestrator:payment-orchestrator-client")
+include("payment-orchestrator:payment-orchestrator")
