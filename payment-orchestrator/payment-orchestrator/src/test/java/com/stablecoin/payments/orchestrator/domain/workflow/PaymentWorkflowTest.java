@@ -97,9 +97,10 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
-            assertThat(result.failureReason()).contains("Compliance check failed");
-            assertThat(result.failureReason()).contains("PEP match");
+            var expected = PaymentResult.failed(PAYMENT_ID, "Compliance check failed: PEP match");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
 
             then(fxLockActivity).should(never()).lockFxRate(any());
         }
@@ -115,8 +116,11 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
-            assertThat(result.failureReason()).contains("Compliance check failed");
+            var expected = PaymentResult.failed(PAYMENT_ID,
+                    "Compliance check failed: OFAC sanctions list match");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
 
             then(fxLockActivity).should(never()).lockFxRate(any());
         }
@@ -140,9 +144,11 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
-            assertThat(result.failureReason()).contains("FX rate lock failed");
-            assertThat(result.failureReason()).contains("No liquidity for USD/EUR");
+            var expected = PaymentResult.failed(PAYMENT_ID,
+                    "FX rate lock failed: No liquidity for USD/EUR");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
         }
     }
 
@@ -176,9 +182,11 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.FAILED);
-            assertThat(result.failureReason()).contains("Cancelled");
-            assertThat(result.failureReason()).contains("Customer requested cancellation");
+            var expected = PaymentResult.failed(PAYMENT_ID,
+                    "Cancelled: Customer requested cancellation");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
         }
     }
 
@@ -201,8 +209,12 @@ class PaymentWorkflowTest {
             var workflow = startWorkflow(workflowClient, worker);
             var result = getResult(workflowClient);
 
-            // After completion, the state should be COMPLETED
-            assertThat(result.status()).isEqualTo(PaymentResult.PaymentResultStatus.COMPLETED);
+            var expected = PaymentResult.completed(
+                    PAYMENT_ID, QUOTE_ID,
+                    new BigDecimal("0.92"), new BigDecimal("920.00"), "EUR");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
         }
     }
 
