@@ -1,0 +1,14 @@
+package com.stablecoin.payments.onramp.domain.model;
+
+public enum CollectionTrigger {
+    INITIATE_PAYMENT,
+    PSP_SESSION_CREATED,
+    PAYMENT_CONFIRMED,
+    PAYMENT_TIMEOUT,
+    AMOUNT_MISMATCH_DETECTED,
+    ESCALATE_MANUAL_REVIEW,
+    START_REFUND,
+    REFUND_PROCESSING_STARTED,
+    REFUND_COMPLETED,
+    FAIL
+}
