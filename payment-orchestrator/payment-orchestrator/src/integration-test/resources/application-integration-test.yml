@@ -35,6 +35,14 @@ server:
 app:
   security:
     enabled: false
+  temporal:
+    worker:
+      enabled: false
+  services:
+    compliance:
+      url: http://localhost:0/compliance
+    fx:
+      url: http://localhost:0/fx
 
 logging:
   level:

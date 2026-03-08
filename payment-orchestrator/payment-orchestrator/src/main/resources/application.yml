@@ -113,8 +113,16 @@ springdoc:
 app:
   security:
     enabled: ${APP_SECURITY_ENABLED:true}
+  temporal:
+    worker:
+      enabled: ${TEMPORAL_WORKER_ENABLED:true}
   payment:
     ttl-minutes: ${PAYMENT_TTL_MINUTES:30}
+  services:
+    compliance:
+      url: ${COMPLIANCE_SERVICE_URL:http://localhost:8083/compliance}
+    fx:
+      url: ${FX_SERVICE_URL:http://localhost:8084/fx}
 
 logging:
   level:

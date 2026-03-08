@@ -10,6 +10,7 @@ import java.util.UUID;
  * and quote expiration for the payment saga.
  */
 public record FxLockResult(
+        UUID lockId,
         UUID quoteId,
         BigDecimal lockedRate,
         BigDecimal targetAmount,
