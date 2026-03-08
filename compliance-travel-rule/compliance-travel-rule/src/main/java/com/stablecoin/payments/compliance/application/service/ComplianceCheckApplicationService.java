@@ -12,7 +12,6 @@ import com.stablecoin.payments.compliance.domain.exception.CustomerNotFoundExcep
 import com.stablecoin.payments.compliance.domain.exception.DuplicatePaymentException;
 import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
 import com.stablecoin.payments.compliance.domain.model.Money;
-import com.stablecoin.payments.compliance.domain.model.OverallResult;
 import com.stablecoin.payments.compliance.domain.model.RiskScoringContext;
 import com.stablecoin.payments.compliance.domain.model.TransmissionStatus;
 import com.stablecoin.payments.compliance.domain.model.TravelRulePackage;

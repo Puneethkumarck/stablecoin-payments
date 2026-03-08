@@ -1,12 +1,7 @@
 package com.stablecoin.payments.compliance.application.mapper;
 
-import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
-import com.stablecoin.payments.compliance.domain.model.Money;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import java.math.BigDecimal;
-import java.util.UUID;
 
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aPendingCheck;

@@ -9,9 +9,6 @@ import com.stablecoin.payments.compliance.domain.exception.CheckNotFoundExceptio
 import com.stablecoin.payments.compliance.domain.exception.CustomerNotFoundException;
 import com.stablecoin.payments.compliance.domain.exception.DuplicatePaymentException;
 import com.stablecoin.payments.compliance.domain.model.ComplianceCheck;
-import com.stablecoin.payments.compliance.domain.model.RiskBand;
-import com.stablecoin.payments.compliance.domain.model.RiskScore;
-import com.stablecoin.payments.compliance.domain.model.RiskScoringContext;
 import com.stablecoin.payments.compliance.domain.model.RiskScoringWeights;
 import com.stablecoin.payments.compliance.domain.port.AmlProvider;
 import com.stablecoin.payments.compliance.domain.port.ComplianceCheckRepository;
@@ -32,16 +29,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycRejectedResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycResult;
-import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.anAmlClearResult;
-import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.anAmlFlaggedResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aSanctionsClearResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aSanctionsHitResult;
+import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.anAmlClearResult;
+import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.anAmlFlaggedResult;
 import static com.stablecoin.payments.compliance.fixtures.CustomerRiskProfileFixtures.aRiskProfile;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
