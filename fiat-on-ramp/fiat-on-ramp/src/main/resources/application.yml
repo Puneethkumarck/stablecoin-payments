@@ -121,6 +121,9 @@ app:
       base-url: https://api.stripe.com
       api-key: ${STRIPE_API_KEY:sk_test_default}
       timeout-seconds: 10
+      webhook:
+        webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_default}
+        tolerance-seconds: 300
 
 logging:
   level:

@@ -12,4 +12,6 @@ public interface CollectionOrderRepository {
     Optional<CollectionOrder> findById(UUID collectionId);
 
     Optional<CollectionOrder> findByPaymentId(UUID paymentId);
+
+    Optional<CollectionOrder> findByPspReference(String pspReference);
 }

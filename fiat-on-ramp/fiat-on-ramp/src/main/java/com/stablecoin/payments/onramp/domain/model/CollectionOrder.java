@@ -189,6 +189,20 @@ public record CollectionOrder(
     }
 
     /**
+     * Marks collection as timed out / PSP-rejected from AWAITING_CONFIRMATION.
+     * Transitions AWAITING_CONFIRMATION -> COLLECTION_FAILED.
+     */
+    public CollectionOrder timeoutCollection(String reason, String errorCode) {
+        var nextState = STATE_MACHINE.transition(status, PAYMENT_TIMEOUT);
+        return toBuilder()
+                .status(nextState)
+                .failureReason(reason)
+                .errorCode(errorCode)
+                .updatedAt(Instant.now())
+                .build();
+    }
+
+    /**
      * Detects amount mismatch. Transitions AWAITING_CONFIRMATION -> AMOUNT_MISMATCH.
      */
     public CollectionOrder detectAmountMismatch() {
