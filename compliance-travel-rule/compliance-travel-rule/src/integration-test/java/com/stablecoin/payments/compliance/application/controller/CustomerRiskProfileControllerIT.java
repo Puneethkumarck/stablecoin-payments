@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,7 +54,10 @@ class CustomerRiskProfileControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.customerId", is(customerId.toString())))
                 .andExpect(jsonPath("$.kycTier", is("KYC_TIER_2")))
                 .andExpect(jsonPath("$.riskBand", is("LOW")))
-                .andExpect(jsonPath("$.riskScore", is(20)));
+                .andExpect(jsonPath("$.riskScore", is(20)))
+                .andExpect(jsonPath("$.perTxnLimitUsd", notNullValue()))
+                .andExpect(jsonPath("$.dailyLimitUsd", notNullValue()))
+                .andExpect(jsonPath("$.monthlyLimitUsd", notNullValue()));
     }
 
     @Test
@@ -63,6 +67,15 @@ class CustomerRiskProfileControllerIT extends AbstractIntegrationTest {
 
         mockMvc.perform(get("/v1/customers/{customerId}/risk-profile", customerId))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code", is("CO-2001")));
+                .andExpect(jsonPath("$.code", is("CO-2001")))
+                .andExpect(jsonPath("$.status", is("Not Found")))
+                .andExpect(jsonPath("$.message", notNullValue()));
+    }
+
+    @Test
+    @DisplayName("should return 400 Bad Request for invalid UUID format")
+    void shouldReturn400ForInvalidUuid() throws Exception {
+        mockMvc.perform(get("/v1/customers/{customerId}/risk-profile", "not-a-uuid"))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -124,6 +124,19 @@ public final class ComplianceCheckFixtures {
                 .build();
     }
 
+    public static KycResult aKycTier1Result(UUID checkId) {
+        return KycResult.builder()
+                .kycResultId(UUID.randomUUID())
+                .checkId(checkId)
+                .senderKycTier(KycTier.KYC_TIER_1)
+                .senderStatus(KycStatus.VERIFIED)
+                .recipientStatus(KycStatus.VERIFIED)
+                .provider("onfido")
+                .providerRef("ref-kyc-" + UUID.randomUUID())
+                .checkedAt(Instant.now())
+                .build();
+    }
+
     /**
      * Walks a check to RISK_SCORING status with configurable KYC tier, amount, countries, and AML result.
      */
