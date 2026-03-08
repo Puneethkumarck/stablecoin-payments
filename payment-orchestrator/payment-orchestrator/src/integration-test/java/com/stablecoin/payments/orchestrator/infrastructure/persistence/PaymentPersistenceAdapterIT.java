@@ -158,11 +158,11 @@ class PaymentPersistenceAdapterIT extends AbstractIntegrationTest {
         );
         adapter.save(withMetadata);
 
-        var found = adapter.findById(withMetadata.paymentId());
-        assertThat(found).isPresent();
-        assertThat(found.get().metadata()).containsEntry("source", "api");
-        assertThat(found.get().metadata()).containsEntry("priority", "high");
-        assertThat(found.get().metadata()).containsEntry("merchantRef", "M-12345");
+        assertThat(adapter.findById(withMetadata.paymentId())).isPresent().get()
+                .usingRecursiveComparison()
+                .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
+                .isEqualTo(withMetadata);
     }
 
     @Test
@@ -171,9 +171,11 @@ class PaymentPersistenceAdapterIT extends AbstractIntegrationTest {
         var payment = anInitiatedPayment();
         var saved = adapter.save(payment);
 
-        var found = adapter.findById(saved.paymentId());
-        assertThat(found).isPresent();
-        assertThat(found.get().metadata()).isEmpty();
+        assertThat(adapter.findById(saved.paymentId())).isPresent().get()
+                .usingRecursiveComparison()
+                .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .ignoringFieldsOfTypes(Instant.class)
+                .isEqualTo(saved);
     }
 
     // ── Optimistic locking ──────────────────────────────────────────────
