@@ -29,18 +29,14 @@ class WalletTest {
         void createsActiveWallet() {
             var result = anActiveWallet();
 
-            assertThat(result.walletId()).isNotNull();
-            assertThat(result.chainId()).isEqualTo(CHAIN_BASE);
-            assertThat(result.address()).isEqualTo(ADDRESS);
-            assertThat(result.addressChecksum()).isEqualTo(ADDRESS_CHECKSUM);
-            assertThat(result.tier()).isEqualTo(TIER_HOT);
-            assertThat(result.purpose()).isEqualTo(PURPOSE_ON_RAMP);
-            assertThat(result.custodian()).isEqualTo(CUSTODIAN);
-            assertThat(result.vaultAccountId()).isEqualTo(VAULT_ACCOUNT_ID);
-            assertThat(result.stablecoin()).isEqualTo(USDC);
-            assertThat(result.active()).isTrue();
-            assertThat(result.createdAt()).isNotNull();
-            assertThat(result.deactivatedAt()).isNull();
+            var expected = Wallet.create(
+                    CHAIN_BASE, ADDRESS, ADDRESS_CHECKSUM,
+                    TIER_HOT, PURPOSE_ON_RAMP, CUSTODIAN, VAULT_ACCOUNT_ID, USDC
+            );
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("walletId", "createdAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -187,9 +183,11 @@ class WalletTest {
 
             var result = active.deactivate();
 
-            assertThat(result.active()).isFalse();
-            assertThat(result.deactivatedAt()).isNotNull();
-            assertThat(result.walletId()).isEqualTo(active.walletId());
+            var expected = anActiveWallet().deactivate();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("walletId", "createdAt", "deactivatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test

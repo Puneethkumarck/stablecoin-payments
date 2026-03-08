@@ -19,51 +19,46 @@ class StablecoinTickerTest {
         @Test
         @DisplayName("USDC maps to circle issuer with 6 decimals")
         void usdcMapsCorrectly() {
-            var ticker = StablecoinTicker.of("USDC");
+            var result = StablecoinTicker.of("USDC");
 
-            assertThat(ticker.ticker()).isEqualTo("USDC");
-            assertThat(ticker.issuer()).isEqualTo("circle");
-            assertThat(ticker.decimals()).isEqualTo(6);
+            var expected = new StablecoinTicker("USDC", "circle", 6);
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
 
         @Test
         @DisplayName("USDT maps to tether issuer with 6 decimals")
         void usdtMapsCorrectly() {
-            var ticker = StablecoinTicker.of("USDT");
+            var result = StablecoinTicker.of("USDT");
 
-            assertThat(ticker.ticker()).isEqualTo("USDT");
-            assertThat(ticker.issuer()).isEqualTo("tether");
-            assertThat(ticker.decimals()).isEqualTo(6);
+            var expected = new StablecoinTicker("USDT", "tether", 6);
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
 
         @Test
         @DisplayName("EURC maps to circle_euro issuer with 6 decimals")
         void eurcMapsCorrectly() {
-            var ticker = StablecoinTicker.of("EURC");
+            var result = StablecoinTicker.of("EURC");
 
-            assertThat(ticker.ticker()).isEqualTo("EURC");
-            assertThat(ticker.issuer()).isEqualTo("circle_euro");
-            assertThat(ticker.decimals()).isEqualTo(6);
+            var expected = new StablecoinTicker("EURC", "circle_euro", 6);
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
 
         @Test
         @DisplayName("PYUSD maps to paypal issuer with 6 decimals")
         void pyusdMapsCorrectly() {
-            var ticker = StablecoinTicker.of("PYUSD");
+            var result = StablecoinTicker.of("PYUSD");
 
-            assertThat(ticker.ticker()).isEqualTo("PYUSD");
-            assertThat(ticker.issuer()).isEqualTo("paypal");
-            assertThat(ticker.decimals()).isEqualTo(6);
+            var expected = new StablecoinTicker("PYUSD", "paypal", 6);
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
 
         @Test
         @DisplayName("RLUSD maps to ripple issuer with 6 decimals")
         void rlusdMapsCorrectly() {
-            var ticker = StablecoinTicker.of("RLUSD");
+            var result = StablecoinTicker.of("RLUSD");
 
-            assertThat(ticker.ticker()).isEqualTo("RLUSD");
-            assertThat(ticker.issuer()).isEqualTo("ripple");
-            assertThat(ticker.decimals()).isEqualTo(6);
+            var expected = new StablecoinTicker("RLUSD", "ripple", 6);
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
     }
 

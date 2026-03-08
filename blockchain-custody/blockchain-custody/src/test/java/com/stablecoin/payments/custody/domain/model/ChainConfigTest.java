@@ -24,16 +24,14 @@ class ChainConfigTest {
         @Test
         @DisplayName("creates chain config with all fields")
         void createsChainConfig() {
-            var config = new ChainConfig(
+            var result = new ChainConfig(
                     BASE, 12, 2, "ETH", RPC_ENDPOINTS, "https://basescan.org"
             );
 
-            assertThat(config.chainId()).isEqualTo(BASE);
-            assertThat(config.minConfirmations()).isEqualTo(12);
-            assertThat(config.avgFinalitySeconds()).isEqualTo(2);
-            assertThat(config.nativeToken()).isEqualTo("ETH");
-            assertThat(config.rpcEndpoints()).containsExactly("https://rpc.base.org", "https://rpc2.base.org");
-            assertThat(config.explorerUrl()).isEqualTo("https://basescan.org");
+            var expected = new ChainConfig(
+                    BASE, 12, 2, "ETH", RPC_ENDPOINTS, "https://basescan.org"
+            );
+            assertThat(result).usingRecursiveComparison().isEqualTo(expected);
         }
 
         @Test

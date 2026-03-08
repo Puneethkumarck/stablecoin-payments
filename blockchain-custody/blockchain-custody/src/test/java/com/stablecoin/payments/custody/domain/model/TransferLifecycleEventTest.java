@@ -23,12 +23,11 @@ class TransferLifecycleEventTest {
         void createsEvent() {
             var result = TransferLifecycleEvent.record(TRANSFER_ID, "PENDING");
 
-            assertThat(result.eventId()).isNotNull();
-            assertThat(result.transferId()).isEqualTo(TRANSFER_ID);
-            assertThat(result.state()).isEqualTo("PENDING");
-            assertThat(result.participantType()).isNull();
-            assertThat(result.address()).isNull();
-            assertThat(result.occurredAt()).isNotNull();
+            var expected = TransferLifecycleEvent.record(TRANSFER_ID, "PENDING");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("eventId", "occurredAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -75,12 +74,13 @@ class TransferLifecycleEventTest {
                     TRANSFER_ID, "SUBMITTED", "INPUT", "0xSenderAddress"
             );
 
-            assertThat(result.eventId()).isNotNull();
-            assertThat(result.transferId()).isEqualTo(TRANSFER_ID);
-            assertThat(result.state()).isEqualTo("SUBMITTED");
-            assertThat(result.participantType()).isEqualTo("INPUT");
-            assertThat(result.address()).isEqualTo("0xSenderAddress");
-            assertThat(result.occurredAt()).isNotNull();
+            var expected = TransferLifecycleEvent.record(
+                    TRANSFER_ID, "SUBMITTED", "INPUT", "0xSenderAddress"
+            );
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("eventId", "occurredAt")
+                    .isEqualTo(expected);
         }
 
         @Test

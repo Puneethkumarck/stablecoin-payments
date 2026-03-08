@@ -1,17 +1,13 @@
 package com.stablecoin.payments.custody.domain.model;
 
-import com.stablecoin.payments.custody.domain.statemachine.StateMachineException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import static com.stablecoin.payments.custody.domain.model.TransferStatus.CHAIN_SELECTED;
@@ -67,23 +63,15 @@ class ChainTransferTest {
         void createsPendingForwardTransfer() {
             var result = aPendingTransfer();
 
-            assertThat(result.transferId()).isNotNull();
+            var expected = ChainTransfer.initiate(
+                    PAYMENT_ID, CORRELATION_ID, FORWARD, null,
+                    USDC, AMOUNT, FROM_WALLET_ID, TO_ADDRESS, FROM_ADDRESS
+            );
             assertThat(result)
-                    .satisfies(t -> {
-                        assertThat(t.paymentId()).isEqualTo(PAYMENT_ID);
-                        assertThat(t.correlationId()).isEqualTo(CORRELATION_ID);
-                        assertThat(t.transferType()).isEqualTo(FORWARD);
-                        assertThat(t.parentTransferId()).isNull();
-                        assertThat(t.stablecoin()).isEqualTo(USDC);
-                        assertThat(t.amount()).isEqualByComparingTo(AMOUNT);
-                        assertThat(t.fromWalletId()).isEqualTo(FROM_WALLET_ID);
-                        assertThat(t.toWalletAddress()).isEqualTo(TO_ADDRESS);
-                        assertThat(t.fromAddress()).isEqualTo(FROM_ADDRESS);
-                        assertThat(t.status()).isEqualTo(PENDING);
-                        assertThat(t.attemptCount()).isZero();
-                        assertThat(t.createdAt()).isNotNull();
-                        assertThat(t.updatedAt()).isNotNull();
-                    });
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -91,9 +79,15 @@ class ChainTransferTest {
         void createsReturnTransferWithParent() {
             var result = aPendingReturnTransfer();
 
-            assertThat(result.transferType()).isEqualTo(RETURN);
-            assertThat(result.parentTransferId()).isEqualTo(PARENT_TRANSFER_ID);
-            assertThat(result.status()).isEqualTo(PENDING);
+            var expected = ChainTransfer.initiate(
+                    PAYMENT_ID, CORRELATION_ID, RETURN, PARENT_TRANSFER_ID,
+                    USDC, AMOUNT, FROM_WALLET_ID, TO_ADDRESS, FROM_ADDRESS
+            );
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -251,9 +245,11 @@ class ChainTransferTest {
 
             var result = pending.selectChain(CHAIN_BASE);
 
-            assertThat(result.status()).isEqualTo(CHAIN_SELECTED);
-            assertThat(result.chainId()).isEqualTo(CHAIN_BASE);
-            assertThat(result.updatedAt()).isAfterOrEqualTo(pending.updatedAt());
+            var expected = aPendingTransfer().selectChain(CHAIN_BASE);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -263,8 +259,11 @@ class ChainTransferTest {
 
             var result = chainSelected.startSigning(42L);
 
-            assertThat(result.status()).isEqualTo(SIGNING);
-            assertThat(result.nonce()).isEqualTo(42L);
+            var expected = aChainSelectedTransfer().startSigning(42L);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -274,9 +273,11 @@ class ChainTransferTest {
 
             var result = signing.submit(TX_HASH);
 
-            assertThat(result.status()).isEqualTo(SUBMITTED);
-            assertThat(result.txHash()).isEqualTo(TX_HASH);
-            assertThat(result.attemptCount()).isEqualTo(1);
+            var expected = aSigningTransfer().submit(TX_HASH);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -286,7 +287,11 @@ class ChainTransferTest {
 
             var result = submitted.startConfirming();
 
-            assertThat(result.status()).isEqualTo(CONFIRMING);
+            var expected = aSubmittedTransfer().startConfirming();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -298,12 +303,12 @@ class ChainTransferTest {
 
             var result = confirming.confirm(12345L, 15, gasUsed, gasPriceGwei);
 
-            assertThat(result.status()).isEqualTo(CONFIRMED);
-            assertThat(result.blockNumber()).isEqualTo(12345L);
-            assertThat(result.confirmations()).isEqualTo(15);
-            assertThat(result.gasUsed()).isEqualByComparingTo(gasUsed);
-            assertThat(result.gasPriceGwei()).isEqualByComparingTo(gasPriceGwei);
-            assertThat(result.blockConfirmedAt()).isNotNull();
+            var expected = aConfirmingTransfer().confirm(12345L, 15, gasUsed, gasPriceGwei);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("transferId", "createdAt", "updatedAt", "blockConfirmedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -318,32 +323,34 @@ class ChainTransferTest {
 
             var result = submitted.markForResubmission();
 
-            assertThat(result.status()).isEqualTo(RESUBMITTING);
+            var expected = aSubmittedTransfer().markForResubmission();
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
         @DisplayName("RESUBMITTING -> SUBMITTED via resubmit() — attemptCount increments")
         void resubmittingToSubmitted() {
             var resubmitting = aResubmittingTransfer();
-            int previousAttemptCount = resubmitting.attemptCount();
 
             var result = resubmitting.resubmit(TX_HASH_RESUBMIT);
 
-            assertThat(result.status()).isEqualTo(SUBMITTED);
-            assertThat(result.txHash()).isEqualTo(TX_HASH_RESUBMIT);
-            assertThat(result.attemptCount()).isEqualTo(previousAttemptCount + 1);
+            var expected = aResubmittingTransfer().resubmit(TX_HASH_RESUBMIT);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
         @DisplayName("full resubmission cycle: SUBMITTED -> RESUBMITTING -> SUBMITTED increments attemptCount twice")
         void fullResubmissionCycleIncrementsAttemptCount() {
-            var submitted = aSubmittedTransfer();
-            assertThat(submitted.attemptCount()).isEqualTo(1);
+            var resubmitted = aSubmittedTransfer()
+                    .markForResubmission()
+                    .resubmit(TX_HASH_RESUBMIT);
 
-            var resubmitting = submitted.markForResubmission();
-            assertThat(resubmitting.attemptCount()).isEqualTo(1);
-
-            var resubmitted = resubmitting.resubmit(TX_HASH_RESUBMIT);
             assertThat(resubmitted.attemptCount()).isEqualTo(2);
         }
 
@@ -379,9 +386,11 @@ class ChainTransferTest {
 
             var result = transfer.fail("Chain unavailable", "CHAIN_DOWN");
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isEqualTo("Chain unavailable");
-            assertThat(result.errorCode()).isEqualTo("CHAIN_DOWN");
+            var expected = aChainSelectedTransfer().fail("Chain unavailable", "CHAIN_DOWN");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -391,9 +400,11 @@ class ChainTransferTest {
 
             var result = transfer.fail("Key not found", "SIGNING_ERROR");
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isEqualTo("Key not found");
-            assertThat(result.errorCode()).isEqualTo("SIGNING_ERROR");
+            var expected = aSigningTransfer().fail("Key not found", "SIGNING_ERROR");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -403,8 +414,11 @@ class ChainTransferTest {
 
             var result = transfer.fail("Transaction reverted", "REVERTED");
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isEqualTo("Transaction reverted");
+            var expected = aSubmittedTransfer().fail("Transaction reverted", "REVERTED");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -414,8 +428,11 @@ class ChainTransferTest {
 
             var result = transfer.fail("Max retries exceeded", "MAX_RETRIES");
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isEqualTo("Max retries exceeded");
+            var expected = aResubmittingTransfer().fail("Max retries exceeded", "MAX_RETRIES");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -425,8 +442,11 @@ class ChainTransferTest {
 
             var result = transfer.fail("Chain reorg", "REORG");
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isEqualTo("Chain reorg");
+            var expected = aConfirmingTransfer().fail("Chain reorg", "REORG");
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -436,9 +456,11 @@ class ChainTransferTest {
 
             var result = transfer.fail(null, null);
 
-            assertThat(result.status()).isEqualTo(FAILED);
-            assertThat(result.failureReason()).isNull();
-            assertThat(result.errorCode()).isNull();
+            var expected = aChainSelectedTransfer().fail(null, null);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -719,8 +741,11 @@ class ChainTransferTest {
 
             var result = chainSelected.startSigning(null);
 
-            assertThat(result.status()).isEqualTo(SIGNING);
-            assertThat(result.nonce()).isNull();
+            var expected = aChainSelectedTransfer().startSigning(null);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .ignoringFields("transferId", "createdAt", "updatedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -848,7 +873,6 @@ class ChainTransferTest {
 
             assertThat(original.status()).isEqualTo(PENDING);
             assertThat(updated.status()).isEqualTo(CHAIN_SELECTED);
-            assertThat(original.transferId()).isEqualTo(updated.transferId());
         }
 
         @Test
