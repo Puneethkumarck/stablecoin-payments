@@ -1,6 +1,7 @@
 package com.stablecoin.payments.fx.infrastructure.persistence;
 
 import com.stablecoin.payments.fx.domain.model.FxRateLock;
+import com.stablecoin.payments.fx.domain.model.FxRateLockStatus;
 import com.stablecoin.payments.fx.domain.port.FxRateLockRepository;
 import com.stablecoin.payments.fx.infrastructure.persistence.entity.FxRateLockJpaRepository;
 import com.stablecoin.payments.fx.infrastructure.persistence.mapper.FxRateLockEntityUpdater;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,5 +42,13 @@ public class FxRateLockPersistenceAdapter implements FxRateLockRepository {
     @Override
     public Optional<FxRateLock> findByPaymentId(UUID paymentId) {
         return jpa.findByPaymentId(paymentId).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<FxRateLock> findActiveLocksExpiredBefore(Instant cutoff) {
+        return jpa.findByStatusAndExpiresAtBefore(FxRateLockStatus.ACTIVE.name(), cutoff)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

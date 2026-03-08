@@ -19,8 +19,10 @@ import org.testcontainers.utility.DockerImageName;
 public abstract class AbstractIntegrationTest {
 
     static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine")
-                    .withDatabaseName("s6_fx_engine")
+            new PostgreSQLContainer<>(
+                    DockerImageName.parse("timescale/timescaledb:latest-pg17")
+                            .asCompatibleSubstituteFor("postgres"))
+                    .withDatabaseName("fx_rates")
                     .withUsername("test")
                     .withPassword("test");
 

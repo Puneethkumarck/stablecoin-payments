@@ -29,6 +29,11 @@ server:
 app:
   security:
     enabled: false
+  fx:
+    rate-refresh:
+      enabled: false
+    lock-expiry:
+      enabled: false
 
 logging:
   level:
