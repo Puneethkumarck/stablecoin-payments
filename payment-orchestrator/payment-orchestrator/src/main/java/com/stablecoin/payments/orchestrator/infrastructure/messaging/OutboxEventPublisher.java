@@ -1,5 +1,6 @@
 package com.stablecoin.payments.orchestrator.infrastructure.messaging;
 
+import com.stablecoin.payments.orchestrator.domain.port.PaymentEventPublisher;
 import io.namastack.outbox.Outbox;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OutboxEventPublisher {
+public class OutboxEventPublisher implements PaymentEventPublisher {
 
     private final Outbox outbox;
 
+    @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void publish(Object event) {
         var key = resolveKey(event);
