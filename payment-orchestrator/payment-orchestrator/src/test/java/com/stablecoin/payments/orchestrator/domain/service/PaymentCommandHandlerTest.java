@@ -9,7 +9,6 @@ import com.stablecoin.payments.orchestrator.domain.model.PaymentState;
 import com.stablecoin.payments.orchestrator.domain.port.PaymentRepository;
 import com.stablecoin.payments.orchestrator.domain.workflow.PaymentWorkflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
-import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.DisplayName;
