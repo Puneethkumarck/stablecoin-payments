@@ -26,6 +26,10 @@ outbox:
 server:
   port: 0
 
+app:
+  security:
+    enabled: false
+
 logging:
   level:
     com.stablecoin.payments: DEBUG
