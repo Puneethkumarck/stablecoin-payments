@@ -10,15 +10,16 @@ import com.stablecoin.payments.compliance.domain.model.RiskScore;
 import com.stablecoin.payments.compliance.domain.model.SanctionsResult;
 import com.stablecoin.payments.compliance.domain.model.TravelRulePackage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
  * Domain service that orchestrates the compliance check pipeline.
- * Pure domain logic — no framework dependencies.
  */
 @Slf4j
+@Service
 public class ComplianceCheckService {
 
     private static final BigDecimal TRAVEL_RULE_THRESHOLD_USD = new BigDecimal("1000");

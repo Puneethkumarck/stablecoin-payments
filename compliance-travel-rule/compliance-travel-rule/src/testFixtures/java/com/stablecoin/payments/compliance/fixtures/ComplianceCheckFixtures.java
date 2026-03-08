@@ -83,6 +83,47 @@ public final class ComplianceCheckFixtures {
                 .build();
     }
 
+    public static SanctionsResult aSanctionsHitResult(UUID checkId) {
+        return SanctionsResult.builder()
+                .sanctionsResultId(UUID.randomUUID())
+                .checkId(checkId)
+                .senderScreened(true)
+                .recipientScreened(true)
+                .senderHit(true)
+                .recipientHit(false)
+                .hitDetails("{\"list\":\"OFAC_SDN\"}")
+                .listsChecked(List.of("OFAC", "EU", "UN"))
+                .provider("chainalysis")
+                .providerRef("ref-sanctions-" + UUID.randomUUID())
+                .screenedAt(Instant.now())
+                .build();
+    }
+
+    public static AmlResult anAmlFlaggedResult(UUID checkId) {
+        return AmlResult.builder()
+                .amlResultId(UUID.randomUUID())
+                .checkId(checkId)
+                .flagged(true)
+                .flagReasons(List.of("high_risk_jurisdiction"))
+                .provider("chainalysis")
+                .providerRef("ref-aml-" + UUID.randomUUID())
+                .screenedAt(Instant.now())
+                .build();
+    }
+
+    public static KycResult aKycRejectedResult(UUID checkId) {
+        return KycResult.builder()
+                .kycResultId(UUID.randomUUID())
+                .checkId(checkId)
+                .senderKycTier(KycTier.KYC_TIER_1)
+                .senderStatus(KycStatus.REJECTED)
+                .recipientStatus(KycStatus.VERIFIED)
+                .provider("onfido")
+                .providerRef("ref-kyc-" + UUID.randomUUID())
+                .checkedAt(Instant.now())
+                .build();
+    }
+
     /**
      * Walks a check to RISK_SCORING status with configurable KYC tier, amount, countries, and AML result.
      */
