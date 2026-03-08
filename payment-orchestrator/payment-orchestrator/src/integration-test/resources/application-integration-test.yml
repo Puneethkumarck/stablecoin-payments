@@ -1,7 +1,36 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
   autoconfigure:
     exclude:
       - io.temporal.spring.boot.autoconfigure.AutoDiscoveryProperties
+
+namastack:
+  outbox:
+    poll-interval: 50
+    batch-size: 20
+    jdbc:
+      table-prefix: "orchestrator_"
+      schema-initialization:
+        enabled: false
+
+server:
+  port: 0
 
 app:
   security:
@@ -10,3 +39,5 @@ app:
 logging:
   level:
     com.stablecoin.payments: DEBUG
+    org.springframework.test: INFO
+    org.testcontainers: INFO
