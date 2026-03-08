@@ -3,7 +3,7 @@ spring:
     name: fx-liquidity-engine
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5433/s6_fx_engine}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/fx_rates}
     username: ${DB_USER:sp_user}
     password: ${DB_PASS:sp_pass}
     driver-class-name: org.postgresql.Driver
@@ -117,6 +117,12 @@ app:
     rate-ttl-seconds: ${RATE_TTL_SECONDS:5}
     lock-ttl-seconds: ${LOCK_TTL_SECONDS:30}
     default-spread-bps: ${DEFAULT_SPREAD_BPS:30}
+    rate-refresh:
+      enabled: ${RATE_REFRESH_ENABLED:true}
+      interval-ms: ${RATE_REFRESH_INTERVAL_MS:5000}
+    lock-expiry:
+      enabled: ${LOCK_EXPIRY_ENABLED:true}
+      interval-ms: ${LOCK_EXPIRY_INTERVAL_MS:5000}
 
 logging:
   level:

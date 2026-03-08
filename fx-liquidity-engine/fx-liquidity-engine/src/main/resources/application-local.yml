@@ -4,9 +4,9 @@ app:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/s6_fx_engine
-    username: sp_user
-    password: sp_pass
+    url: jdbc:postgresql://localhost:5433/fx_rates
+    username: dev
+    password: dev
 
   cloud:
     stream:
