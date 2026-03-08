@@ -17,6 +17,7 @@ import java.util.UUID;
 import static com.stablecoin.payments.compliance.application.filter.IdempotencyKeyFilter.IDEMPOTENCY_KEY_HEADER;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,6 +64,44 @@ class ComplianceCheckControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.paymentId", is(paymentId.toString())))
                     .andExpect(jsonPath("$.checkId", notNullValue()))
                     .andExpect(jsonPath("$.status", notNullValue()));
+        }
+
+        @Test
+        @DisplayName("should return 202 with complete response structure for passed check")
+        void shouldReturn202WithCompleteResponseStructure() throws Exception {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+
+            var requestBody = """
+                    {
+                        "paymentId": "%s",
+                        "senderId": "%s",
+                        "recipientId": "%s",
+                        "amount": 500.00,
+                        "currency": "USD",
+                        "sourceCountry": "US",
+                        "targetCountry": "DE",
+                        "targetCurrency": "EUR"
+                    }
+                    """.formatted(paymentId, senderId, recipientId);
+
+            mockMvc.perform(post("/v1/compliance/check")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
+                            .content(requestBody))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.paymentId", is(paymentId.toString())))
+                    .andExpect(jsonPath("$.checkId", notNullValue()))
+                    .andExpect(jsonPath("$.status", notNullValue()))
+                    .andExpect(jsonPath("$.createdAt", notNullValue()))
+                    .andExpect(jsonPath("$.kycResult", notNullValue()))
+                    .andExpect(jsonPath("$.kycResult.senderStatus", notNullValue()))
+                    .andExpect(jsonPath("$.kycResult.recipientStatus", notNullValue()))
+                    .andExpect(jsonPath("$.sanctionsResult", notNullValue()))
+                    .andExpect(jsonPath("$.riskScore", notNullValue()))
+                    .andExpect(jsonPath("$.riskScore.score", notNullValue()))
+                    .andExpect(jsonPath("$.riskScore.band", notNullValue()));
         }
 
         @Test
@@ -141,7 +180,9 @@ class ComplianceCheckControllerIT extends AbstractIntegrationTest {
                             .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
                             .content(requestBody))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.code", is("CO-1002")));
+                    .andExpect(jsonPath("$.code", is("CO-1002")))
+                    .andExpect(jsonPath("$.status", is("Conflict")))
+                    .andExpect(jsonPath("$.message", notNullValue()));
         }
 
         @Test
@@ -191,6 +232,55 @@ class ComplianceCheckControllerIT extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.code", is("CO-0001")))
                     .andExpect(jsonPath("$.message", is("Idempotency-Key header is required for mutating requests")));
         }
+
+        @Test
+        @DisplayName("should return 400 Bad Request for zero amount")
+        void shouldReturn400ForZeroAmount() throws Exception {
+            var requestBody = """
+                    {
+                        "paymentId": "%s",
+                        "senderId": "%s",
+                        "recipientId": "%s",
+                        "amount": 0,
+                        "currency": "USD",
+                        "sourceCountry": "US",
+                        "targetCountry": "DE",
+                        "targetCurrency": "EUR"
+                    }
+                    """.formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+
+            mockMvc.perform(post("/v1/compliance/check")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code", is("CO-0001")));
+        }
+
+        @Test
+        @DisplayName("should return 400 Bad Request for invalid country code length")
+        void shouldReturn400ForInvalidCountryCode() throws Exception {
+            var requestBody = """
+                    {
+                        "paymentId": "%s",
+                        "senderId": "%s",
+                        "recipientId": "%s",
+                        "amount": 1000.00,
+                        "currency": "USD",
+                        "sourceCountry": "USA",
+                        "targetCountry": "DE",
+                        "targetCurrency": "EUR"
+                    }
+                    """.formatted(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+
+            mockMvc.perform(post("/v1/compliance/check")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .header(IDEMPOTENCY_KEY_HEADER, UUID.randomUUID().toString())
+                            .content(requestBody))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code", is("CO-0001")))
+                    .andExpect(jsonPath("$.errors.sourceCountry", notNullValue()));
+        }
     }
 
     @Nested
@@ -209,7 +299,10 @@ class ComplianceCheckControllerIT extends AbstractIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.checkId", is(saved.checkId().toString())))
                     .andExpect(jsonPath("$.paymentId", is(saved.paymentId().toString())))
-                    .andExpect(jsonPath("$.status", is("PENDING")));
+                    .andExpect(jsonPath("$.status", is("PENDING")))
+                    .andExpect(jsonPath("$.createdAt", notNullValue()))
+                    .andExpect(jsonPath("$.overallResult", nullValue()))
+                    .andExpect(jsonPath("$.errorCode", nullValue()));
         }
 
         @Test
@@ -219,7 +312,16 @@ class ComplianceCheckControllerIT extends AbstractIntegrationTest {
 
             mockMvc.perform(get("/v1/compliance/checks/{checkId}", checkId))
                     .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.code", is("CO-1001")));
+                    .andExpect(jsonPath("$.code", is("CO-1001")))
+                    .andExpect(jsonPath("$.status", is("Not Found")))
+                    .andExpect(jsonPath("$.message", notNullValue()));
+        }
+
+        @Test
+        @DisplayName("should return 400 Bad Request for invalid UUID format")
+        void shouldReturn400ForInvalidUuid() throws Exception {
+            mockMvc.perform(get("/v1/compliance/checks/{checkId}", "not-a-uuid"))
+                    .andExpect(status().isBadRequest());
         }
     }
 }

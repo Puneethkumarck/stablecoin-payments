@@ -28,11 +28,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycRejectedResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycResult;
+import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycTier1Result;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aSanctionsClearResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aSanctionsHitResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.anAmlClearResult;
@@ -63,6 +65,7 @@ class ComplianceCheckCommandHandlerTest {
 
     private static final Money ABOVE_THRESHOLD = new Money(new BigDecimal("1000.00"), "USD");
     private static final Money BELOW_THRESHOLD = new Money(new BigDecimal("500.00"), "USD");
+    private static final Money HIGH_VALUE_AMOUNT = new Money(new BigDecimal("50000.00"), "USD");
 
     /**
      * Simple record used as comparison target for recursive comparison
@@ -113,6 +116,38 @@ class ComplianceCheckCommandHandlerTest {
                     paymentId, ComplianceCheckStatus.PASSED, OverallResult.PASSED, null);
 
             assertThat(result)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should save the completed check via repository")
+        void shouldSaveCompletedCheck() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any()))
+                    .willReturn(Optional.of(aRiskProfile()));
+            given(travelRuleProvider.transmit(any())).willReturn("tr-ref-123");
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.PASSED, OverallResult.PASSED, null);
+
+            assertThat(saved)
                     .usingRecursiveComparison()
                     .comparingOnlyFields("paymentId", "status", "overallResult")
                     .isEqualTo(expected);
@@ -177,6 +212,34 @@ class ComplianceCheckCommandHandlerTest {
                     .isEqualTo(expected);
             then(travelRuleProvider).should(never()).transmit(any());
         }
+
+        @Test
+        @DisplayName("should invoke all providers in order for full pipeline")
+        void shouldInvokeAllProvidersInOrder() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(senderId, recipientId)).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(senderId, recipientId))
+                    .willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(senderId, recipientId)).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(senderId))
+                    .willReturn(Optional.of(aRiskProfile()));
+            given(travelRuleProvider.transmit(any())).willReturn("tr-ref-123");
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            then(kycProvider).should().verify(senderId, recipientId);
+            then(sanctionsProvider).should().screen(senderId, recipientId);
+            then(amlProvider).should().analyze(senderId, recipientId);
+            then(travelRuleProvider).should().transmit(any());
+            then(checkRepository).should().save(any(ComplianceCheck.class));
+            then(eventPublisher).should().publish(any());
+        }
     }
 
     @Nested
@@ -184,7 +247,7 @@ class ComplianceCheckCommandHandlerTest {
     class KycFailure {
 
         @Test
-        @DisplayName("should stop pipeline on KYC rejection")
+        @DisplayName("should stop pipeline on KYC rejection and save FAILED check")
         void shouldStopOnKycRejection() {
             var paymentId = UUID.randomUUID();
             var senderId = UUID.randomUUID();
@@ -206,6 +269,34 @@ class ComplianceCheckCommandHandlerTest {
                     .isEqualTo(expected);
             then(sanctionsProvider).should(never()).screen(any(), any());
             then(amlProvider).should(never()).analyze(any(), any());
+        }
+
+        @Test
+        @DisplayName("should save check with FAILED status on KYC rejection")
+        void shouldSaveFailedCheck() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycRejectedResult(null));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.FAILED, OverallResult.FAILED,
+                    "KYC verification failed");
+
+            assertThat(saved)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult", "errorMessage")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -263,6 +354,36 @@ class ComplianceCheckCommandHandlerTest {
                     .comparingOnlyFields("paymentId", "status", "overallResult")
                     .isEqualTo(expected);
             then(amlProvider).should(never()).analyze(any(), any());
+        }
+
+        @Test
+        @DisplayName("should save check with SANCTIONS_HIT status")
+        void shouldSaveSanctionsHitCheck() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsHitResult(null));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.SANCTIONS_HIT,
+                    OverallResult.SANCTIONS_HIT,
+                    "Sanctions screening hit detected");
+
+            assertThat(saved)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult", "errorMessage")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -333,6 +454,181 @@ class ComplianceCheckCommandHandlerTest {
                     .isEqualTo(expected);
             then(travelRuleProvider).should(never()).transmit(any());
         }
+
+        @Test
+        @DisplayName("should save check with MANUAL_REVIEW status on AML flag")
+        void shouldSaveManualReviewCheck() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlFlaggedResult(null));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.MANUAL_REVIEW,
+                    OverallResult.MANUAL_REVIEW,
+                    "AML screening flagged — manual review required");
+
+            assertThat(saved)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult", "errorMessage")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should publish ComplianceCheckFailed event on AML flag")
+        void shouldPublishFailedEventOnAmlFlag() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlFlaggedResult(null));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(Object.class);
+            then(eventPublisher).should().publish(captor.capture());
+
+            assertThat(captor.getValue()).isInstanceOf(ComplianceCheckFailed.class);
+
+            var expected = new ComplianceCheckFailed(
+                    null, paymentId, null, null, null, null);
+
+            assertThat(captor.getValue())
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "reason", "errorCode",
+                            "failedAt")
+                    .isEqualTo(expected);
+        }
+    }
+
+    @Nested
+    @DisplayName("Risk scoring CRITICAL")
+    class RiskCriticalPath {
+
+        private ComplianceCheckCommandHandler criticalHandler;
+
+        @BeforeEach
+        void setUpCriticalHandler() {
+            // Use corridor risk scores to push score above 75 (CRITICAL threshold)
+            // KYC_TIER_1(20) + high_value(15) + cross_border(10) + corridor_US-DE(20) + new_customer(15) = 80 -> CRITICAL
+            var weights = RiskScoringWeights.defaults().toBuilder()
+                    .corridorRiskScores(Map.of("US-DE", 20))
+                    .build();
+            var criticalRiskService = new RiskScoringService(weights);
+            criticalHandler = new ComplianceCheckCommandHandler(
+                    checkRepository, profileRepository,
+                    kycProvider, sanctionsProvider, amlProvider, travelRuleProvider,
+                    complianceCheckService, criticalRiskService, eventPublisher);
+        }
+
+        @Test
+        @DisplayName("should route to MANUAL_REVIEW on CRITICAL risk score")
+        void shouldRouteToManualReviewOnCriticalRisk() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycTier1Result(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any())).willReturn(Optional.empty());
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            var result = criticalHandler.initiateCheck(
+                    paymentId, senderId, recipientId, HIGH_VALUE_AMOUNT, "US", "DE", "EUR");
+
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.MANUAL_REVIEW,
+                    OverallResult.MANUAL_REVIEW, null);
+
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult")
+                    .isEqualTo(expected);
+            then(travelRuleProvider).should(never()).transmit(any());
+        }
+
+        @Test
+        @DisplayName("should save check with MANUAL_REVIEW status on CRITICAL risk")
+        void shouldSaveManualReviewCheckOnCriticalRisk() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycTier1Result(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any())).willReturn(Optional.empty());
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            criticalHandler.initiateCheck(
+                    paymentId, senderId, recipientId, HIGH_VALUE_AMOUNT, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.MANUAL_REVIEW,
+                    OverallResult.MANUAL_REVIEW,
+                    "Critical risk score — manual review required");
+
+            assertThat(saved)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult", "errorMessage")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should publish ComplianceCheckFailed event on CRITICAL risk")
+        void shouldPublishFailedEventOnCriticalRisk() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycTier1Result(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any())).willReturn(Optional.empty());
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            criticalHandler.initiateCheck(
+                    paymentId, senderId, recipientId, HIGH_VALUE_AMOUNT, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(Object.class);
+            then(eventPublisher).should().publish(captor.capture());
+
+            assertThat(captor.getValue()).isInstanceOf(ComplianceCheckFailed.class);
+
+            var expected = new ComplianceCheckFailed(
+                    null, paymentId, null, null, null, null);
+
+            assertThat(captor.getValue())
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "reason", "errorCode",
+                            "failedAt")
+                    .isEqualTo(expected);
+        }
     }
 
     @Nested
@@ -369,6 +665,66 @@ class ComplianceCheckCommandHandlerTest {
                             "errorMessage")
                     .isEqualTo(expected);
         }
+
+        @Test
+        @DisplayName("should save FAILED check on travel rule transmission error")
+        void shouldSaveFailedCheckOnTravelRuleError() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any()))
+                    .willReturn(Optional.of(aRiskProfile()));
+            given(travelRuleProvider.transmit(any()))
+                    .willThrow(new RuntimeException("Connection refused"));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(ComplianceCheck.class);
+            then(checkRepository).should().save(captor.capture());
+
+            var saved = captor.getValue();
+            var expected = new ExpectedCheckState(
+                    paymentId, ComplianceCheckStatus.FAILED, OverallResult.FAILED,
+                    "Travel rule transmission failed: Connection refused");
+
+            assertThat(saved)
+                    .usingRecursiveComparison()
+                    .comparingOnlyFields("paymentId", "status", "overallResult", "errorMessage")
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("should publish ComplianceCheckFailed event on travel rule failure")
+        void shouldPublishFailedEventOnTravelRuleFailure() {
+            var paymentId = UUID.randomUUID();
+            var senderId = UUID.randomUUID();
+            var recipientId = UUID.randomUUID();
+            given(checkRepository.findByPaymentId(paymentId)).willReturn(Optional.empty());
+            given(kycProvider.verify(any(), any())).willReturn(aKycResult(null));
+            given(sanctionsProvider.screen(any(), any())).willReturn(aSanctionsClearResult(null));
+            given(amlProvider.analyze(any(), any())).willReturn(anAmlClearResult(null));
+            given(profileRepository.findByCustomerId(any()))
+                    .willReturn(Optional.of(aRiskProfile()));
+            given(travelRuleProvider.transmit(any()))
+                    .willThrow(new RuntimeException("Timeout"));
+            given(checkRepository.save(any(ComplianceCheck.class)))
+                    .willAnswer(invocation -> invocation.getArgument(0));
+
+            handler.initiateCheck(
+                    paymentId, senderId, recipientId, ABOVE_THRESHOLD, "US", "DE", "EUR");
+
+            var captor = ArgumentCaptor.forClass(Object.class);
+            then(eventPublisher).should().publish(captor.capture());
+
+            assertThat(captor.getValue()).isInstanceOf(ComplianceCheckFailed.class);
+        }
     }
 
     @Nested
@@ -392,6 +748,7 @@ class ComplianceCheckCommandHandlerTest {
                     .hasMessageContaining(paymentId.toString());
 
             then(kycProvider).should(never()).verify(any(), any());
+            then(checkRepository).should(never()).save(any());
         }
     }
 

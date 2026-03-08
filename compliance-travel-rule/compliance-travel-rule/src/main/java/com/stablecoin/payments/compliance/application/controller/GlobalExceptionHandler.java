@@ -13,12 +13,14 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
 import static com.stablecoin.payments.compliance.application.controller.ErrorCodes.CHECK_NOT_FOUND;
 import static com.stablecoin.payments.compliance.application.controller.ErrorCodes.CUSTOMER_NOT_FOUND;
 import static com.stablecoin.payments.compliance.application.controller.ErrorCodes.DUPLICATE_PAYMENT;
+import static com.stablecoin.payments.compliance.application.controller.ErrorCodes.VALIDATION_ERROR;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
@@ -72,6 +74,14 @@ public class GlobalExceptionHandler {
     public ApiError handleDuplicatePayment(DuplicatePaymentException ex) {
         log.info("Duplicate payment: {}", ex.getMessage());
         return ApiError.of(DUPLICATE_PAYMENT, CONFLICT.getReasonPhrase(), ex.getMessage());
+    }
+
+    @ResponseStatus(BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ApiError handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        log.info("Type mismatch for parameter '{}': {}", ex.getName(), ex.getMessage());
+        return ApiError.of(VALIDATION_ERROR, BAD_REQUEST.getReasonPhrase(),
+                "Invalid value for parameter '" + ex.getName() + "'");
     }
 
     @ResponseStatus(BAD_REQUEST)
