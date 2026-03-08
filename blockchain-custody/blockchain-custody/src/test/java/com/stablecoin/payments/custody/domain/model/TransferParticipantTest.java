@@ -33,13 +33,14 @@ class TransferParticipantTest {
                     TRANSFER_ID, INPUT, ADDRESS, WALLET_ID, AMOUNT, ASSET_CODE
             );
 
-            assertThat(result.participantId()).isNotNull();
-            assertThat(result.transferId()).isEqualTo(TRANSFER_ID);
-            assertThat(result.participantType()).isEqualTo(INPUT);
-            assertThat(result.address()).isEqualTo(ADDRESS);
-            assertThat(result.walletId()).isEqualTo(WALLET_ID);
-            assertThat(result.amount()).isEqualByComparingTo(AMOUNT);
-            assertThat(result.assetCode()).isEqualTo(ASSET_CODE);
+            var expected = TransferParticipant.create(
+                    TRANSFER_ID, INPUT, ADDRESS, WALLET_ID, AMOUNT, ASSET_CODE
+            );
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("participantId")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -59,9 +60,14 @@ class TransferParticipantTest {
                     TRANSFER_ID, FEE, ADDRESS, null, new BigDecimal("0.50"), "ETH"
             );
 
-            assertThat(result.participantType()).isEqualTo(FEE);
-            assertThat(result.walletId()).isNull();
-            assertThat(result.assetCode()).isEqualTo("ETH");
+            var expected = TransferParticipant.create(
+                    TRANSFER_ID, FEE, ADDRESS, null, new BigDecimal("0.50"), "ETH"
+            );
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("participantId")
+                    .isEqualTo(expected);
         }
     }
 

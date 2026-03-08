@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import static com.stablecoin.payments.custody.fixtures.WalletBalanceFixtures.CHAIN_BASE;
 import static com.stablecoin.payments.custody.fixtures.WalletBalanceFixtures.USDC;
@@ -27,16 +26,12 @@ class WalletBalanceTest {
         void createsZeroBalance() {
             var result = aZeroBalance();
 
-            assertThat(result.balanceId()).isNotNull();
-            assertThat(result.walletId()).isEqualTo(WALLET_ID);
-            assertThat(result.chainId()).isEqualTo(CHAIN_BASE);
-            assertThat(result.stablecoin()).isEqualTo(USDC);
-            assertThat(result.availableBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.reservedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.blockchainBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.lastIndexedBlock()).isZero();
-            assertThat(result.version()).isZero();
-            assertThat(result.updatedAt()).isNotNull();
+            var expected = WalletBalance.initialize(WALLET_ID, CHAIN_BASE, USDC);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -75,8 +70,13 @@ class WalletBalanceTest {
 
             var result = balance.reserve(new BigDecimal("200.00"));
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("300.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("200.00"));
+            var expected = aBalanceWith(new BigDecimal("500.00"), BigDecimal.ZERO)
+                    .reserve(new BigDecimal("200.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -86,8 +86,13 @@ class WalletBalanceTest {
 
             var result = balance.reserve(new BigDecimal("500.00"));
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("500.00"));
+            var expected = aBalanceWith(new BigDecimal("500.00"), BigDecimal.ZERO)
+                    .reserve(new BigDecimal("500.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -97,8 +102,13 @@ class WalletBalanceTest {
 
             var result = balance.reserve(new BigDecimal("100.00"));
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("200.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("300.00"));
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .reserve(new BigDecimal("100.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -153,8 +163,13 @@ class WalletBalanceTest {
 
             var result = balance.release(new BigDecimal("100.00"));
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("400.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("100.00"));
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .release(new BigDecimal("100.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -164,8 +179,13 @@ class WalletBalanceTest {
 
             var result = balance.release(new BigDecimal("200.00"));
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("500.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .release(new BigDecimal("200.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -220,8 +240,13 @@ class WalletBalanceTest {
 
             var result = balance.confirmDebit(new BigDecimal("100.00"));
 
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("100.00"));
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("300.00"));
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .confirmDebit(new BigDecimal("100.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -231,7 +256,13 @@ class WalletBalanceTest {
 
             var result = balance.confirmDebit(new BigDecimal("200.00"));
 
-            assertThat(result.reservedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .confirmDebit(new BigDecimal("200.00"));
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -276,9 +307,12 @@ class WalletBalanceTest {
 
             var result = balance.syncFromChain(new BigDecimal("1000.00"), 1L);
 
-            assertThat(result.blockchainBalance()).isEqualByComparingTo(new BigDecimal("1000.00"));
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("1000.00"));
-            assertThat(result.lastIndexedBlock()).isEqualTo(1L);
+            var expected = aZeroBalance().syncFromChain(new BigDecimal("1000.00"), 1L);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -288,9 +322,13 @@ class WalletBalanceTest {
 
             var result = balance.syncFromChain(new BigDecimal("600.00"), 101L);
 
-            assertThat(result.blockchainBalance()).isEqualByComparingTo(new BigDecimal("600.00"));
-            assertThat(result.availableBalance()).isEqualByComparingTo(new BigDecimal("400.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("200.00"));
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .syncFromChain(new BigDecimal("600.00"), 101L);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -300,9 +338,13 @@ class WalletBalanceTest {
 
             var result = balance.syncFromChain(new BigDecimal("100.00"), 101L);
 
-            assertThat(result.availableBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.blockchainBalance()).isEqualByComparingTo(new BigDecimal("100.00"));
-            assertThat(result.reservedBalance()).isEqualByComparingTo(new BigDecimal("200.00"));
+            var expected = aBalanceWith(new BigDecimal("300.00"), new BigDecimal("200.00"))
+                    .syncFromChain(new BigDecimal("100.00"), 101L);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -352,8 +394,12 @@ class WalletBalanceTest {
 
             var result = balance.syncFromChain(BigDecimal.ZERO, 1L);
 
-            assertThat(result.blockchainBalance()).isEqualByComparingTo(BigDecimal.ZERO);
-            assertThat(result.availableBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+            var expected = aZeroBalance().syncFromChain(BigDecimal.ZERO, 1L);
+            assertThat(result)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .ignoringFields("balanceId", "updatedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -460,7 +506,7 @@ class WalletBalanceTest {
             var reserved = original.reserve(new BigDecimal("200.00"));
 
             assertThat(original.availableBalance()).isEqualByComparingTo(new BigDecimal("500.00"));
-            assertThat(reserved.availableBalance()).isEqualByComparingTo(new BigDecimal("300.00"));
+            assertThat(reserved.availableBalance()).isEqualByComparingTo(new BigDecimal("300.00")); // immutability requires checking both
         }
     }
 }
