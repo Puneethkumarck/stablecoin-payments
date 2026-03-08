@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface CollectionOrderJpaRepository extends JpaRepository<CollectionOrderEntity, UUID> {
 
     Optional<CollectionOrderEntity> findByPaymentId(UUID paymentId);
+
+    Optional<CollectionOrderEntity> findByPspReference(String pspReference);
 }

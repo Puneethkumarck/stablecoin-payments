@@ -40,4 +40,9 @@ public class CollectionOrderPersistenceAdapter implements CollectionOrderReposit
     public Optional<CollectionOrder> findByPaymentId(UUID paymentId) {
         return jpa.findByPaymentId(paymentId).map(mapper::toDomain);
     }
+
+    @Override
+    public Optional<CollectionOrder> findByPspReference(String pspReference) {
+        return jpa.findByPspReference(pspReference).map(mapper::toDomain);
+    }
 }

@@ -1,8 +1,10 @@
 package com.stablecoin.payments.onramp.config;
 
+import com.stablecoin.payments.onramp.domain.port.CollectionEventPublisher;
 import com.stablecoin.payments.onramp.domain.port.PspGateway;
 import com.stablecoin.payments.onramp.domain.port.PspPaymentResult;
 import com.stablecoin.payments.onramp.domain.port.PspRefundResult;
+import com.stablecoin.payments.onramp.domain.port.WebhookSignatureValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -40,5 +42,21 @@ public class FallbackAdaptersConfig {
                 return new PspRefundResult("dev-re-" + UUID.randomUUID(), "succeeded");
             }
         };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public WebhookSignatureValidator fallbackWebhookSignatureValidator() {
+        return (payload, signature) -> {
+            log.warn("[FALLBACK-WEBHOOK] Using dev webhook signature validator — always valid");
+            return true;
+        };
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CollectionEventPublisher fallbackCollectionEventPublisher() {
+        return event -> log.warn("[FALLBACK-EVENT] Using dev event publisher — event={}",
+                event.getClass().getSimpleName());
     }
 }
