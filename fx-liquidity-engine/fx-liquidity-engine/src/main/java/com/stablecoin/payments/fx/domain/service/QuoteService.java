@@ -3,10 +3,12 @@ package com.stablecoin.payments.fx.domain.service;
 import com.stablecoin.payments.fx.domain.model.CorridorRate;
 import com.stablecoin.payments.fx.domain.model.FxQuote;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 
 @Slf4j
+@Service
 public class QuoteService {
 
     private static final int DEFAULT_QUOTE_TTL_SECONDS = 10;
