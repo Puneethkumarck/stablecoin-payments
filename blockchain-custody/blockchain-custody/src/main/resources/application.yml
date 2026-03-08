@@ -126,6 +126,13 @@ app:
           usdc-contract-address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
           connect-timeout-ms: 5000
           read-timeout-ms: 10000
+    solana:
+      enabled: false  # disabled by default for dev/test — enable in production
+      rpc-url: ${SOL_RPC_URL:https://api.devnet.solana.com}
+      usdc-mint-address: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+      commitment: confirmed
+      connect-timeout-ms: 5000
+      read-timeout-ms: 10000
   chains:
     base:
       min-confirmations: 1
