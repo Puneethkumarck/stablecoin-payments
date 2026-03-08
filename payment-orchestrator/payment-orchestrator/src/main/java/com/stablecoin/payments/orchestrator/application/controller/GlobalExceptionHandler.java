@@ -8,11 +8,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.stablecoin.payments.orchestrator.application.controller.ErrorCodes.INTERNAL_ERROR;
@@ -39,6 +43,31 @@ public class GlobalExceptionHandler {
         log.info("Validation failed: {}", errors);
         return ApiError.withErrors(VALIDATION_ERROR, BAD_REQUEST.getReasonPhrase(),
                 "Invalid request content", errors);
+    }
+
+    @ResponseStatus(BAD_REQUEST)
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ApiError handleMethodValidation(HandlerMethodValidationException ex) {
+        Map<String, List<String>> errors = ex.getParameterValidationResults().stream()
+                .flatMap(result -> result.getResolvableErrors().stream()
+                        .map(error -> Map.entry(
+                                resolveParameterName(result, error),
+                                error.getDefaultMessage())))
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+        log.info("Method validation failed: {}", errors);
+        return ApiError.withErrors(VALIDATION_ERROR, BAD_REQUEST.getReasonPhrase(),
+                "Invalid request content", errors);
+    }
+
+    private static String resolveParameterName(ParameterValidationResult result,
+                                                org.springframework.context.MessageSourceResolvable error) {
+        if (error instanceof FieldError fieldError) {
+            return fieldError.getField();
+        }
+        var paramName = result.getMethodParameter().getParameterName();
+        return paramName != null ? paramName : "unknown";
     }
 
     @ResponseStatus(BAD_REQUEST)

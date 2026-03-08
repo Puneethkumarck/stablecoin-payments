@@ -9,6 +9,7 @@ import com.stablecoin.payments.orchestrator.domain.model.PaymentState;
 import com.stablecoin.payments.orchestrator.domain.port.PaymentRepository;
 import com.stablecoin.payments.orchestrator.domain.workflow.PaymentWorkflow;
 import com.stablecoin.payments.orchestrator.domain.workflow.dto.CancelRequest;
+import com.stablecoin.payments.orchestrator.domain.workflow.dto.PaymentRequest;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -98,6 +100,7 @@ class PaymentCommandHandlerTest {
                     .isEqualTo(expectedPayment);
 
             then(paymentRepository).should().save(eqIgnoring(expectedPayment, "paymentId"));
+            then(workflowClient).should().newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
         }
 
         @Test
@@ -123,6 +126,37 @@ class PaymentCommandHandlerTest {
                     .isEqualTo(existingPayment);
 
             then(paymentRepository).should(never()).save(any());
+            then(workflowClient).should(never()).newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
+        }
+
+        @Test
+        @DisplayName("should handle concurrent duplicate by returning existing payment")
+        void shouldHandleConcurrentDuplicate() {
+            // given
+            var existingPayment = anInitiatedPayment();
+            given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                    .willReturn(Optional.empty());
+            given(paymentRepository.save(any(Payment.class)))
+                    .willThrow(new DataIntegrityViolationException("duplicate key"));
+            given(paymentRepository.findByIdempotencyKey(IDEMPOTENCY_KEY))
+                    .willReturn(Optional.empty())
+                    .willReturn(Optional.of(existingPayment));
+
+            // when
+            var result = handler.initiatePayment(
+                    IDEMPOTENCY_KEY, CORRELATION_ID,
+                    SENDER_ID, RECIPIENT_ID, SOURCE_AMOUNT_VALUE,
+                    SOURCE_CURRENCY, TARGET_CURRENCY,
+                    SOURCE_COUNTRY, TARGET_COUNTRY
+            );
+
+            // then
+            assertThat(result.replay()).isTrue();
+            assertThat(result.payment())
+                    .usingRecursiveComparison()
+                    .isEqualTo(existingPayment);
+
+            then(workflowClient).should(never()).newWorkflowStub(eq(PaymentWorkflow.class), any(WorkflowOptions.class));
         }
     }
 

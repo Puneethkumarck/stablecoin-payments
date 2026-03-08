@@ -2,6 +2,7 @@ package com.stablecoin.payments.orchestrator.application.controller;
 
 import com.stablecoin.payments.orchestrator.domain.service.PaymentCommandHandler;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -37,6 +38,7 @@ public class PaymentController {
      */
     @PostMapping
     public ResponseEntity<PaymentResponse> initiatePayment(
+            @NotBlank(message = "Idempotency-Key header is required")
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody InitiatePaymentRequest request) {
         log.info("POST /v1/payments idempotencyKey={}, senderId={}", idempotencyKey, request.senderId());

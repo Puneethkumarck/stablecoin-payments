@@ -13,6 +13,7 @@ import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,7 +78,15 @@ public class PaymentCommandHandler {
                 new Corridor(sourceCountry, targetCountry)
         );
 
-        var saved = paymentRepository.save(payment);
+        Payment saved;
+        try {
+            saved = paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException ex) {
+            log.info("Concurrent duplicate for idempotencyKey={}, returning existing", idempotencyKey);
+            var concurrent = paymentRepository.findByIdempotencyKey(idempotencyKey)
+                    .orElseThrow(() -> ex);
+            return new InitiateResult(concurrent, true);
+        }
 
         startWorkflow(saved, sourceCountry, targetCountry);
 
