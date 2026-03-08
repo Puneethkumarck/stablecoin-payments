@@ -1,6 +1,7 @@
 package com.stablecoin.payments.orchestrator.infrastructure.persistence;
 
 import com.stablecoin.payments.orchestrator.domain.model.Payment;
+import com.stablecoin.payments.orchestrator.domain.model.PaymentState;
 import com.stablecoin.payments.orchestrator.domain.port.PaymentRepository;
 import com.stablecoin.payments.orchestrator.infrastructure.persistence.entity.PaymentJpaRepository;
 import com.stablecoin.payments.orchestrator.infrastructure.persistence.mapper.PaymentEntityUpdater;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,5 +41,12 @@ public class PaymentPersistenceAdapter implements PaymentRepository {
     @Override
     public Optional<Payment> findByIdempotencyKey(String idempotencyKey) {
         return jpa.findByIdempotencyKey(idempotencyKey).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Payment> findBySenderIdAndState(UUID senderId, PaymentState state) {
+        return jpa.findBySenderIdAndState(senderId, state).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }

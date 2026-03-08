@@ -26,6 +26,8 @@ import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.SOUR
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.SOURCE_CURRENCY;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.TARGET_CURRENCY;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.US_TO_DE;
+import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.BASE_CHAIN;
+import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.TX_HASH;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.aCompletedPayment;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.aValidFxRate;
 import static com.stablecoin.payments.orchestrator.fixtures.PaymentFixtures.anInitiatedPayment;
@@ -116,14 +118,14 @@ class PaymentPersistenceAdapterIT extends AbstractIntegrationTest {
         adapter.save(payment1);
         adapter.save(payment2);
 
-        var results = jpaRepository.findBySenderIdAndState(SENDER_ID, PaymentState.INITIATED);
-        assertThat(results).hasSizeGreaterThanOrEqualTo(2);
+        var results = adapter.findBySenderIdAndState(SENDER_ID, PaymentState.INITIATED);
+        assertThat(results).hasSize(2);
     }
 
     @Test
     @DisplayName("should return empty list when no payments match sender and state")
     void shouldReturnEmptyListWhenNoPaymentsMatchSenderAndState() {
-        var results = jpaRepository.findBySenderIdAndState(UUID.randomUUID(), PaymentState.COMPLETED);
+        var results = adapter.findBySenderIdAndState(UUID.randomUUID(), PaymentState.COMPLETED);
         assertThat(results).isEmpty();
     }
 
@@ -264,14 +266,41 @@ class PaymentPersistenceAdapterIT extends AbstractIntegrationTest {
     @Test
     @DisplayName("should update payment through full happy path to COMPLETED")
     void shouldUpdatePaymentThroughFullHappyPath() {
-        var payment = aCompletedPayment();
-        var saved = adapter.save(payment);
+        // Start from INITIATED and walk through the full state machine
+        var payment = anInitiatedPayment();
+        adapter.save(payment);
 
-        assertThat(adapter.findById(saved.paymentId())).isPresent().get()
+        var complianceCheck = payment.startComplianceCheck();
+        adapter.save(complianceCheck);
+
+        var fxLocked = complianceCheck.lockFxRate(aValidFxRate());
+        adapter.save(fxLocked);
+
+        var fiatPending = fxLocked.startFiatCollection();
+        adapter.save(fiatPending);
+
+        var fiatCollected = fiatPending.confirmFiatCollected();
+        adapter.save(fiatCollected);
+
+        var onChainSubmitted = fiatCollected.submitOnChain(BASE_CHAIN);
+        adapter.save(onChainSubmitted);
+
+        var onChainConfirmed = onChainSubmitted.confirmOnChain(TX_HASH);
+        adapter.save(onChainConfirmed);
+
+        var offRampInitiated = onChainConfirmed.initiateOffRamp();
+        adapter.save(offRampInitiated);
+
+        var settled = offRampInitiated.settle();
+        adapter.save(settled);
+
+        var completed = settled.complete();
+        adapter.save(completed);
+
+        assertThat(adapter.findById(payment.paymentId())).isPresent().get()
                 .usingRecursiveComparison()
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                 .ignoringFieldsOfTypes(Instant.class)
-                .isEqualTo(saved);
-        assertThat(saved.state()).isEqualTo(PaymentState.COMPLETED);
+                .isEqualTo(completed);
     }
 }
