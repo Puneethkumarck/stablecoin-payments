@@ -1,6 +1,11 @@
 package com.stablecoin.payments.compliance.application.service;
 
 import com.stablecoin.payments.compliance.api.request.InitiateComplianceCheckRequest;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse.KycResultResponse;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse.SanctionsResultResponse;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse.TravelRuleResponse;
+import com.stablecoin.payments.compliance.api.response.CustomerRiskProfileResponse;
 import com.stablecoin.payments.compliance.application.mapper.ComplianceCheckResponseMapper;
 import com.stablecoin.payments.compliance.domain.event.ComplianceCheckFailed;
 import com.stablecoin.payments.compliance.domain.event.ComplianceCheckPassed;
@@ -29,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -110,14 +116,19 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("PASSED");
-            assertThat(response.overallResult()).isEqualTo("PASSED");
-            assertThat(response.paymentId()).isEqualTo(request.paymentId());
-            assertThat(response.riskScore()).isNotNull();
-            assertThat(response.kycResult()).isNotNull();
-            assertThat(response.sanctionsResult()).isNotNull();
-            assertThat(response.travelRule()).isNotNull();
-            assertThat(response.travelRule().transmissionStatus()).isEqualTo("TRANSMITTED");
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "PASSED", "PASSED",
+                    null,
+                    new KycResultResponse("VERIFIED", "VERIFIED", "KYC_TIER_2"),
+                    new SanctionsResultResponse(false, false, List.of("OFAC", "EU", "UN")),
+                    new TravelRuleResponse("IVMS101", "TRANSMITTED"),
+                    null, null, null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "riskScore",
+                            "errorCode", "errorMessage")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -137,9 +148,15 @@ class ComplianceCheckApplicationServiceTest {
 
             var captor = ArgumentCaptor.forClass(Object.class);
             then(eventPublisher).should().publish(captor.capture());
-            assertThat(captor.getValue()).isInstanceOf(ComplianceCheckPassed.class);
-            var event = (ComplianceCheckPassed) captor.getValue();
-            assertThat(event.paymentId()).isEqualTo(request.paymentId());
+
+            var expected = new ComplianceCheckPassed(
+                    null, request.paymentId(), null, 0, null, null, null);
+
+            assertThat(captor.getValue())
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "riskScore", "riskBand",
+                            "travelRuleRef", "passedAt")
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -156,8 +173,15 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("PASSED");
-            assertThat(response.travelRule()).isNull();
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "PASSED", "PASSED",
+                    null, null, null, null, null, null, null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "riskScore",
+                            "kycResult", "sanctionsResult", "errorCode", "errorMessage")
+                    .isEqualTo(expected);
             then(travelRuleProvider).should(never()).transmit(any());
         }
     }
@@ -177,8 +201,15 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("FAILED");
-            assertThat(response.overallResult()).isEqualTo("FAILED");
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "FAILED", "FAILED",
+                    null, null, null, null, null, null, null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "kycResult",
+                            "errorCode", "errorMessage")
+                    .isEqualTo(expected);
             then(sanctionsProvider).should(never()).screen(any(), any());
             then(amlProvider).should(never()).analyze(any(), any());
         }
@@ -196,7 +227,13 @@ class ComplianceCheckApplicationServiceTest {
 
             var captor = ArgumentCaptor.forClass(Object.class);
             then(eventPublisher).should().publish(captor.capture());
-            assertThat(captor.getValue()).isInstanceOf(ComplianceCheckFailed.class);
+
+            var expected = new ComplianceCheckFailed(
+                    null, request.paymentId(), null, null, null, null);
+            assertThat(captor.getValue())
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "reason", "errorCode", "failedAt")
+                    .isEqualTo(expected);
         }
     }
 
@@ -216,8 +253,15 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("SANCTIONS_HIT");
-            assertThat(response.overallResult()).isEqualTo("SANCTIONS_HIT");
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "SANCTIONS_HIT", "SANCTIONS_HIT",
+                    null, null, null, null, null, null, null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "kycResult",
+                            "sanctionsResult", "errorCode", "errorMessage")
+                    .isEqualTo(expected);
             then(amlProvider).should(never()).analyze(any(), any());
         }
 
@@ -236,10 +280,20 @@ class ComplianceCheckApplicationServiceTest {
             var captor = ArgumentCaptor.forClass(Object.class);
             then(eventPublisher).should(times(2)).publish(captor.capture());
             var events = captor.getAllValues();
-            assertThat(events.get(0)).isInstanceOf(ComplianceCheckFailed.class);
-            assertThat(events.get(1)).isInstanceOf(SanctionsHitEvent.class);
-            var hitEvent = (SanctionsHitEvent) events.get(1);
-            assertThat(hitEvent.hitParty()).isEqualTo("SENDER");
+
+            var expectedFailed = new ComplianceCheckFailed(
+                    null, request.paymentId(), null, null, null, null);
+            assertThat(events.get(0))
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "reason", "errorCode", "failedAt")
+                    .isEqualTo(expectedFailed);
+
+            var expectedHit = new SanctionsHitEvent(
+                    null, request.paymentId(), null, "SENDER", "OFAC", null, null);
+            assertThat(events.get(1))
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "correlationId", "hitDetails", "detectedAt")
+                    .isEqualTo(expectedHit);
         }
     }
 
@@ -260,8 +314,15 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("MANUAL_REVIEW");
-            assertThat(response.overallResult()).isEqualTo("MANUAL_REVIEW");
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "MANUAL_REVIEW", "MANUAL_REVIEW",
+                    null, null, null, null, null, null, null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "riskScore",
+                            "kycResult", "sanctionsResult", "errorCode", "errorMessage")
+                    .isEqualTo(expected);
             then(travelRuleProvider).should(never()).transmit(any());
         }
     }
@@ -285,9 +346,17 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.initiateCheck(request);
 
-            assertThat(response.status()).isEqualTo("FAILED");
-            assertThat(response.overallResult()).isEqualTo("FAILED");
-            assertThat(response.errorMessage()).contains("Travel rule transmission failed");
+            var expected = new ComplianceCheckResponse(
+                    null, request.paymentId(), "FAILED", "FAILED",
+                    null, null, null, null, null,
+                    "Travel rule transmission failed: Network error",
+                    null, null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .ignoringFields("checkId", "createdAt", "completedAt", "riskScore",
+                            "kycResult", "sanctionsResult", "travelRule", "errorCode")
+                    .isEqualTo(expected);
         }
     }
 
@@ -330,8 +399,14 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.getCheck(checkId);
 
-            assertThat(response.status()).isEqualTo("PENDING");
-            assertThat(response.checkId()).isEqualTo(check.checkId());
+            var expected = new ComplianceCheckResponse(
+                    check.checkId(), check.paymentId(), "PENDING",
+                    null, null, null, null, null, null, null,
+                    check.createdAt(), null);
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .isEqualTo(expected);
         }
 
         @Test
@@ -359,9 +434,16 @@ class ComplianceCheckApplicationServiceTest {
 
             var response = service.getCustomerRiskProfile(customerId);
 
-            assertThat(response.customerId()).isEqualTo(customerId);
-            assertThat(response.kycTier()).isEqualTo("KYC_TIER_2");
-            assertThat(response.riskBand()).isEqualTo("LOW");
+            var expected = new CustomerRiskProfileResponse(
+                    customerId, "KYC_TIER_2", profile.kycVerifiedAt(),
+                    "LOW", 20,
+                    profile.perTxnLimitUsd(), profile.dailyLimitUsd(),
+                    profile.monthlyLimitUsd(), profile.lastScoredAt());
+
+            assertThat(response)
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
 
         @Test

@@ -1,7 +1,14 @@
 package com.stablecoin.payments.compliance.application.mapper;
 
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse.KycResultResponse;
+import com.stablecoin.payments.compliance.api.response.ComplianceCheckResponse.SanctionsResultResponse;
+import com.stablecoin.payments.compliance.api.response.CustomerRiskProfileResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aKycResult;
 import static com.stablecoin.payments.compliance.fixtures.ComplianceCheckFixtures.aPendingCheck;
@@ -20,14 +27,14 @@ class ComplianceCheckResponseMapperTest {
 
         var response = mapper.toResponse(check);
 
-        assertThat(response.checkId()).isEqualTo(check.checkId());
-        assertThat(response.paymentId()).isEqualTo(check.paymentId());
-        assertThat(response.status()).isEqualTo("PENDING");
-        assertThat(response.overallResult()).isNull();
-        assertThat(response.riskScore()).isNull();
-        assertThat(response.kycResult()).isNull();
-        assertThat(response.sanctionsResult()).isNull();
-        assertThat(response.travelRule()).isNull();
+        var expected = new ComplianceCheckResponse(
+                check.checkId(), check.paymentId(), "PENDING",
+                null, null, null, null, null, null, null,
+                check.createdAt(), null);
+
+        assertThat(response)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
     }
 
     @Test
@@ -40,11 +47,17 @@ class ComplianceCheckResponseMapperTest {
 
         var response = mapper.toResponse(check);
 
-        assertThat(response.status()).isEqualTo("AML_SCREENING");
-        assertThat(response.kycResult()).isNotNull();
-        assertThat(response.kycResult().senderStatus()).isEqualTo("VERIFIED");
-        assertThat(response.sanctionsResult()).isNotNull();
-        assertThat(response.sanctionsResult().senderHit()).isFalse();
+        var expected = new ComplianceCheckResponse(
+                check.checkId(), check.paymentId(), "AML_SCREENING",
+                null, null,
+                new KycResultResponse("VERIFIED", "VERIFIED", "KYC_TIER_2"),
+                new SanctionsResultResponse(false, false, List.of("OFAC", "EU", "UN")),
+                null, null, null,
+                check.createdAt(), null);
+
+        assertThat(response)
+                .usingRecursiveComparison()
+                .isEqualTo(expected);
     }
 
     @Test
@@ -54,9 +67,15 @@ class ComplianceCheckResponseMapperTest {
 
         var response = mapper.toResponse(profile);
 
-        assertThat(response.customerId()).isEqualTo(profile.customerId());
-        assertThat(response.kycTier()).isEqualTo("KYC_TIER_2");
-        assertThat(response.riskBand()).isEqualTo("LOW");
-        assertThat(response.riskScore()).isEqualTo(20);
+        var expected = new CustomerRiskProfileResponse(
+                profile.customerId(), "KYC_TIER_2", profile.kycVerifiedAt(),
+                "LOW", 20,
+                profile.perTxnLimitUsd(), profile.dailyLimitUsd(),
+                profile.monthlyLimitUsd(), profile.lastScoredAt());
+
+        assertThat(response)
+                .usingRecursiveComparison()
+                .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                .isEqualTo(expected);
     }
 }
