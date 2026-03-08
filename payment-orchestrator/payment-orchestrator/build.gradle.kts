@@ -126,6 +126,7 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("com.tngtech.archunit:archunit-junit5:$archunitVersion")
     testImplementation("org.wiremock:wiremock-standalone:$wiremockVersion")
+    testImplementation("io.temporal:temporal-testing:$temporalVersion")
     "integrationTestImplementation"(testFixtures(project))
     "integrationTestImplementation"("org.testcontainers:postgresql:$testcontainersVersion")
     "integrationTestImplementation"("org.testcontainers:kafka:$testcontainersVersion")
