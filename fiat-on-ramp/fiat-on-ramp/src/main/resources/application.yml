@@ -115,6 +115,12 @@ springdoc:
 app:
   security:
     enabled: false
+  psp:
+    provider: stripe
+    stripe:
+      base-url: https://api.stripe.com
+      api-key: ${STRIPE_API_KEY:sk_test_default}
+      timeout-seconds: 10
 
 logging:
   level:
