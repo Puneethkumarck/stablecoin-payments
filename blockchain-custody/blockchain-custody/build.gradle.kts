@@ -99,6 +99,11 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:$resilience4jVersion")
 
+    // Dev custody adapter — EVM transaction signing
+    implementation("org.web3j:core:4.12.3") {
+        exclude(group = "org.slf4j") // avoid SLF4J conflicts with Spring Boot
+    }
+
     // MapStruct (compiler args set below in JavaCompile task)
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
