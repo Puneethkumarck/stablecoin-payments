@@ -25,6 +25,23 @@ public final class ChainTransferFixtures {
     public static final BigDecimal AMOUNT = new BigDecimal("1000.00");
 
     /**
+     * JSON body for a FORWARD transfer request on Base chain.
+     */
+    public static String aTransferRequestJson() {
+        return """
+                {
+                  "paymentId": "%s",
+                  "correlationId": "%s",
+                  "transferType": "FORWARD",
+                  "stablecoin": "USDC",
+                  "amount": "1000.00",
+                  "toWalletAddress": "%s",
+                  "preferredChain": "base"
+                }
+                """.formatted(PAYMENT_ID, CORRELATION_ID, TO_ADDRESS);
+    }
+
+    /**
      * A fresh PENDING transfer (FORWARD type, no parent).
      */
     public static ChainTransfer aPendingTransfer() {
