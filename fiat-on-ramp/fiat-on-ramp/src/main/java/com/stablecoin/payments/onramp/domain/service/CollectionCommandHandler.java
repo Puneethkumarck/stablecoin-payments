@@ -1,5 +1,6 @@
 package com.stablecoin.payments.onramp.domain.service;
 
+import com.stablecoin.payments.onramp.domain.event.CollectionFailedEvent;
 import com.stablecoin.payments.onramp.domain.event.CollectionInitiatedEvent;
 import com.stablecoin.payments.onramp.domain.exception.CollectionOrderNotFoundException;
 import com.stablecoin.payments.onramp.domain.model.BankAccount;
@@ -130,5 +131,30 @@ public class CollectionCommandHandler {
     public CollectionOrder getCollectionByPaymentId(UUID paymentId) {
         return collectionOrderRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new CollectionOrderNotFoundException(paymentId));
+    }
+
+    /**
+     * Expires a collection order that has been in AWAITING_CONFIRMATION past its timeout.
+     * <p>
+     * Transitions the order to COLLECTION_FAILED, persists, and publishes a
+     * {@link CollectionFailedEvent} via the outbox.
+     *
+     * @param order the expired order
+     * @param now   the current timestamp
+     */
+    public void expireCollection(CollectionOrder order, Instant now) {
+        var expired = order.timeoutCollection("Collection expired", "OR-3001");
+        collectionOrderRepository.save(expired);
+
+        eventPublisher.publish(new CollectionFailedEvent(
+                expired.collectionId(),
+                expired.paymentId(),
+                expired.correlationId(),
+                "Collection expired",
+                "OR-3001",
+                now));
+
+        log.info("Expired collection order collectionId={} paymentId={}",
+                expired.collectionId(), expired.paymentId());
     }
 }

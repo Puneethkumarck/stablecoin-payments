@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Clock;
 import java.util.UUID;
 
 /**
@@ -58,5 +59,11 @@ public class FallbackAdaptersConfig {
     public CollectionEventPublisher fallbackCollectionEventPublisher() {
         return event -> log.warn("[FALLBACK-EVENT] Using dev event publisher — event={}",
                 event.getClass().getSimpleName());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public Clock clock() {
+        return Clock.systemUTC();
     }
 }

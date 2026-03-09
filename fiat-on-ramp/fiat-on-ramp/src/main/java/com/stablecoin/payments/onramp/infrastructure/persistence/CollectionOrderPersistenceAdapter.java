@@ -1,6 +1,7 @@
 package com.stablecoin.payments.onramp.infrastructure.persistence;
 
 import com.stablecoin.payments.onramp.domain.model.CollectionOrder;
+import com.stablecoin.payments.onramp.domain.model.CollectionStatus;
 import com.stablecoin.payments.onramp.domain.port.CollectionOrderRepository;
 import com.stablecoin.payments.onramp.infrastructure.persistence.entity.CollectionOrderJpaRepository;
 import com.stablecoin.payments.onramp.infrastructure.persistence.mapper.CollectionOrderEntityUpdater;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,5 +47,19 @@ public class CollectionOrderPersistenceAdapter implements CollectionOrderReposit
     @Override
     public Optional<CollectionOrder> findByPspReference(String pspReference) {
         return jpa.findByPspReference(pspReference).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<CollectionOrder> findByStatusAndNotReconciled(CollectionStatus status) {
+        return jpa.findByStatusAndNotReconciled(status).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<CollectionOrder> findExpiredByStatus(CollectionStatus status, Instant before) {
+        return jpa.findExpiredByStatus(status, before).stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }
