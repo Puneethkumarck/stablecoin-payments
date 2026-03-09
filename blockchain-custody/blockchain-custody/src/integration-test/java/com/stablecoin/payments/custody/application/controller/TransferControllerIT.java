@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -86,20 +87,28 @@ class TransferControllerIT extends AbstractIntegrationTest {
             var balance = WalletBalance.initialize(wallet.walletId(), CHAIN_BASE, USDC)
                     .syncFromChain(new BigDecimal("50000.00"), 100L);
             walletBalanceRepository.save(balance);
+            var mapper = JsonMapper.builder().build();
 
             // first request — 202 Accepted
-            mockMvc.perform(post("/v1/transfers")
+            var firstResponse = mockMvc.perform(post("/v1/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(aTransferRequestJson()))
-                    .andExpect(status().isAccepted());
+                    .andExpect(status().isAccepted())
+                    .andReturn().getResponse().getContentAsString();
+            var firstTransferId = mapper.readTree(firstResponse).get("transferId").asText();
 
             // when — second request with same paymentId
-            mockMvc.perform(post("/v1/transfers")
+            var secondResponse = mockMvc.perform(post("/v1/transfers")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(aTransferRequestJson()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.paymentId", is(PAYMENT_ID.toString())))
-                    .andExpect(jsonPath("$.status", is("SUBMITTED")));
+                    .andReturn().getResponse().getContentAsString();
+            var secondTransferId = mapper.readTree(secondResponse).get("transferId").asText();
+
+            // then — same transferId returned, no duplicate created
+            assertThat(secondTransferId).isEqualTo(firstTransferId);
+            assertThat(chainTransferRepository.findByPaymentIdAndType(PAYMENT_ID, TransferType.FORWARD))
+                    .isPresent();
         }
 
         @Test
