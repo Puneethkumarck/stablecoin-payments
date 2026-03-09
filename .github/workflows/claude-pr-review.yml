@@ -1,0 +1,52 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+# One review per PR at a time
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Skip bot PRs to prevent loops
+    if: github.event.pull_request.user.login != 'github-actions[bot]'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude PR Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--max-turns 10"
+
+          prompt: |
+            Review PR #${{ github.event.pull_request.number }} for code quality.
+
+            Focus on these project-specific patterns (from CLAUDE.md):
+            1. Single-assert test pattern — no scattered field asserts
+            2. No generic Mockito matchers (any(), eq()) — use actual values
+            3. Controller thickness — controllers must be thin, call CommandHandler directly
+            4. Test fixtures in testFixtures source set, not private methods in tests
+            5. No wildcard imports
+            6. Correct Jackson 3 imports (tools.jackson, not com.fasterxml.jackson)
+            7. Outbox pattern correctness (MANDATORY propagation)
+            8. Handler tests use interaction-verification only
+
+            Post a single review comment with findings grouped by severity.
+            If everything looks good, post a short approval comment.
+            Do NOT approve or request changes — comment only.
