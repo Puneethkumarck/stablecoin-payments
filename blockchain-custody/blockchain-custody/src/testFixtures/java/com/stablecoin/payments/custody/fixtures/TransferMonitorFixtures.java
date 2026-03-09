@@ -7,6 +7,7 @@ import com.stablecoin.payments.custody.domain.model.TransferType;
 import com.stablecoin.payments.custody.domain.model.WalletBalance;
 import com.stablecoin.payments.custody.domain.port.ChainConfirmationProperties;
 import com.stablecoin.payments.custody.domain.port.SignResult;
+import com.stablecoin.payments.custody.domain.port.TokenContractResolver;
 import com.stablecoin.payments.custody.domain.port.TransactionReceipt;
 import com.stablecoin.payments.custody.domain.port.TransferMonitorProperties;
 
@@ -36,6 +37,7 @@ public final class TransferMonitorFixtures {
     public static final long LATEST_BLOCK = 110L;
     public static final BigDecimal GAS_USED = new BigDecimal("21000");
     public static final BigDecimal GAS_PRICE = new BigDecimal("25.5");
+    public static final String USDC_BASE_CONTRACT = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
     private static final Map<String, Integer> CHAIN_CONFIRMATIONS = Map.of(
             "base", 1,
@@ -44,7 +46,7 @@ public final class TransferMonitorFixtures {
     );
 
     /**
-     * Default transfer monitor properties: 120s resubmit timeout, 3 max attempts.
+     * Default transfer monitor properties: 120s resubmit timeout, 3 max attempts, 300s confirming timeout.
      */
     public static TransferMonitorProperties defaultMonitorProperties() {
         return new TransferMonitorProperties() {
@@ -57,14 +59,33 @@ public final class TransferMonitorFixtures {
             public int maxAttempts() {
                 return 3;
             }
+
+            @Override
+            public int confirmingTimeoutS() {
+                return 300;
+            }
         };
     }
 
     /**
      * Default chain confirmation properties with Base (1), Ethereum (32), Solana (1).
+     * Throws IllegalStateException for unknown chains (fail-fast).
      */
     public static ChainConfirmationProperties defaultChainConfirmationProperties() {
-        return chainId -> CHAIN_CONFIRMATIONS.getOrDefault(chainId, 1);
+        return chainId -> {
+            var confirmations = CHAIN_CONFIRMATIONS.get(chainId);
+            if (confirmations == null) {
+                throw new IllegalStateException("Unknown chain: " + chainId);
+            }
+            return confirmations;
+        };
+    }
+
+    /**
+     * Default token contract resolver mapping USDC to test contract addresses.
+     */
+    public static TokenContractResolver defaultTokenContractResolver() {
+        return (chainId, stablecoin) -> USDC_BASE_CONTRACT;
     }
 
     /**

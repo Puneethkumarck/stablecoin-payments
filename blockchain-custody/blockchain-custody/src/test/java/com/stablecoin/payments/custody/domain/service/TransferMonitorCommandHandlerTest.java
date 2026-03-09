@@ -19,6 +19,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.Clock;
 import java.util.List;
@@ -66,6 +70,23 @@ class TransferMonitorCommandHandlerTest {
     // Use system clock for the default handler — transfers are created with Instant.now()
     private static final Clock SYSTEM_CLOCK = Clock.systemUTC();
 
+    private static PlatformTransactionManager passthroughTransactionManager() {
+        return new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+
+            @Override
+            public void commit(TransactionStatus status) {
+            }
+
+            @Override
+            public void rollback(TransactionStatus status) {
+            }
+        };
+    }
+
     @BeforeEach
     void setUp() {
         handler = new TransferMonitorCommandHandler(
@@ -77,7 +98,8 @@ class TransferMonitorCommandHandlerTest {
                 transferEventPublisher,
                 defaultMonitorProperties(),
                 defaultChainConfirmationProperties(),
-                SYSTEM_CLOCK
+                SYSTEM_CLOCK,
+                passthroughTransactionManager()
         );
     }
 
@@ -180,7 +202,8 @@ class TransferMonitorCommandHandlerTest {
                     transferEventPublisher,
                     defaultMonitorProperties(),
                     defaultChainConfirmationProperties(),
-                    futureClock
+                    futureClock,
+                    passthroughTransactionManager()
             );
 
             var transfer = aSubmittedTransferOnBase();
@@ -314,6 +337,69 @@ class TransferMonitorCommandHandlerTest {
                             null
                     )));
         }
+
+        @Test
+        @DisplayName("should mark for resubmission when receipt disappears beyond grace window")
+        void shouldMarkForResubmissionWhenReceiptDisappearsBeyondGraceWindow() {
+            // given — use a clock far enough ahead to exceed the 300s confirming timeout
+            var futureClock = Clock.offset(Clock.systemUTC(), java.time.Duration.ofSeconds(600));
+            var handlerWithFutureClock = new TransferMonitorCommandHandler(
+                    chainTransferRepository,
+                    walletBalanceRepository,
+                    lifecycleEventRepository,
+                    chainRpcProvider,
+                    custodyEngine,
+                    transferEventPublisher,
+                    defaultMonitorProperties(),
+                    defaultChainConfirmationProperties(),
+                    futureClock,
+                    passthroughTransactionManager()
+            );
+
+            var transfer = aConfirmingTransferOnBase();
+
+            given(chainTransferRepository.findByStatus(TransferStatus.SUBMITTED))
+                    .willReturn(List.of());
+            given(chainTransferRepository.findByStatus(TransferStatus.CONFIRMING))
+                    .willReturn(List.of(transfer));
+            given(chainTransferRepository.findByStatus(TransferStatus.RESUBMITTING))
+                    .willReturn(List.of());
+            given(chainRpcProvider.getTransactionReceipt(CHAIN_BASE, TX_HASH))
+                    .willReturn(null);
+
+            var expectedResubmitting = transfer.markForResubmission();
+
+            // when
+            handlerWithFutureClock.monitorPendingTransfers();
+
+            // then
+            then(chainTransferRepository).should().save(eqIgnoringTimestamps(expectedResubmitting));
+            then(lifecycleEventRepository).should().save(
+                    eqIgnoring(TransferLifecycleEvent.record(transfer.transferId(), "RESUBMITTING"), "eventId"));
+        }
+
+        @Test
+        @DisplayName("should wait within grace window when receipt disappears")
+        void shouldWaitWithinGraceWindowWhenReceiptDisappears() {
+            // given — transfer just entered CONFIRMING (updatedAt ≈ now), 300s timeout not reached
+            var transfer = aConfirmingTransferOnBase();
+
+            given(chainTransferRepository.findByStatus(TransferStatus.SUBMITTED))
+                    .willReturn(List.of());
+            given(chainTransferRepository.findByStatus(TransferStatus.CONFIRMING))
+                    .willReturn(List.of(transfer));
+            given(chainTransferRepository.findByStatus(TransferStatus.RESUBMITTING))
+                    .willReturn(List.of());
+            given(chainRpcProvider.getTransactionReceipt(CHAIN_BASE, TX_HASH))
+                    .willReturn(null);
+
+            // when
+            handler.monitorPendingTransfers();
+
+            // then — no state change, just log warning
+            then(chainTransferRepository).should(never()).save(eqIgnoringTimestamps(transfer));
+            then(lifecycleEventRepository).shouldHaveNoInteractions();
+        }
     }
 
     @Nested
@@ -321,8 +407,8 @@ class TransferMonitorCommandHandlerTest {
     class ResubmittingTransfers {
 
         @Test
-        @DisplayName("should resubmit transfer when attempts below maximum")
-        void shouldResubmitWhenAttemptsBelow() {
+        @DisplayName("should claim then resubmit transfer when attempts below maximum")
+        void shouldClaimThenResubmitWhenAttemptsBelow() {
             // given
             var transfer = aResubmittingTransfer();
             var signResult = aResubmitSignResult();
@@ -346,14 +432,18 @@ class TransferMonitorCommandHandlerTest {
             given(custodyEngine.signAndSubmit(eqIgnoringTimestamps(signRequest)))
                     .willReturn(signResult);
 
-            var expectedResubmitted = transfer.resubmit(RESUBMIT_TX_HASH);
+            var expectedClaimed = transfer.claimResubmission();
+            var expectedResubmitted = expectedClaimed.confirmResubmission(RESUBMIT_TX_HASH);
 
             // when
             handler.monitorPendingTransfers();
 
-            // then
+            // then — claim persisted first, then resubmission
+            then(chainTransferRepository).should().save(eqIgnoringTimestamps(expectedClaimed));
             then(custodyEngine).should().signAndSubmit(eqIgnoringTimestamps(signRequest));
             then(chainTransferRepository).should().save(eqIgnoringTimestamps(expectedResubmitted));
+            then(lifecycleEventRepository).should().save(
+                    eqIgnoring(TransferLifecycleEvent.record(transfer.transferId(), "RESUBMISSION_CLAIMED"), "eventId"));
             then(lifecycleEventRepository).should().save(
                     eqIgnoring(TransferLifecycleEvent.record(transfer.transferId(), "SUBMITTED"), "eventId"));
         }

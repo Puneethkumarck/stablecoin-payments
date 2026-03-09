@@ -10,7 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.transfer")
 public record TransferMonitorConfig(
         int resubmitTimeoutS,
-        int maxAttempts
+        int maxAttempts,
+        int confirmingTimeoutS
 ) implements TransferMonitorProperties {
 
     public TransferMonitorConfig {
@@ -19,6 +20,9 @@ public record TransferMonitorConfig(
         }
         if (maxAttempts <= 0) {
             maxAttempts = 3;
+        }
+        if (confirmingTimeoutS <= 0) {
+            confirmingTimeoutS = 300;
         }
     }
 }

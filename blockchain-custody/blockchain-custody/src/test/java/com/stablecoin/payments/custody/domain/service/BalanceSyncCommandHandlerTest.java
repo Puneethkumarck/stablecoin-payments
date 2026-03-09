@@ -7,6 +7,7 @@ import com.stablecoin.payments.custody.domain.model.WalletBalance;
 import com.stablecoin.payments.custody.domain.model.WalletPurpose;
 import com.stablecoin.payments.custody.domain.model.WalletTier;
 import com.stablecoin.payments.custody.domain.port.ChainRpcProvider;
+import com.stablecoin.payments.custody.domain.port.TokenContractResolver;
 import com.stablecoin.payments.custody.domain.port.WalletBalanceRepository;
 import com.stablecoin.payments.custody.domain.port.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.stablecoin.payments.custody.fixtures.TestUtils.eqIgnoringTimestamps;
+import static com.stablecoin.payments.custody.fixtures.TransferMonitorFixtures.USDC_BASE_CONTRACT;
+import static com.stablecoin.payments.custody.fixtures.TransferMonitorFixtures.defaultTokenContractResolver;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -41,7 +44,8 @@ class BalanceSyncCommandHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new BalanceSyncCommandHandler(walletBalanceRepository, walletRepository, chainRpcProvider);
+        handler = new BalanceSyncCommandHandler(
+                walletBalanceRepository, walletRepository, chainRpcProvider, defaultTokenContractResolver());
     }
 
     @Nested
@@ -49,7 +53,7 @@ class BalanceSyncCommandHandlerTest {
     class SyncAllBalances {
 
         @Test
-        @DisplayName("should sync balance from RPC and save updated balance")
+        @DisplayName("should sync balance from RPC with resolved token contract and save updated balance")
         void shouldSyncBalanceFromRpcAndSave() {
             // given
             var balance = WalletBalance.initialize(
@@ -72,7 +76,7 @@ class BalanceSyncCommandHandlerTest {
                     .willReturn(Optional.of(wallet));
             given(chainRpcProvider.getLatestBlockNumber(CHAIN_BASE))
                     .willReturn(latestBlock);
-            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet.address(), null))
+            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet.address(), USDC_BASE_CONTRACT))
                     .willReturn(onChainBalance);
 
             var expectedUpdated = balance.syncFromChain(onChainBalance, latestBlock);
@@ -172,10 +176,10 @@ class BalanceSyncCommandHandlerTest {
             given(chainRpcProvider.getLatestBlockNumber(CHAIN_BASE))
                     .willReturn(latestBlock);
             // First balance RPC fails
-            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet1.address(), null))
+            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet1.address(), USDC_BASE_CONTRACT))
                     .willThrow(new RuntimeException("RPC timeout"));
             // Second balance succeeds
-            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet2.address(), null))
+            given(chainRpcProvider.getTokenBalance(CHAIN_BASE, wallet2.address(), USDC_BASE_CONTRACT))
                     .willReturn(onChainBalance2);
 
             var expectedUpdated2 = balance2.syncFromChain(onChainBalance2, latestBlock);

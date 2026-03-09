@@ -14,10 +14,11 @@ import com.stablecoin.payments.custody.domain.port.TransferEventPublisher;
 import com.stablecoin.payments.custody.domain.port.TransferLifecycleEventRepository;
 import com.stablecoin.payments.custody.domain.port.TransferMonitorProperties;
 import com.stablecoin.payments.custody.domain.port.WalletBalanceRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -32,14 +33,17 @@ import java.util.ArrayList;
  *   <li><b>SUBMITTED</b> — checks for receipt; if found, transitions to CONFIRMING;
  *       if stuck beyond timeout, transitions to RESUBMITTING</li>
  *   <li><b>CONFIRMING</b> — checks if confirmations meet the chain's minimum;
- *       if so, confirms and releases reserved balance</li>
- *   <li><b>RESUBMITTING</b> — re-signs and resubmits; fails if max attempts exceeded</li>
+ *       if so, confirms and releases reserved balance.
+ *       If receipt disappears (reorg) beyond grace window, marks for resubmission.</li>
+ *   <li><b>RESUBMITTING</b> — re-signs and resubmits; fails if max attempts exceeded.
+ *       Uses claim-before-submit pattern for crash safety.</li>
  * </ul>
+ * <p>
+ * Each transfer is processed in its own transaction to prevent partial commits
+ * and isolate failures between transfers.
  */
 @Slf4j
 @Service
-@Transactional
-@RequiredArgsConstructor
 public class TransferMonitorCommandHandler {
 
     private final ChainTransferRepository chainTransferRepository;
@@ -51,9 +55,35 @@ public class TransferMonitorCommandHandler {
     private final TransferMonitorProperties transferMonitorProperties;
     private final ChainConfirmationProperties chainConfirmationProperties;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
+
+    public TransferMonitorCommandHandler(
+            ChainTransferRepository chainTransferRepository,
+            WalletBalanceRepository walletBalanceRepository,
+            TransferLifecycleEventRepository lifecycleEventRepository,
+            ChainRpcProvider chainRpcProvider,
+            CustodyEngine custodyEngine,
+            TransferEventPublisher transferEventPublisher,
+            TransferMonitorProperties transferMonitorProperties,
+            ChainConfirmationProperties chainConfirmationProperties,
+            Clock clock,
+            PlatformTransactionManager transactionManager) {
+        this.chainTransferRepository = chainTransferRepository;
+        this.walletBalanceRepository = walletBalanceRepository;
+        this.lifecycleEventRepository = lifecycleEventRepository;
+        this.chainRpcProvider = chainRpcProvider;
+        this.custodyEngine = custodyEngine;
+        this.transferEventPublisher = transferEventPublisher;
+        this.transferMonitorProperties = transferMonitorProperties;
+        this.chainConfirmationProperties = chainConfirmationProperties;
+        this.clock = clock;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    }
 
     /**
      * Polls all in-flight transfers and processes them according to their current status.
+     * Each transfer is processed in its own transaction.
      */
     public void monitorPendingTransfers() {
         var submitted = chainTransferRepository.findByStatus(TransferStatus.SUBMITTED);
@@ -75,7 +105,7 @@ public class TransferMonitorCommandHandler {
 
         for (var transfer : allTransfers) {
             try {
-                processTransfer(transfer);
+                transactionTemplate.executeWithoutResult(status -> processTransfer(transfer));
             } catch (Exception e) {
                 log.error("Error monitoring transfer transferId={}: {}",
                         transfer.transferId(), e.getMessage(), e);
@@ -133,8 +163,19 @@ public class TransferMonitorCommandHandler {
         var receipt = chainRpcProvider.getTransactionReceipt(transfer.chainId(), transfer.txHash());
 
         if (receipt == null || receipt.txHash() == null) {
-            log.warn("Receipt disappeared for CONFIRMING transfer {} — possible reorg",
-                    transfer.transferId());
+            // Check if stuck beyond grace window — possible chain reorg
+            var graceThreshold = Instant.now(clock).minusSeconds(transferMonitorProperties.confirmingTimeoutS());
+            if (graceThreshold.isAfter(transfer.updatedAt())) {
+                var resubmitting = transfer.markForResubmission();
+                chainTransferRepository.save(resubmitting);
+                lifecycleEventRepository.save(
+                        TransferLifecycleEvent.record(resubmitting.transferId(), "RESUBMITTING"));
+                log.warn("Transfer {} receipt disappeared for >{}s — marking for resubmission (possible reorg)",
+                        transfer.transferId(), transferMonitorProperties.confirmingTimeoutS());
+            } else {
+                log.warn("Receipt disappeared for CONFIRMING transfer {} — possible reorg, waiting for grace window",
+                        transfer.transferId());
+            }
             return;
         }
 
@@ -178,6 +219,15 @@ public class TransferMonitorCommandHandler {
             return;
         }
 
+        // Step 1: Claim resubmission (increment attempt count) and persist BEFORE calling custody.
+        // If crash occurs after custody call but before final persist, next poll will see
+        // the incremented attempt count and re-attempt with the same nonce (idempotent on-chain).
+        var claimed = transfer.claimResubmission();
+        chainTransferRepository.save(claimed);
+        lifecycleEventRepository.save(
+                TransferLifecycleEvent.record(claimed.transferId(), "RESUBMISSION_CLAIMED"));
+
+        // Step 2: Call custody engine
         var signRequest = new SignRequest(
                 transfer.transferId(),
                 transfer.chainId(),
@@ -188,9 +238,10 @@ public class TransferMonitorCommandHandler {
                 transfer.nonce(),
                 null
         );
-
         var signResult = custodyEngine.signAndSubmit(signRequest);
-        var resubmitted = transfer.resubmit(signResult.txHash());
+
+        // Step 3: Complete resubmission with actual tx hash
+        var resubmitted = claimed.confirmResubmission(signResult.txHash());
         chainTransferRepository.save(resubmitted);
         lifecycleEventRepository.save(
                 TransferLifecycleEvent.record(resubmitted.transferId(), "SUBMITTED"));
