@@ -67,9 +67,10 @@ public class CollectionCommandHandler {
         // 2. Create new collection order in PENDING state
         var order = CollectionOrder.initiate(paymentId, correlationId, amount, paymentRail, psp, senderAccount);
 
-        // 3. Call PSP to initiate payment
+        // 3. Call PSP to initiate payment (collectionId as idempotency key for safe retries)
         var pspResult = pspGateway.initiatePayment(new PspPaymentRequest(
-                order.collectionId(), amount, paymentRail, senderAccount, psp.pspName()));
+                order.collectionId(), amount, paymentRail, senderAccount, psp.pspName(),
+                order.collectionId().toString()));
 
         // 4. Transition: PENDING -> PAYMENT_INITIATED -> AWAITING_CONFIRMATION
         order = order.initiatePayment();
