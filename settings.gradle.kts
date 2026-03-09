@@ -39,3 +39,7 @@ include("fiat-on-ramp:fiat-on-ramp")
 include("blockchain-custody:blockchain-custody-api")
 include("blockchain-custody:blockchain-custody-client")
 include("blockchain-custody:blockchain-custody")
+
+include("fiat-off-ramp:fiat-off-ramp-api")
+include("fiat-off-ramp:fiat-off-ramp-client")
+include("fiat-off-ramp:fiat-off-ramp")
