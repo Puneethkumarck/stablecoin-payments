@@ -51,4 +51,11 @@ public class WalletBalancePersistenceAdapter implements WalletBalanceRepository 
                 .map(mapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<WalletBalance> findAll() {
+        return jpa.findAll().stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }

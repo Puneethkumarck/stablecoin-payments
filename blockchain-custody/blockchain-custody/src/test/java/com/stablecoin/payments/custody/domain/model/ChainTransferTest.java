@@ -655,12 +655,11 @@ class ChainTransferTest {
                     Arguments.of(RESUBMITTING, CONFIRM, "RESUBMITTING + CONFIRM"),
                     Arguments.of(RESUBMITTING, RESUBMIT, "RESUBMITTING + RESUBMIT"),
 
-                    // CONFIRMING only allows CONFIRM and FAIL
+                    // CONFIRMING only allows CONFIRM, RESUBMIT (reorg recovery), and FAIL
                     Arguments.of(CONFIRMING, SELECT_CHAIN, "CONFIRMING + SELECT_CHAIN"),
                     Arguments.of(CONFIRMING, START_SIGNING, "CONFIRMING + START_SIGNING"),
                     Arguments.of(CONFIRMING, SUBMIT, "CONFIRMING + SUBMIT"),
                     Arguments.of(CONFIRMING, START_CONFIRMING, "CONFIRMING + START_CONFIRMING"),
-                    Arguments.of(CONFIRMING, RESUBMIT, "CONFIRMING + RESUBMIT"),
                     Arguments.of(CONFIRMING, CONFIRM_SUBMISSION, "CONFIRMING + CONFIRM_SUBMISSION")
             );
         }

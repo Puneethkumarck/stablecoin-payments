@@ -11,8 +11,10 @@ import com.stablecoin.payments.custody.domain.port.SignRequest;
 import com.stablecoin.payments.custody.domain.port.SignResult;
 import com.stablecoin.payments.custody.domain.port.TransactionReceipt;
 import com.stablecoin.payments.custody.domain.port.TransactionStatus;
+import com.stablecoin.payments.custody.domain.port.TransferEventPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -130,6 +132,20 @@ public class FallbackAdaptersConfig {
                 return BigDecimal.valueOf(500000);
             }
         };
+    }
+
+    /**
+     * Fallback event publisher for dev/test environments without Kafka outbox.
+     * Logs the event instead of publishing.
+     * Gated by property to prevent silent event loss in production.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "app.transfer.event-publisher.fallback-enabled",
+            havingValue = "true", matchIfMissing = true)
+    public TransferEventPublisher fallbackTransferEventPublisher() {
+        log.info("Using fallback TransferEventPublisher (log only)");
+        return event -> log.warn("[FALLBACK-EVENT] Published event: {}", event);
     }
 
     static class InMemoryNonceRepository implements NonceRepository {

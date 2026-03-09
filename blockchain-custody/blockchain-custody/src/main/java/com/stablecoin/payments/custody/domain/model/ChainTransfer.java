@@ -81,6 +81,7 @@ public record ChainTransfer(
 
                     // -- Resubmission path ------------------------------------------
                     new StateTransition<>(SUBMITTED, RESUBMIT, RESUBMITTING),
+                    new StateTransition<>(CONFIRMING, RESUBMIT, RESUBMITTING),
                     new StateTransition<>(RESUBMITTING, CONFIRM_SUBMISSION, SUBMITTED),
 
                     // -- Failure from multiple states --------------------------------
@@ -250,6 +251,41 @@ public record ChainTransfer(
                 .status(nextState)
                 .txHash(newTxHash)
                 .attemptCount(attemptCount + 1)
+                .updatedAt(Instant.now())
+                .build();
+    }
+
+    /**
+     * Claims a resubmission attempt by incrementing the attempt counter.
+     * Must be persisted BEFORE calling the custody engine to ensure crash safety.
+     * Stays in RESUBMITTING state.
+     */
+    public ChainTransfer claimResubmission() {
+        assertNotTerminal();
+        if (status != RESUBMITTING) {
+            throw new IllegalStateException(
+                    "Can only claim resubmission in RESUBMITTING state, current: " + status);
+        }
+        return toBuilder()
+                .attemptCount(attemptCount + 1)
+                .updatedAt(Instant.now())
+                .build();
+    }
+
+    /**
+     * Completes a previously claimed resubmission with the new transaction hash.
+     * Transitions RESUBMITTING -> SUBMITTED without incrementing attempt count
+     * (already incremented by {@link #claimResubmission()}).
+     */
+    public ChainTransfer confirmResubmission(String newTxHash) {
+        assertNotTerminal();
+        if (newTxHash == null || newTxHash.isBlank()) {
+            throw new IllegalArgumentException("Transaction hash is required for resubmission");
+        }
+        var nextState = STATE_MACHINE.transition(status, CONFIRM_SUBMISSION);
+        return toBuilder()
+                .status(nextState)
+                .txHash(newTxHash)
                 .updatedAt(Instant.now())
                 .build();
     }

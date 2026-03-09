@@ -16,4 +16,6 @@ public interface WalletBalanceRepository {
     Optional<WalletBalance> findByWalletIdAndStablecoinForUpdate(UUID walletId, StablecoinTicker stablecoin);
 
     List<WalletBalance> findByWalletId(UUID walletId);
+
+    List<WalletBalance> findAll();
 }

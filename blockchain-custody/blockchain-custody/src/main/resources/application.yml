@@ -151,14 +151,20 @@ app:
       min-confirmations: 1
       avg-finality-s: 12
       rpc-url: ${BASE_RPC_URL:https://base-sepolia.g.alchemy.com/v2/demo}
+      token-contracts:
+        USDC: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
     ethereum:
       min-confirmations: 32
       avg-finality-s: 300
       rpc-url: ${ETH_RPC_URL:https://eth-sepolia.g.alchemy.com/v2/demo}
+      token-contracts:
+        USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
     solana:
       min-confirmations: 1
       avg-finality-s: 5
       rpc-url: ${SOL_RPC_URL:https://api.devnet.solana.com}
+      token-contracts:
+        USDC: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
   chain-selection:
     cost-weight: 0.4
     speed-weight: 0.35
@@ -166,6 +172,7 @@ app:
   transfer:
     resubmit-timeout-s: 120
     max-attempts: 3
+    confirming-timeout-s: 300
   balance:
     low-alert-threshold-usd: 50000
 
