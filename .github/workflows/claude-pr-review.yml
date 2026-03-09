@@ -11,42 +11,103 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  review:
+  review-and-fix:
     runs-on: ubuntu-latest
-    # Skip bot PRs to prevent loops
-    if: github.event.pull_request.user.login != 'github-actions[bot]'
-    timeout-minutes: 15
+    # Skip bot commits to prevent loops
+    if: >
+      github.event.pull_request.user.login != 'github-actions[bot]' &&
+      !contains(github.event.pull_request.title, '[autofix]')
+    timeout-minutes: 30
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
       id-token: write
       actions: read
     steps:
-      - name: Checkout repository
+      - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Run Claude PR Review
+      - name: Check for bot commit (loop prevention)
+        id: loop-check
+        run: |
+          LAST_AUTHOR=$(git log -1 --format='%an')
+          if [[ "$LAST_AUTHOR" == *"[bot]"* || "$LAST_AUTHOR" == "github-actions"* || "$LAST_AUTHOR" == "Claude"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Java
+        if: steps.loop-check.outputs.skip != 'true'
+        uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: "temurin"
+
+      - name: Setup Gradle
+        if: steps.loop-check.outputs.skip != 'true'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+          gradle-home-cache-cleanup: true
+
+      - name: Claude Review and Autofix
+        if: steps.loop-check.outputs.skip != 'true'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--max-turns 10"
-
           prompt: |
-            Review PR #${{ github.event.pull_request.number }} for code quality.
+            Review and fix PR #${{ github.event.pull_request.number }}.
 
-            Focus on these project-specific patterns (from CLAUDE.md):
+            ## Step 1 — Review for project-specific patterns
+
+            Check the diff (`git diff main...HEAD`) for these CLAUDE.md violations:
             1. Single-assert test pattern — no scattered field asserts
-            2. No generic Mockito matchers (any(), eq()) — use actual values
-            3. Controller thickness — controllers must be thin, call CommandHandler directly
+            2. No generic Mockito matchers (any(), eq()) — must use actual values
+            3. Controller thickness — must be thin, call CommandHandler directly
             4. Test fixtures in testFixtures source set, not private methods in tests
             5. No wildcard imports
             6. Correct Jackson 3 imports (tools.jackson, not com.fasterxml.jackson)
             7. Outbox pattern correctness (MANDATORY propagation)
             8. Handler tests use interaction-verification only
 
-            Post a single review comment with findings grouped by severity.
-            If everything looks good, post a short approval comment.
+            ## Step 2 — Auto-fix critical and major violations
+
+            For each critical/major finding:
+            1. Read the full source file for context
+            2. Apply the minimal fix following CLAUDE.md standards
+            3. Do NOT make unrelated changes
+
+            Skip minor/style suggestions — only fix things that would fail code review.
+
+            ## Step 3 — Validate fixes
+
+            If you made fixes:
+            1. Run `./gradlew spotlessApply` for affected services
+            2. Run `./gradlew :<service>:<service>:test` for affected services
+            3. Stage changed files, commit: `fix: auto-fix Claude review findings`
+            4. Push to the PR branch
+
+            ## Step 4 — Post summary comment
+
+            Use `gh pr comment` with:
+            ```
+            ## Claude PR Review
+
+            ### Fixed
+            - [file:line — what was fixed]
+
+            ### Passed
+            - [patterns that were correct]
+
+            ### Skipped (manual fix needed)
+            - [anything too risky to auto-fix]
+            ```
+
+            If no issues found, post a short "All project patterns look good" comment.
             Do NOT approve or request changes — comment only.
