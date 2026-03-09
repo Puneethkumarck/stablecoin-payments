@@ -1,5 +1,6 @@
 package com.stablecoin.payments.custody.fixtures;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public final class TestUtils {
         try {
             assertThat(original)
                     .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                     .ignoringFieldsOfTypes(ZonedDateTime.class, LocalDateTime.class, LocalDate.class, Instant.class)
                     .ignoringFields(fieldsToIgnore)
                     .isEqualTo(expected);
