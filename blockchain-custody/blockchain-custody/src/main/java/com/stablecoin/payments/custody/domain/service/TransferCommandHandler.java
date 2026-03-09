@@ -12,6 +12,7 @@ import com.stablecoin.payments.custody.domain.model.TransferLifecycleEvent;
 import com.stablecoin.payments.custody.domain.model.TransferParticipant;
 import com.stablecoin.payments.custody.domain.model.TransferResult;
 import com.stablecoin.payments.custody.domain.model.TransferType;
+import com.stablecoin.payments.custody.domain.model.Wallet;
 import com.stablecoin.payments.custody.domain.model.WalletBalance;
 import com.stablecoin.payments.custody.domain.model.WalletPurpose;
 import com.stablecoin.payments.custody.domain.port.ChainTransferRepository;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -203,7 +205,7 @@ public class TransferCommandHandler {
      * Wrapper for wallet + balance list used by the controller.
      */
     public record WalletBalanceDetails(
-            com.stablecoin.payments.custody.domain.model.Wallet wallet,
-            java.util.List<WalletBalance> balances
+            Wallet wallet,
+            List<WalletBalance> balances
     ) {}
 }

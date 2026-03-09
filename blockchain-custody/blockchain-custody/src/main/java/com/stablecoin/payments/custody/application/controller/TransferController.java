@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.ACCEPTED;
@@ -97,7 +98,7 @@ public class TransferController {
 
         var latestUpdate = details.balances().stream()
                 .map(b -> b.updatedAt())
-                .max(java.time.Instant::compareTo)
+                .max(Instant::compareTo)
                 .orElse(wallet.createdAt());
 
         return new WalletBalanceResponse(

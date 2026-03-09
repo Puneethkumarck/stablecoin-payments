@@ -5,15 +5,12 @@ import com.stablecoin.payments.custody.domain.exception.CustodySigningException;
 import com.stablecoin.payments.custody.domain.exception.InsufficientBalanceException;
 import com.stablecoin.payments.custody.domain.exception.TransferNotFoundException;
 import com.stablecoin.payments.custody.domain.exception.WalletNotFoundException;
-import com.stablecoin.payments.custody.domain.model.ChainCandidate;
-import com.stablecoin.payments.custody.domain.model.ChainSelectionResult;
 import com.stablecoin.payments.custody.domain.model.ChainTransfer;
 import com.stablecoin.payments.custody.domain.model.NonceAssignment;
 import com.stablecoin.payments.custody.domain.model.ParticipantType;
 import com.stablecoin.payments.custody.domain.model.TransferLifecycleEvent;
 import com.stablecoin.payments.custody.domain.model.TransferParticipant;
 import com.stablecoin.payments.custody.domain.model.TransferResult;
-import com.stablecoin.payments.custody.domain.model.TransferStatus;
 import com.stablecoin.payments.custody.domain.model.TransferType;
 import com.stablecoin.payments.custody.domain.model.WalletPurpose;
 import com.stablecoin.payments.custody.domain.port.ChainTransferRepository;
@@ -39,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.stablecoin.payments.custody.fixtures.ChainSelectionFixtures.aBaseSelectionResult;
 import static com.stablecoin.payments.custody.fixtures.ChainTransferFixtures.AMOUNT;
 import static com.stablecoin.payments.custody.fixtures.ChainTransferFixtures.CHAIN_BASE;
 import static com.stablecoin.payments.custody.fixtures.ChainTransferFixtures.CORRELATION_ID;
@@ -82,19 +80,6 @@ class TransferCommandHandlerTest {
     @InjectMocks
     private TransferCommandHandler handler;
 
-    private static final List<ChainCandidate> BASE_CANDIDATES = List.of(
-            ChainCandidate.builder()
-                    .chainId(CHAIN_BASE).feeUsd(0.01).finalitySeconds(12)
-                    .healthScore(1.0).score(50.0).selected(true).build());
-
-    private ChainSelectionResult aSelectionResult() {
-        return ChainSelectionResult.builder()
-                .selectedChain(CHAIN_BASE)
-                .candidates(BASE_CANDIDATES)
-                .transferId(UUID.randomUUID())
-                .build();
-    }
-
     @Nested
     @DisplayName("initiateTransfer")
     class InitiateTransfer {
@@ -111,7 +96,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, "base"), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of(wallet));
             given(walletBalanceRepository.findByWalletIdAndStablecoinForUpdate(wallet.walletId(), USDC))
@@ -129,13 +114,17 @@ class TransferCommandHandlerTest {
                     "transferId")))
                     .willAnswer(inv -> inv.getArgument(0));
 
-            var result = handler.initiateTransfer(
+            // when
+            handler.initiateTransfer(
                     PAYMENT_ID, CORRELATION_ID, TransferType.FORWARD, null,
                     USDC, AMOUNT, TO_ADDRESS, "base");
 
-            assertThat(result.created()).isTrue();
-            assertThat(result.transfer().status()).isEqualTo(TransferStatus.SUBMITTED);
-
+            // then
+            then(chainTransferRepository).should().save(eqIgnoring(
+                    ChainTransfer.initiate(PAYMENT_ID, CORRELATION_ID, TransferType.FORWARD, null,
+                                    USDC, AMOUNT, wallet.walletId(), TO_ADDRESS, wallet.address())
+                            .selectChain(CHAIN_BASE).startSigning(42L).submit(TX_HASH),
+                    "transferId"));
             then(walletBalanceRepository).should().save(eqIgnoringTimestamps(balance.reserve(AMOUNT)));
             then(transferEventPublisher).should().publish(eqIgnoring(
                     new TransferSubmittedEvent(
@@ -177,7 +166,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, null), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of(wallet));
             given(walletBalanceRepository.findByWalletIdAndStablecoinForUpdate(wallet.walletId(), USDC))
@@ -196,7 +185,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, null), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of());
 
@@ -217,7 +206,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, null), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of(wallet));
             given(walletBalanceRepository.findByWalletIdAndStablecoinForUpdate(wallet.walletId(), USDC))
@@ -258,7 +247,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, null), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of(wallet));
             given(walletBalanceRepository.findByWalletIdAndStablecoinForUpdate(wallet.walletId(), USDC))
@@ -302,7 +291,7 @@ class TransferCommandHandlerTest {
                     .willReturn(Optional.empty());
             given(chainSelectionEngine.selectChain(eqIgnoring(
                     new ChainSelectionRequest(UUID.randomUUID(), USDC, AMOUNT, null), "transferId")))
-                    .willReturn(aSelectionResult());
+                    .willReturn(aBaseSelectionResult());
             given(walletRepository.findByChainIdAndPurpose(CHAIN_BASE, WalletPurpose.ON_RAMP))
                     .willReturn(List.of(wallet));
             given(walletBalanceRepository.findByWalletIdAndStablecoinForUpdate(wallet.walletId(), USDC))
@@ -384,13 +373,15 @@ class TransferCommandHandlerTest {
             given(walletBalanceRepository.findByWalletId(wallet.walletId()))
                     .willReturn(List.of(balance));
 
+            // when
             var result = handler.getWalletBalance(wallet.walletId());
 
-            assertThat(result.wallet())
+            // then
+            var expected = new TransferCommandHandler.WalletBalanceDetails(wallet, List.of(balance));
+            assertThat(result)
                     .usingRecursiveComparison()
-                    .isEqualTo(wallet);
-            assertThat(result.balances())
-                    .hasSize(1);
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
         }
 
         @Test

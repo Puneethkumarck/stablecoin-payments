@@ -1,7 +1,9 @@
 package com.stablecoin.payments.custody.fixtures;
 
+import com.stablecoin.payments.custody.domain.model.ChainCandidate;
 import com.stablecoin.payments.custody.domain.model.ChainConfig;
 import com.stablecoin.payments.custody.domain.model.ChainId;
+import com.stablecoin.payments.custody.domain.model.ChainSelectionResult;
 import com.stablecoin.payments.custody.domain.model.ChainSelectionWeights;
 import com.stablecoin.payments.custody.domain.model.StablecoinTicker;
 import com.stablecoin.payments.custody.domain.service.ChainSelectionEngine.ChainSelectionRequest;
@@ -78,5 +80,18 @@ public final class ChainSelectionFixtures {
      */
     public static ChainSelectionRequest aSelectionRequestWithAmount(BigDecimal amount) {
         return new ChainSelectionRequest(TRANSFER_ID, USDC, amount, null);
+    }
+
+    public static final List<ChainCandidate> BASE_CANDIDATES = List.of(
+            ChainCandidate.builder()
+                    .chainId(CHAIN_BASE).feeUsd(0.01).finalitySeconds(12)
+                    .healthScore(1.0).score(50.0).selected(true).build());
+
+    public static ChainSelectionResult aBaseSelectionResult() {
+        return ChainSelectionResult.builder()
+                .selectedChain(CHAIN_BASE)
+                .candidates(BASE_CANDIDATES)
+                .transferId(UUID.randomUUID())
+                .build();
     }
 }

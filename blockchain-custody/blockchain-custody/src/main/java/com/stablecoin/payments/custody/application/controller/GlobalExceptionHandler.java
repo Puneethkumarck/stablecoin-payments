@@ -64,7 +64,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ChainUnavailableException.class)
     public ApiError handleChainUnavailable(ChainUnavailableException ex) {
         log.warn("Chain unavailable: {}", ex.getMessage());
-        return ApiError.of("BC-1002", SERVICE_UNAVAILABLE.getReasonPhrase(), ex.getMessage());
+        return ApiError.of(ChainUnavailableException.ERROR_CODE,
+                SERVICE_UNAVAILABLE.getReasonPhrase(), ex.getMessage());
     }
 
     @ResponseStatus(NOT_FOUND)
