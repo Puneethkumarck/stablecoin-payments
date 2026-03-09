@@ -7,7 +7,6 @@ import com.stablecoin.payments.custody.domain.model.WalletBalance;
 import com.stablecoin.payments.custody.domain.model.WalletPurpose;
 import com.stablecoin.payments.custody.domain.model.WalletTier;
 import com.stablecoin.payments.custody.domain.port.ChainRpcProvider;
-import com.stablecoin.payments.custody.domain.port.TokenContractResolver;
 import com.stablecoin.payments.custody.domain.port.WalletBalanceRepository;
 import com.stablecoin.payments.custody.domain.port.WalletRepository;
 import org.junit.jupiter.api.BeforeEach;
