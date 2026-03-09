@@ -100,7 +100,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
             return new ChainRpcProvider() {
                 @Override
                 public TransactionReceipt getTransactionReceipt(ChainId chainId, String txHash) {
-                    return RECEIPT_MAP.get(txHash);
+                    return RECEIPT_MAP.get(chainId.value() + ":" + txHash);
                 }
 
                 @Override
@@ -111,7 +111,8 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
                 @Override
                 public BigDecimal getTokenBalance(ChainId chainId, String address, String tokenContract) {
-                    return TOKEN_BALANCE_MAP.getOrDefault(address, new BigDecimal("500000"));
+                    return TOKEN_BALANCE_MAP.getOrDefault(
+                            chainId.value() + ":" + address, new BigDecimal("500000"));
                 }
             };
         }
@@ -290,14 +291,24 @@ class TransferLifecycleTest extends AbstractBusinessTest {
         return extractField(result.getResponse().getContentAsString(), "txHash");
     }
 
-    private void configureConfirmedReceipt(String txHash, long blockNumber) {
-        RECEIPT_MAP.put(txHash, new TransactionReceipt(
+    private void configureConfirmedReceipt(String chainId, String txHash, long blockNumber) {
+        RECEIPT_MAP.put(chainId + ":" + txHash, new TransactionReceipt(
                 txHash, blockNumber, true,
                 new BigDecimal("21000"), new BigDecimal("25"), 0));
     }
 
     private void setLatestBlock(String chainId, long blockNumber) {
         BLOCK_NUMBER_MAP.computeIfAbsent(chainId, k -> new AtomicLong(0)).set(blockNumber);
+    }
+
+    private void assertOutboxContainsEvents(UUID paymentId, String... expectedEventTypes) {
+        var outboxTypes = jdbcTemplate.queryForList(
+                "SELECT record_type FROM custody_outbox_record WHERE record_key = ? ORDER BY id",
+                String.class, paymentId.toString());
+        assertThat(outboxTypes).hasSize(expectedEventTypes.length);
+        for (var expectedType : expectedEventTypes) {
+            assertThat(outboxTypes).anyMatch(type -> type.contains(expectedType));
+        }
     }
 
     // ── Scenario 1: Happy Path Base ─────────────────────────────────────
@@ -329,7 +340,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // 3. Configure receipt at block 100, latest block 101 (1 confirmation >= 1 for Base)
             var txHash = getTxHash(transferId);
-            configureConfirmedReceipt(txHash, 100L);
+            configureConfirmedReceipt("base", txHash, 100L);
             setLatestBlock("base", 101L);
 
             // 4. Run monitor -> CONFIRMED
@@ -343,10 +354,8 @@ class TransferLifecycleTest extends AbstractBusinessTest {
                     .andExpect(jsonPath("$.confirmedAt", notNullValue()));
 
             // 6. Verify outbox events (submitted + confirmed)
-            var outboxCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM custody_outbox_record WHERE record_key = ?",
-                    Integer.class, paymentId.toString());
-            assertThat(outboxCount).isGreaterThanOrEqualTo(2);
+            assertOutboxContainsEvents(paymentId,
+                    "TransferSubmittedEvent", "TransferConfirmedEvent");
         }
     }
 
@@ -373,7 +382,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // 3. Receipt at block 500; latest = 520 (only 20 confirmations, need 32)
             var txHash = getTxHash(transferId);
-            configureConfirmedReceipt(txHash, 500L);
+            configureConfirmedReceipt("ethereum", txHash, 500L);
             setLatestBlock("ethereum", 520L);
 
             // 4. Monitor -> CONFIRMING (not yet CONFIRMED)
@@ -394,11 +403,9 @@ class TransferLifecycleTest extends AbstractBusinessTest {
                     .andExpect(jsonPath("$.status", is("CONFIRMED")))
                     .andExpect(jsonPath("$.blockNumber", is("500")));
 
-            // 7. Verify outbox
-            var outboxCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM custody_outbox_record WHERE record_key = ?",
-                    Integer.class, paymentId.toString());
-            assertThat(outboxCount).isGreaterThanOrEqualTo(2);
+            // 7. Verify outbox events (submitted + confirmed)
+            assertOutboxContainsEvents(paymentId,
+                    "TransferSubmittedEvent", "TransferConfirmedEvent");
         }
     }
 
@@ -425,7 +432,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // 3. Receipt at block 800; latest = 801 (1 confirmation for Solana)
             var txHash = getTxHash(transferId);
-            configureConfirmedReceipt(txHash, 800L);
+            configureConfirmedReceipt("solana", txHash, 800L);
             setLatestBlock("solana", 801L);
 
             // 4. Monitor -> CONFIRMED
@@ -436,11 +443,9 @@ class TransferLifecycleTest extends AbstractBusinessTest {
                     .andExpect(jsonPath("$.status", is("CONFIRMED")))
                     .andExpect(jsonPath("$.blockNumber", is("800")));
 
-            // 5. Verify outbox
-            var outboxCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM custody_outbox_record WHERE record_key = ?",
-                    Integer.class, paymentId.toString());
-            assertThat(outboxCount).isGreaterThanOrEqualTo(2);
+            // 5. Verify outbox events (submitted + confirmed)
+            assertOutboxContainsEvents(paymentId,
+                    "TransferSubmittedEvent", "TransferConfirmedEvent");
         }
     }
 
@@ -495,7 +500,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
             // 1. Submit and confirm a FORWARD transfer
             var forwardTransferId = createForwardTransfer(paymentId, correlationId, "base");
             var forwardTxHash = getTxHash(forwardTransferId);
-            configureConfirmedReceipt(forwardTxHash, 100L);
+            configureConfirmedReceipt("base", forwardTxHash, 100L);
             setLatestBlock("base", 101L);
             transferMonitorCommandHandler.monitorPendingTransfers();
 
@@ -523,7 +528,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // 4. Confirm the RETURN transfer
             var returnTxHash = getTxHash(returnTransferId);
-            configureConfirmedReceipt(returnTxHash, 200L);
+            configureConfirmedReceipt("base", returnTxHash, 200L);
             setLatestBlock("base", 201L);
             transferMonitorCommandHandler.monitorPendingTransfers();
 
@@ -532,11 +537,9 @@ class TransferLifecycleTest extends AbstractBusinessTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status", is("CONFIRMED")));
 
-            // 6. Verify outbox events for return
-            var outboxCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM custody_outbox_record WHERE record_key = ?",
-                    Integer.class, returnPaymentId.toString());
-            assertThat(outboxCount).isGreaterThanOrEqualTo(2);
+            // 6. Verify outbox events for return (submitted + confirmed)
+            assertOutboxContainsEvents(returnPaymentId,
+                    "TransferSubmittedEvent", "TransferConfirmedEvent");
         }
     }
 
@@ -618,6 +621,9 @@ class TransferLifecycleTest extends AbstractBusinessTest {
             // 1. Submit -> SUBMITTED
             var transferId = createForwardTransfer(paymentId, correlationId, "base");
 
+            // Capture original txHash before making it stuck
+            var originalTxHash = getTxHash(transferId);
+
             mockMvc.perform(get("/v1/transfers/{transferId}", transferId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status", is("SUBMITTED")));
@@ -636,9 +642,10 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // After resubmission: transfer is SUBMITTED with a new txHash
             var newTxHash = getTxHash(transferId);
+            assertThat(newTxHash).isNotEqualTo(originalTxHash);
 
             // 5. Configure receipt for new txHash
-            configureConfirmedReceipt(newTxHash, 300L);
+            configureConfirmedReceipt("base", newTxHash, 300L);
             setLatestBlock("base", 301L);
 
             // 6. Monitor #3: processes SUBMITTED -> finds receipt -> CONFIRMED
@@ -684,7 +691,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
             // 3. Submit and confirm a transfer
             var transferId = createForwardTransfer(paymentId, correlationId, "base");
             var txHash = getTxHash(transferId);
-            configureConfirmedReceipt(txHash, 100L);
+            configureConfirmedReceipt("base", txHash, 100L);
             setLatestBlock("base", 101L);
             transferMonitorCommandHandler.monitorPendingTransfers();
 
@@ -696,7 +703,7 @@ class TransferLifecycleTest extends AbstractBusinessTest {
 
             // 5. Configure on-chain balance as reduced after transfer
             var expectedOnChainBalance = initialAvailable.subtract(new BigDecimal("1000.00000000"));
-            TOKEN_BALANCE_MAP.put(walletAddress, expectedOnChainBalance);
+            TOKEN_BALANCE_MAP.put("base:" + walletAddress, expectedOnChainBalance);
             setLatestBlock("base", 102L);
 
             // 6. Run balance sync
