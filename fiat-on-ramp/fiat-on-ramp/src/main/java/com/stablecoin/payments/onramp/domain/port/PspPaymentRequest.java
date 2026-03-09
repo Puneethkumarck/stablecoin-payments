@@ -11,6 +11,7 @@ public record PspPaymentRequest(
         Money amount,
         PaymentRail paymentRail,
         BankAccount senderAccount,
-        String pspName
+        String pspName,
+        String idempotencyKey
 ) {
 }

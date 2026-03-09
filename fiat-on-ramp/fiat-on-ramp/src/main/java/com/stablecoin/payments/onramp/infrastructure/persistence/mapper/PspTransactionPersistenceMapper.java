@@ -23,7 +23,7 @@ public interface PspTransactionPersistenceMapper {
                 .status(txn.status())
                 .amount(txn.amount() != null ? txn.amount().amount() : null)
                 .currency(txn.amount() != null ? txn.amount().currency() : null)
-                .rawResponse(txn.rawResponse())
+                .rawResponse(txn.rawResponse() != null ? txn.rawResponse() : "{}")
                 .receivedAt(txn.receivedAt())
                 .build();
     }

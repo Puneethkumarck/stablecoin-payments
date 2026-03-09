@@ -76,7 +76,8 @@ class CollectionCommandHandlerTest {
                     .awaitConfirmation(PSP_REFERENCE);
 
             var expectedPspPaymentRequest = new PspPaymentRequest(
-                    expectedOrder.collectionId(), amount, paymentRail, senderAccount, psp.pspName());
+                    expectedOrder.collectionId(), amount, paymentRail, senderAccount, psp.pspName(),
+                    expectedOrder.collectionId().toString());
 
             var expectedPspTransaction = PspTransaction.create(
                     expectedOrder.collectionId(),
@@ -99,7 +100,7 @@ class CollectionCommandHandlerTest {
                     Instant.now());
 
             given(collectionOrderRepository.findByPaymentId(PAYMENT_ID)).willReturn(Optional.empty());
-            given(pspGateway.initiatePayment(eqIgnoring(expectedPspPaymentRequest, "collectionId")))
+            given(pspGateway.initiatePayment(eqIgnoring(expectedPspPaymentRequest, "collectionId", "idempotencyKey")))
                     .willReturn(pspResult);
             given(collectionOrderRepository.save(eqIgnoring(expectedOrder, "collectionId")))
                     .willReturn(expectedOrder);

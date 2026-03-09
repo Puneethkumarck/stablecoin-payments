@@ -1,5 +1,6 @@
 package com.stablecoin.payments.onramp.fixtures;
 
+import com.stablecoin.payments.onramp.api.CollectionRequest;
 import com.stablecoin.payments.onramp.domain.model.AccountType;
 import com.stablecoin.payments.onramp.domain.model.BankAccount;
 import com.stablecoin.payments.onramp.domain.model.CollectionOrder;
@@ -102,5 +103,25 @@ public final class CollectionOrderFixtures {
 
     public static CollectionOrder aRefundedOrder() {
         return aRefundProcessingOrder().completeRefund();
+    }
+
+    // -- API Request Factories --------------------------------------------
+
+    public static CollectionRequest aCollectionRequest() {
+        return new CollectionRequest(
+                PAYMENT_ID,
+                CORRELATION_ID,
+                new BigDecimal("1000.00"),
+                "USD",
+                "SEPA",
+                "DE",
+                "EUR",
+                "stripe_001",
+                "Stripe",
+                "sha256_abc123def456",
+                "DEUTDEFF",
+                "IBAN",
+                "DE"
+        );
     }
 }

@@ -58,9 +58,13 @@ public class StripePspAdapter implements PspGateway {
         formData.add("confirm", "true");
         formData.add("metadata[collection_id]", request.collectionId().toString());
 
-        var response = restClient.post()
+        var requestSpec = restClient.post()
                 .uri("/v1/payment_intents")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED);
+        if (request.idempotencyKey() != null) {
+            requestSpec.header("Idempotency-Key", request.idempotencyKey());
+        }
+        var response = requestSpec
                 .body(formData)
                 .retrieve()
                 .body(StripePaymentIntentResponse.class);

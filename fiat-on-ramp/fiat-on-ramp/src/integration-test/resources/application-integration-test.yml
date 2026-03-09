@@ -29,6 +29,8 @@ server:
 app:
   security:
     enabled: false
+  psp:
+    provider: dev
 
 logging:
   level:

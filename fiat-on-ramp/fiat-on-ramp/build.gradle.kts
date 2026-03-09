@@ -112,6 +112,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     // Test Fixtures
+    testFixturesImplementation(project(":fiat-on-ramp:fiat-on-ramp-api"))
     testFixturesImplementation("org.assertj:assertj-core")
     testFixturesImplementation("org.mockito:mockito-core")
 

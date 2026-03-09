@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
@@ -60,7 +61,8 @@ class StripePspAdapterTest {
                 new Money(new BigDecimal("250.00"), "USD"),
                 new PaymentRail(PaymentRailType.ACH, "US", "USD"),
                 new BankAccount("hash123", "021000021", AccountType.ACH_ROUTING, "US"),
-                "stripe"
+                "stripe",
+                COLLECTION_ID.toString()
         );
     }
 
@@ -166,6 +168,7 @@ class StripePspAdapterTest {
             adapter.initiatePayment(aPaymentRequest());
 
             wireMock.verify(postRequestedFor(urlEqualTo("/v1/payment_intents"))
+                    .withHeader("Idempotency-Key", equalTo(COLLECTION_ID.toString()))
                     .withRequestBody(containing("amount=25000"))
                     .withRequestBody(containing("currency=usd"))
                     .withRequestBody(containing("payment_method_types%5B%5D=us_bank_account"))
