@@ -75,7 +75,10 @@ public class CollectionCommandHandler {
         order = order.initiatePayment();
         order = order.awaitConfirmation(pspResult.pspReference());
 
-        // 5. Record PspTransaction
+        // 5. Save collection order first (PspTransaction FK depends on it)
+        order = collectionOrderRepository.save(order);
+
+        // 6. Record PspTransaction
         var pspTransaction = PspTransaction.create(
                 order.collectionId(),
                 psp.pspName(),
@@ -87,7 +90,7 @@ public class CollectionCommandHandler {
                 null);
         pspTransactionRepository.save(pspTransaction);
 
-        // 6. Publish CollectionInitiatedEvent via outbox
+        // 7. Publish CollectionInitiatedEvent via outbox
         eventPublisher.publish(new CollectionInitiatedEvent(
                 order.collectionId(),
                 paymentId,
@@ -97,9 +100,6 @@ public class CollectionCommandHandler {
                 paymentRail.rail().name(),
                 psp.pspName(),
                 Instant.now()));
-
-        // 7. Save and return
-        order = collectionOrderRepository.save(order);
 
         log.info("Collection initiated collectionId={} paymentId={} pspRef={}",
                 order.collectionId(), paymentId, pspResult.pspReference());

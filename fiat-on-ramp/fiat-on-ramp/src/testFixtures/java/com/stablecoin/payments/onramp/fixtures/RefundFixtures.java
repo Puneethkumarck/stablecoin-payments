@@ -1,5 +1,6 @@
 package com.stablecoin.payments.onramp.fixtures;
 
+import com.stablecoin.payments.onramp.api.RefundRequest;
 import com.stablecoin.payments.onramp.domain.model.Money;
 import com.stablecoin.payments.onramp.domain.model.Refund;
 
@@ -44,5 +45,11 @@ public final class RefundFixtures {
 
     public static Refund aFailedRefund() {
         return aProcessingRefund().fail(FAILURE_REASON);
+    }
+
+    // -- API Request Factories --------------------------------------------
+
+    public static RefundRequest aRefundRequest() {
+        return new RefundRequest(new BigDecimal("1000.00"), "USD", REFUND_REASON);
     }
 }

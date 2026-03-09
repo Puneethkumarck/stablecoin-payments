@@ -8,6 +8,8 @@ import com.stablecoin.payments.onramp.domain.model.PaymentRail;
 import com.stablecoin.payments.onramp.domain.model.PaymentRailType;
 import com.stablecoin.payments.onramp.domain.model.PspIdentifier;
 
+import com.stablecoin.payments.onramp.api.CollectionRequest;
+
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -102,5 +104,25 @@ public final class CollectionOrderFixtures {
 
     public static CollectionOrder aRefundedOrder() {
         return aRefundProcessingOrder().completeRefund();
+    }
+
+    // -- API Request Factories --------------------------------------------
+
+    public static CollectionRequest aCollectionRequest() {
+        return new CollectionRequest(
+                PAYMENT_ID,
+                CORRELATION_ID,
+                new BigDecimal("1000.00"),
+                "USD",
+                "SEPA",
+                "DE",
+                "EUR",
+                "stripe_001",
+                "Stripe",
+                "sha256_abc123def456",
+                "DEUTDEFF",
+                "IBAN",
+                "DE"
+        );
     }
 }
