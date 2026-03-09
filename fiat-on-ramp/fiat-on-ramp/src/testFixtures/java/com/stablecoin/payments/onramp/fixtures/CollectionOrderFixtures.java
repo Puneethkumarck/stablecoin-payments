@@ -9,8 +9,6 @@ import com.stablecoin.payments.onramp.domain.model.PaymentRail;
 import com.stablecoin.payments.onramp.domain.model.PaymentRailType;
 import com.stablecoin.payments.onramp.domain.model.PspIdentifier;
 
-import com.stablecoin.payments.onramp.api.CollectionRequest;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
