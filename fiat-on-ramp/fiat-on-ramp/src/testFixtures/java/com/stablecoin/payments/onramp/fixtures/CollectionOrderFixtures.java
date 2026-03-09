@@ -1,5 +1,6 @@
 package com.stablecoin.payments.onramp.fixtures;
 
+import com.stablecoin.payments.onramp.api.CollectionRequest;
 import com.stablecoin.payments.onramp.domain.model.AccountType;
 import com.stablecoin.payments.onramp.domain.model.BankAccount;
 import com.stablecoin.payments.onramp.domain.model.CollectionOrder;
@@ -7,8 +8,6 @@ import com.stablecoin.payments.onramp.domain.model.Money;
 import com.stablecoin.payments.onramp.domain.model.PaymentRail;
 import com.stablecoin.payments.onramp.domain.model.PaymentRailType;
 import com.stablecoin.payments.onramp.domain.model.PspIdentifier;
-
-import com.stablecoin.payments.onramp.api.CollectionRequest;
 
 import java.math.BigDecimal;
 import java.util.UUID;
