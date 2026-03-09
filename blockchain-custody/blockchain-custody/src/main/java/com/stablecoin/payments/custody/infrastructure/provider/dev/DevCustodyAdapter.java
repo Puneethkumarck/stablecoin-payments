@@ -81,10 +81,20 @@ public class DevCustodyAdapter implements CustodyEngine {
 
     SignResult signAndSubmitEvm(SignRequest request) {
         var chainConfig = resolveEvmChainConfig(request.chainId().value());
+
+        if (properties.evmPrivateKey() == null || properties.evmPrivateKey().isBlank()) {
+            throw new DevCustodyException(
+                    "evmPrivateKey is not configured for dev custody chain=%s".formatted(
+                            request.chainId().value()));
+        }
+
         var credentials = Credentials.create(properties.evmPrivateKey());
 
         var usdcContract = chainConfig.usdcContract();
-        var data = encodeErc20Transfer(request.toAddress(), request.amount().toBigInteger());
+        var amountMinorUnits = request.amount()
+                .movePointRight(USDC_DECIMALS)
+                .toBigIntegerExact();
+        var data = encodeErc20Transfer(request.toAddress(), amountMinorUnits);
 
         var nonce = request.nonce() != null ? BigInteger.valueOf(request.nonce()) : BigInteger.ZERO;
 
@@ -149,12 +159,14 @@ public class DevCustodyAdapter implements CustodyEngine {
         };
     }
 
-    static String encodeErc20Transfer(String toAddress, BigInteger amount) {
+    static String encodeErc20Transfer(String toAddress, BigInteger amountMinorUnits) {
         var cleanAddress = toAddress.startsWith("0x") ? toAddress.substring(2) : toAddress;
+        if (cleanAddress.length() != 40 || !cleanAddress.matches("[0-9a-fA-F]+")) {
+            throw new IllegalArgumentException("Invalid EVM address: " + toAddress);
+        }
         var paddedAddress = "0".repeat(64 - cleanAddress.length()) + cleanAddress.toLowerCase();
 
-        var amountScaled = amount.multiply(BigInteger.TEN.pow(USDC_DECIMALS));
-        var amountHex = amountScaled.toString(16);
+        var amountHex = amountMinorUnits.toString(16);
         var paddedAmount = "0".repeat(64 - amountHex.length()) + amountHex;
 
         return "0x" + TRANSFER_SELECTOR + paddedAddress + paddedAmount;

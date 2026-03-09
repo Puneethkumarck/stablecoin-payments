@@ -289,14 +289,23 @@ class DevCustodyAdapterTest {
         @Test
         @DisplayName("should encode ERC-20 transfer with correct selector and padded params")
         void shouldEncodeErc20Transfer() {
-            // when
+            // when — amount is in minor units (100 USDC = 100_000_000)
             var result = DevCustodyAdapter.encodeErc20Transfer(
                     "0x1234567890AbCdEf1234567890aBcDeF12345678",
-                    BigInteger.valueOf(100)
+                    BigInteger.valueOf(100_000_000)
             );
 
             // then — starts with 0x + transfer selector a9059cbb, length = 2 + 8 + 64 + 64 = 138
             assertThat(result).startsWith("0xa9059cbb").hasSize(138);
+        }
+
+        @Test
+        @DisplayName("should reject invalid EVM address")
+        void shouldRejectInvalidEvmAddress() {
+            // when / then
+            assertThatThrownBy(() -> DevCustodyAdapter.encodeErc20Transfer("0xINVALID", BigInteger.ONE))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Invalid EVM address");
         }
     }
 }

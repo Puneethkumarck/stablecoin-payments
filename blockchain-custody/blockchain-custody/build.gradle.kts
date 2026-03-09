@@ -69,6 +69,7 @@ val archunitVersion: String by project
 val testcontainersVersion: String by project
 val wiremockVersion: String by project
 val springdocVersion: String by project
+val web3jVersion: String by project
 
 dependencies {
     implementation(project(":blockchain-custody:blockchain-custody-api"))
@@ -100,7 +101,7 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:$resilience4jVersion")
 
     // Dev custody adapter — EVM transaction signing
-    implementation("org.web3j:core:4.12.3") {
+    implementation("org.web3j:core:$web3jVersion") {
         exclude(group = "org.slf4j") // avoid SLF4J conflicts with Spring Boot
     }
 
