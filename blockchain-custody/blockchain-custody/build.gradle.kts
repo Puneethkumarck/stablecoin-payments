@@ -69,6 +69,7 @@ val archunitVersion: String by project
 val testcontainersVersion: String by project
 val wiremockVersion: String by project
 val springdocVersion: String by project
+val web3jVersion: String by project
 
 dependencies {
     implementation(project(":blockchain-custody:blockchain-custody-api"))
@@ -98,6 +99,11 @@ dependencies {
     // Resilience4j
     implementation("io.github.resilience4j:resilience4j-spring-boot3:$resilience4jVersion")
     implementation("io.github.resilience4j:resilience4j-circuitbreaker:$resilience4jVersion")
+
+    // Dev custody adapter — EVM transaction signing
+    implementation("org.web3j:core:$web3jVersion") {
+        exclude(group = "org.slf4j") // avoid SLF4J conflicts with Spring Boot
+    }
 
     // MapStruct (compiler args set below in JavaCompile task)
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
