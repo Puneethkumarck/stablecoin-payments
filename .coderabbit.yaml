@@ -75,6 +75,77 @@ reviews:
         - No wildcard imports allowed
         - Check hexagonal architecture compliance (same rules as merchant-onboarding)
 
+    # API Gateway & IAM — security-critical gateway service
+    - path: "api-gateway-iam/**"
+      instructions: |
+        This is the API gateway with OAuth2/JWT authentication and API key management.
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture: controllers in application.controller, adapters in infrastructure/
+        - Verify JWT validation, token revocation, and rate limiting logic
+        - API keys and OAuth secrets must never be logged
+        - All endpoints must have @Secured or @PreAuthorize
+        - Redis caching must handle cache misses gracefully
+        - No wildcard imports allowed
+
+    # Compliance & Travel Rule — regulatory compliance
+    - path: "compliance-travel-rule/**"
+      instructions: |
+        This service handles AML/sanctions screening and Travel Rule compliance.
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture compliance required
+        - Sanctions screening must be fail-closed (reject on error, not pass)
+        - All compliance decisions must be auditable (check audit trail)
+        - PII data (names, addresses) must never appear in logs — use IDs only
+        - Risk scoring logic must be deterministic and testable
+        - No wildcard imports allowed
+
+    # FX & Liquidity Engine — financial calculations
+    - path: "fx-liquidity-engine/**"
+      instructions: |
+        This service handles FX rates, quotes, and liquidity pool management.
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture compliance required
+        - All monetary calculations must use BigDecimal — NEVER double/float
+        - Quote expiry and staleness must be enforced
+        - Rate caching must handle stale data correctly
+        - Liquidity pool operations must be thread-safe
+        - No wildcard imports allowed
+
+    # Payment Orchestrator — saga workflows
+    - path: "payment-orchestrator/**"
+      instructions: |
+        This is the payment orchestration service using Temporal for saga workflows.
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture compliance required
+        - Temporal workflows must be deterministic (no I/O, no System.currentTimeMillis())
+        - Saga compensation must happen in LIFO order
+        - Activity methods must be idempotent
+        - Payment state transitions must be explicit and validated
+        - No wildcard imports allowed
+
+    # Fiat On-Ramp — payment collection
+    - path: "fiat-on-ramp/**"
+      instructions: |
+        This service handles fiat payment collection (Stripe ACH, Open Banking).
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture compliance required
+        - Collection status tracking must handle webhook idempotency
+        - Monetary amounts must use BigDecimal
+        - Provider webhooks must validate signatures
+        - No wildcard imports allowed
+
+    # Blockchain & Custody — crypto operations
+    - path: "blockchain-custody/**"
+      instructions: |
+        This service handles blockchain transactions, custody, and transfer monitoring.
+        - Spring annotations permitted in domain classes — do NOT flag as architecture violations
+        - Hexagonal architecture compliance required
+        - Private keys must NEVER appear in logs or error messages
+        - Transaction signing must go through custody adapter (never direct)
+        - Block confirmation polling must handle reorgs
+        - Gas estimation must include safety margins
+        - No wildcard imports allowed
+
     # GitHub Actions workflows — CI/CD hygiene
     - path: ".github/workflows/**"
       instructions: |

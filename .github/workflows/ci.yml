@@ -73,6 +73,18 @@ jobs:
               - 'settings.gradle.kts'
               - 'gradle/**'
               - 'gradle.properties'
+            fiat-on-ramp:fiat-on-ramp:
+              - 'fiat-on-ramp/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle/**'
+              - 'gradle.properties'
+            blockchain-custody:blockchain-custody:
+              - 'blockchain-custody/**'
+              - 'build.gradle.kts'
+              - 'settings.gradle.kts'
+              - 'gradle/**'
+              - 'gradle.properties'
 
   test:
     needs: [spotless, changes]
