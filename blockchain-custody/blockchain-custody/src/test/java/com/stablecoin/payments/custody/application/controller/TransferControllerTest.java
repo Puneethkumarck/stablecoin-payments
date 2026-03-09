@@ -1,6 +1,7 @@
 package com.stablecoin.payments.custody.application.controller;
 
 import com.stablecoin.payments.custody.config.SecurityConfig;
+import com.stablecoin.payments.custody.domain.exception.ChainUnavailableException;
 import com.stablecoin.payments.custody.domain.exception.CustodySigningException;
 import com.stablecoin.payments.custody.domain.exception.InsufficientBalanceException;
 import com.stablecoin.payments.custody.domain.exception.TransferNotFoundException;
@@ -169,6 +170,31 @@ class TransferControllerTest {
                                     """.formatted(PAYMENT_ID, CORRELATION_ID, TO_ADDRESS)))
                     .andExpect(status().isInternalServerError())
                     .andExpect(jsonPath("$.code").value("BC-1004"));
+        }
+
+        @Test
+        @DisplayName("should return 503 when chain unavailable")
+        void shouldReturn503ForChainUnavailable() throws Exception {
+            given(transferCommandHandler.initiateTransfer(
+                    PAYMENT_ID, CORRELATION_ID, TransferType.FORWARD, null,
+                    USDC, AMOUNT, TO_ADDRESS, "base"))
+                    .willThrow(new ChainUnavailableException("No healthy chain available"));
+
+            mockMvc.perform(post("/v1/transfers")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "paymentId": "%s",
+                                      "correlationId": "%s",
+                                      "transferType": "FORWARD",
+                                      "stablecoin": "USDC",
+                                      "amount": "1000.00",
+                                      "toWalletAddress": "%s",
+                                      "preferredChain": "base"
+                                    }
+                                    """.formatted(PAYMENT_ID, CORRELATION_ID, TO_ADDRESS)))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("BC-1002"));
         }
     }
 

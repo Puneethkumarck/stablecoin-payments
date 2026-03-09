@@ -28,6 +28,11 @@ public class CustodyOutboxHandler {
             kafkaTemplate.send(topic, key, event).get(10, TimeUnit.SECONDS);
             log.debug("Published outbox event type={} topic={} key={}",
                     event.getClass().getSimpleName(), topic, key);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Interrupted publishing event type={} topic={} key={}",
+                    event.getClass().getSimpleName(), topic, key);
+            throw new RuntimeException("Kafka send interrupted for event " + event.getClass().getSimpleName(), e);
         } catch (Exception e) {
             log.error("Failed to publish event type={} topic={}: {}",
                     event.getClass().getSimpleName(), topic, e.getMessage());

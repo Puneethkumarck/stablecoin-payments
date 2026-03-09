@@ -3,6 +3,7 @@ package com.stablecoin.payments.custody.api;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 
 import java.util.UUID;
 
@@ -22,6 +23,7 @@ public record TransferRequest(
         String stablecoin,
 
         @NotBlank(message = "amount is required")
+        @Pattern(regexp = "^\\d+(\\.\\d+)?$", message = "amount must be a valid decimal number")
         @DecimalMin(value = "0.000001", message = "amount must be positive")
         String amount,
 

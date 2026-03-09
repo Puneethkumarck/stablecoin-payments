@@ -91,7 +91,7 @@ public final class ChainSelectionFixtures {
         return ChainSelectionResult.builder()
                 .selectedChain(CHAIN_BASE)
                 .candidates(BASE_CANDIDATES)
-                .transferId(UUID.randomUUID())
+                .transferId(TRANSFER_ID)
                 .build();
     }
 }

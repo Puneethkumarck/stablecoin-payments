@@ -192,13 +192,8 @@ public class TransferCommandHandler {
     }
 
     private void releaseBalance(WalletBalance reservedBalance, BigDecimal amount) {
-        try {
-            var released = reservedBalance.release(amount);
-            walletBalanceRepository.save(released);
-        } catch (Exception e) {
-            log.error("Failed to release balance for wallet {}: {}",
-                    reservedBalance.walletId(), e.getMessage());
-        }
+        var released = reservedBalance.release(amount);
+        walletBalanceRepository.save(released);
     }
 
     /**
