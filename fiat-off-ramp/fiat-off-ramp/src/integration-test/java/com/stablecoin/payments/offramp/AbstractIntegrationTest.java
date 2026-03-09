@@ -42,7 +42,9 @@ public abstract class AbstractIntegrationTest {
                     off_ramp_transactions,
                     stablecoin_redemptions,
                     payout_orders,
-                    offramp_outbox_record
+                    offramp_outbox_record,
+                    offramp_outbox_instance,
+                    offramp_outbox_partition
                 CASCADE
                 """);
     }

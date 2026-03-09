@@ -39,7 +39,7 @@ CREATE TABLE payout_orders (
     CONSTRAINT payout_orders_type_check CHECK (payout_type IN ('FIAT','HOLD_STABLECOIN'))
 );
 
-CREATE INDEX payout_orders_payment_id_idx ON payout_orders (payment_id);
+-- payment_id index is already created by the UNIQUE constraint
 CREATE INDEX payout_orders_recipient_id_idx ON payout_orders (recipient_id, created_at DESC);
 CREATE INDEX payout_orders_status_idx
     ON payout_orders (status, created_at)
