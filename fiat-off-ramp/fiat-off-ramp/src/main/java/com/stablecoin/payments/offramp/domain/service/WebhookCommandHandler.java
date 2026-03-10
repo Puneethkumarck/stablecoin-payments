@@ -72,7 +72,11 @@ public class WebhookCommandHandler {
     private PayoutOrder handleSettlement(PayoutOrder order, PartnerWebhookCommand command) {
         var settledAt = command.settledAt() != null ? command.settledAt() : Instant.now();
 
-        var updated = order.completePayout(command.partnerReference(), settledAt);
+        var orderToComplete = order.status() == PayoutStatus.PAYOUT_INITIATED
+                ? order.markPayoutProcessing()
+                : order;
+
+        var updated = orderToComplete.completePayout(command.partnerReference(), settledAt);
         updated = orderRepository.save(updated);
 
         eventPublisher.publish(new FiatPayoutCompletedEvent(

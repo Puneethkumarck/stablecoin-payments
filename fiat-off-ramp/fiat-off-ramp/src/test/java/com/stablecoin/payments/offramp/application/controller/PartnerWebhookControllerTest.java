@@ -113,6 +113,18 @@ class PartnerWebhookControllerTest {
         }
 
         @Test
+        @DisplayName("should return 400 on malformed webhook payload")
+        void shouldReturn400OnMalformedPayload() {
+            var malformedBody = "{\"event_id\":\"evt1\",\"settled_at\":\"not-a-timestamp\"}";
+            given(signatureValidator.isValid(malformedBody, VALID_SIGNATURE)).willReturn(true);
+
+            var response = controller.handleWebhook(PARTNER_NAME, malformedBody, VALID_SIGNATURE);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(response.getBody()).containsKey("error");
+        }
+
+        @Test
         @DisplayName("should return 500 on unexpected error")
         void shouldReturn500OnUnexpectedError() {
             given(signatureValidator.isValid(RAW_BODY, VALID_SIGNATURE)).willReturn(true);

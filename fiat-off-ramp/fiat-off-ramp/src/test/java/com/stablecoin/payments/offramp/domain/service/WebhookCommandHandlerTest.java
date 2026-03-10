@@ -89,20 +89,16 @@ class WebhookCommandHandlerTest {
             var order = aPayoutInitiatedOrder();
             var command = aSettlementCommand();
 
-            // completePayout requires PAYOUT_PROCESSING state;
-            // the handler needs to handle this via markPayoutProcessing first
-            // but the domain model enforces PAYOUT_PROCESSING -> COMPLETED
-            // so we test from PAYOUT_PROCESSING which is the expected webhook receive state
+            var expected = order.markPayoutProcessing().completePayout(PARTNER_REFERENCE, SETTLED_AT);
+
             given(orderRepository.findByPartnerReference(PARTNER_REFERENCE))
-                    .willReturn(Optional.of(order.markPayoutProcessing()));
-            given(orderRepository.save(eqIgnoringTimestamps(
-                    order.markPayoutProcessing().completePayout(PARTNER_REFERENCE, SETTLED_AT))))
+                    .willReturn(Optional.of(order));
+            given(orderRepository.save(eqIgnoringTimestamps(expected)))
                     .willAnswer(inv -> inv.getArgument(0));
 
             handler.handleWebhook(command);
 
-            then(orderRepository).should().save(eqIgnoringTimestamps(
-                    order.markPayoutProcessing().completePayout(PARTNER_REFERENCE, SETTLED_AT)));
+            then(orderRepository).should().save(eqIgnoringTimestamps(expected));
         }
 
         @Test

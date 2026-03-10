@@ -126,7 +126,7 @@ app:
   payout:
     modulr:
       webhook:
-        webhook-secret: ${MODULR_WEBHOOK_SECRET:dev-modulr-webhook-secret}
+        webhook-secret: ${MODULR_WEBHOOK_SECRET:}
         tolerance-seconds: 300
 
 logging:

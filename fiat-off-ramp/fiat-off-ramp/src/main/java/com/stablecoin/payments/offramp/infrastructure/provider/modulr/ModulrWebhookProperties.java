@@ -15,9 +15,6 @@ public record ModulrWebhookProperties(
 ) {
 
     public ModulrWebhookProperties {
-        if (webhookSecret == null || webhookSecret.isBlank()) {
-            webhookSecret = "dev-webhook-secret";
-        }
         if (toleranceSeconds <= 0) {
             toleranceSeconds = 300;
         }

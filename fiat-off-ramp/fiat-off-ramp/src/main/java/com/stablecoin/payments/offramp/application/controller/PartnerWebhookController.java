@@ -62,6 +62,11 @@ public class PartnerWebhookController {
             var command = parsePartnerEvent(partnerName, rawBody);
             webhookCommandHandler.handleWebhook(command);
             return ResponseEntity.ok(Map.of("status", "received"));
+        } catch (IllegalArgumentException e) {
+            log.warn("[PARTNER-WEBHOOK] Invalid webhook payload partner={}: {}",
+                    partnerName, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         } catch (PayoutNotFoundException e) {
             log.warn("[PARTNER-WEBHOOK] Payout order not found: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -120,12 +125,6 @@ public class PartnerWebhookController {
         if (node.isMissingNode() || node.isNull()) {
             return null;
         }
-        try {
-            return Instant.parse(node.asText());
-        } catch (Exception e) {
-            log.warn("[PARTNER-WEBHOOK] Invalid timestamp for field {}: {}",
-                    fieldName, node.asText());
-            return null;
-        }
+        return Instant.parse(node.asText());
     }
 }

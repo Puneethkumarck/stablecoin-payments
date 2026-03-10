@@ -36,6 +36,10 @@ public class ModulrWebhookSignatureValidator implements WebhookSignatureValidato
     private final Duration tolerance;
 
     public ModulrWebhookSignatureValidator(ModulrWebhookProperties properties) {
+        if (properties.webhookSecret() == null || properties.webhookSecret().isBlank()) {
+            throw new IllegalStateException(
+                    "app.payout.modulr.webhook.webhook-secret must be configured when app.payout.provider=modulr");
+        }
         this.webhookSecret = properties.webhookSecret();
         this.tolerance = Duration.ofSeconds(properties.toleranceSeconds());
     }
