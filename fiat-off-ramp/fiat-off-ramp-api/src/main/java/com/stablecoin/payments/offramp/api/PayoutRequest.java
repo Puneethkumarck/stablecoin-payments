@@ -20,5 +20,12 @@ public record PayoutRequest(
         @NotBlank String recipientAccountHash,
         @NotBlank String paymentRail,
         @NotBlank String offRampPartnerId,
-        @NotBlank String offRampPartnerName
+        @NotBlank String offRampPartnerName,
+        String bankAccountNumber,
+        String bankCode,
+        String bankAccountType,
+        String bankAccountCountry,
+        String mobileMoneyProvider,
+        String mobileMoneyPhoneNumber,
+        String mobileMoneyCountry
 ) {}
