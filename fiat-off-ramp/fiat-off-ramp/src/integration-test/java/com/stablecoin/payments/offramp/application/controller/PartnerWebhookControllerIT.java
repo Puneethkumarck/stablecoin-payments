@@ -9,9 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.UUID;
-
-import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.PARTNER_REFERENCE;
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aPayoutInitiatedOrder;
 import static com.stablecoin.payments.offramp.fixtures.WebhookFixtures.PARTNER_NAME;
 import static com.stablecoin.payments.offramp.fixtures.WebhookFixtures.failurePayload;
