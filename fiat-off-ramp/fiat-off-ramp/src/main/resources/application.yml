@@ -117,6 +117,8 @@ springdoc:
 app:
   security:
     enabled: false
+  fallback-adapters:
+    enabled: true
   redemption:
     circle:
       base-url: ${CIRCLE_BASE_URL:https://api-sandbox.circle.com}

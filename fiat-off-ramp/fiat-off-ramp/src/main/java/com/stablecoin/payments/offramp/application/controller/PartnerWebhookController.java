@@ -125,6 +125,11 @@ public class PartnerWebhookController {
         if (node.isMissingNode() || node.isNull()) {
             return null;
         }
-        return Instant.parse(node.asText());
+        try {
+            return Instant.parse(node.asText());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Invalid timestamp format for field '%s': %s".formatted(fieldName, node.asText()), e);
+        }
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
@@ -18,4 +19,7 @@ public interface FiatOffRampClient {
 
     @GetMapping(value = "/v1/payouts/{payoutId}", produces = "application/json")
     PayoutResponse getPayout(@PathVariable("payoutId") UUID payoutId);
+
+    @GetMapping(value = "/v1/payouts", produces = "application/json")
+    PayoutResponse getPayoutByPaymentId(@RequestParam("paymentId") UUID paymentId);
 }

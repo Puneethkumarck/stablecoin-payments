@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aPayoutProcessingOrder;
 import static com.stablecoin.payments.offramp.fixtures.WebhookFixtures.PARTNER_NAME;
+import static com.stablecoin.payments.offramp.fixtures.WebhookFixtures.nextEventId;
 import static com.stablecoin.payments.offramp.fixtures.WebhookFixtures.settlementPayload;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -32,7 +33,7 @@ class PartnerWebhookControllerTest {
     private PartnerWebhookController controller;
 
     private static final String VALID_SIGNATURE = "t=1234567890,v1=abc123";
-    private static final String RAW_BODY = settlementPayload();
+    private static final String RAW_BODY = settlementPayload(nextEventId());
 
     @Nested
     @DisplayName("Signature validation")
