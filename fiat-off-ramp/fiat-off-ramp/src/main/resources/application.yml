@@ -117,6 +117,12 @@ springdoc:
 app:
   security:
     enabled: false
+  redemption:
+    circle:
+      base-url: ${CIRCLE_BASE_URL:https://api-sandbox.circle.com}
+      api-key: ${CIRCLE_API_KEY:SAND_API_KEY_DEFAULT}
+      destination-id: ${CIRCLE_DESTINATION_ID:default-wire-id}
+      timeout-seconds: 10
 
 logging:
   level:
