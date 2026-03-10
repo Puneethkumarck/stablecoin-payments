@@ -7,6 +7,7 @@ import com.stablecoin.payments.offramp.domain.port.RedemptionResult;
 import com.stablecoin.payments.offramp.domain.port.WebhookSignatureValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -19,9 +20,13 @@ import java.util.UUID;
  * via {@code @ConditionalOnMissingBean}. Real adapters are registered
  * by provider-specific configurations under
  * {@code infrastructure/provider/<name>/}.
+ * <p>
+ * Requires {@code app.fallback-adapters.enabled=true} to activate,
+ * preventing accidental use in production.
  */
 @Slf4j
 @Configuration
+@ConditionalOnProperty(name = "app.fallback-adapters.enabled", havingValue = "true")
 public class FallbackAdaptersConfig {
 
     private static final BigDecimal DEV_FEE_MULTIPLIER = new BigDecimal("0.92");

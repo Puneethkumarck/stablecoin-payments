@@ -67,7 +67,8 @@ public class CircleRedemptionAdapter implements RedemptionGateway {
                 .retrieve()
                 .body(CirclePayoutResponse.class);
 
-        if (response == null || response.data() == null || response.data().amount() == null) {
+        if (response == null || response.data() == null
+                || response.data().amount() == null || response.data().createDate() == null) {
             throw new IllegalStateException("Circle payout response missing required fields");
         }
 

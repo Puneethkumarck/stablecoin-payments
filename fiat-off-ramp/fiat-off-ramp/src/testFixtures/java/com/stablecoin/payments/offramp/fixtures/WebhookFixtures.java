@@ -15,13 +15,17 @@ public final class WebhookFixtures {
 
     private WebhookFixtures() {}
 
-    public static final String EVENT_ID = "evt_" + UUID.randomUUID();
     public static final String PARTNER_NAME = "modulr";
     public static final Instant SETTLED_AT = Instant.parse("2026-03-10T14:30:00Z");
 
+    public static String nextEventId() {
+        return "evt_" + UUID.randomUUID();
+    }
+
     public static PartnerWebhookCommand aSettlementCommand() {
+        var eventId = nextEventId();
         return new PartnerWebhookCommand(
-                EVENT_ID,
+                eventId,
                 EVENT_PAYMENT_SETTLED,
                 PARTNER_NAME,
                 PARTNER_REFERENCE,
@@ -30,13 +34,14 @@ public final class WebhookFixtures {
                 "SETTLED",
                 SETTLED_AT,
                 null,
-                settlementPayload()
+                settlementPayload(eventId)
         );
     }
 
     public static PartnerWebhookCommand aFailureCommand() {
+        var eventId = nextEventId();
         return new PartnerWebhookCommand(
-                EVENT_ID,
+                eventId,
                 EVENT_PAYMENT_FAILED,
                 PARTNER_NAME,
                 PARTNER_REFERENCE,
@@ -45,13 +50,14 @@ public final class WebhookFixtures {
                 "FAILED",
                 null,
                 "Insufficient funds in beneficiary account",
-                failurePayload()
+                failurePayload(eventId)
         );
     }
 
     public static PartnerWebhookCommand anUnknownEventCommand() {
+        var eventId = nextEventId();
         return new PartnerWebhookCommand(
-                EVENT_ID,
+                eventId,
                 "payment.unknown",
                 PARTNER_NAME,
                 PARTNER_REFERENCE,
@@ -60,11 +66,11 @@ public final class WebhookFixtures {
                 null,
                 null,
                 null,
-                "{\"event_type\":\"payment.unknown\"}"
+                "{\"event_id\":\"%s\",\"event_type\":\"payment.unknown\"}".formatted(eventId)
         );
     }
 
-    public static String settlementPayload() {
+    public static String settlementPayload(String eventId) {
         return """
                 {
                     "event_id": "%s",
@@ -75,12 +81,12 @@ public final class WebhookFixtures {
                     "status": "SETTLED",
                     "settled_at": "%s"
                 }
-                """.formatted(EVENT_ID, PARTNER_REFERENCE,
+                """.formatted(eventId, PARTNER_REFERENCE,
                 EXPECTED_FIAT_AMOUNT.toPlainString(), TARGET_CURRENCY,
                 SETTLED_AT.toString());
     }
 
-    public static String failurePayload() {
+    public static String failurePayload(String eventId) {
         return """
                 {
                     "event_id": "%s",
@@ -91,7 +97,7 @@ public final class WebhookFixtures {
                     "status": "FAILED",
                     "failure_reason": "Insufficient funds in beneficiary account"
                 }
-                """.formatted(EVENT_ID, PARTNER_REFERENCE,
+                """.formatted(eventId, PARTNER_REFERENCE,
                 EXPECTED_FIAT_AMOUNT.toPlainString(), TARGET_CURRENCY);
     }
 
