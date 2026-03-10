@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -25,17 +24,19 @@ import java.util.UUID;
 @Configuration
 public class FallbackAdaptersConfig {
 
+    private static final BigDecimal DEV_FEE_MULTIPLIER = new BigDecimal("0.92");
+
     @Bean
     @ConditionalOnMissingBean
-    public RedemptionGateway fallbackRedemptionGateway() {
+    public RedemptionGateway fallbackRedemptionGateway(Clock clock) {
         return request -> {
             log.warn("[FALLBACK-REDEMPTION] Using dev redemption gateway payoutId={} amount={}",
                     request.payoutId(), request.amount());
             return new RedemptionResult(
                     "dev-redeem-" + UUID.randomUUID(),
-                    request.amount().multiply(new BigDecimal("0.92")),
+                    request.amount().multiply(DEV_FEE_MULTIPLIER),
                     "EUR",
-                    Instant.now()
+                    clock.instant()
             );
         };
     }

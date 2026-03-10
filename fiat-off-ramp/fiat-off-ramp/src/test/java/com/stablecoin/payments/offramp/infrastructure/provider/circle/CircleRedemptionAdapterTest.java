@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -84,10 +85,9 @@ class CircleRedemptionAdapterTest {
                     "circle-payout-ref-001",
                     new BigDecimal("10000.00"),
                     "USD",
-                    result.redeemedAt()
+                    Instant.parse("2026-03-10T12:00:00.000Z")
             );
             assertThat(result).usingRecursiveComparison()
-                    .ignoringFields("redeemedAt")
                     .isEqualTo(expected);
         }
 
@@ -242,10 +242,9 @@ class CircleRedemptionAdapterTest {
                     "circle-payout-eur-001",
                     new BigDecimal("9200.00"),
                     "EUR",
-                    result.redeemedAt()
+                    Instant.parse("2026-03-10T12:00:00.000Z")
             );
             assertThat(result).usingRecursiveComparison()
-                    .ignoringFields("redeemedAt")
                     .isEqualTo(expected);
         }
     }

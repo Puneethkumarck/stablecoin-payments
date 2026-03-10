@@ -32,7 +32,7 @@ public class OffRampTransactionPersistenceAdapter implements OffRampTransactionR
 
     @Override
     public List<OffRampTransaction> findByPayoutId(UUID payoutId) {
-        return jpa.findByPayoutIdOrderByReceivedAtAsc(payoutId).stream()
+        return jpa.findByPayoutIdOrderByReceivedAtAscOffRampTxnIdAsc(payoutId).stream()
                 .map(mapper::toDomain)
                 .toList();
     }

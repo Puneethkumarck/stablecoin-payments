@@ -67,6 +67,7 @@ public record PayoutOrder(
         Instant partnerSettledAt,
         String failureReason,
         String errorCode,
+        Long version,
         Instant createdAt,
         Instant updatedAt
 ) {

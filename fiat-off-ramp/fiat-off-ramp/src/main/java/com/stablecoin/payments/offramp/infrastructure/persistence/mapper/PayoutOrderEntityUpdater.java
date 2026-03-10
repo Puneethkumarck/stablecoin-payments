@@ -31,6 +31,7 @@ public interface PayoutOrderEntityUpdater {
         entity.setPartnerSettledAt(order.partnerSettledAt());
         entity.setFailureReason(order.failureReason());
         entity.setErrorCode(order.errorCode());
+        entity.setVersion(order.version());
         entity.setBankAccountNumber(order.bankAccount() != null ? order.bankAccount().accountNumber() : null);
         entity.setBankCode(order.bankAccount() != null ? order.bankAccount().bankCode() : null);
         entity.setBankAccountType(order.bankAccount() != null ? order.bankAccount().accountType().name() : null);
