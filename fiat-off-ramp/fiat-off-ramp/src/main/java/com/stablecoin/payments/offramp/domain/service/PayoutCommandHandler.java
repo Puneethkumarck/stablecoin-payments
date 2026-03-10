@@ -97,6 +97,9 @@ public class PayoutCommandHandler {
         // 5. Complete redemption with fiat amount
         order = order.completeRedemption(redemptionResult.fiatReceived());
 
+        // 5a. Save order before child records (FK constraint)
+        order = payoutOrderRepository.save(order);
+
         // 6. Record StablecoinRedemption
         var redemption = StablecoinRedemption.create(
                 order.payoutId(), stablecoin, redeemedAmount,

@@ -19,6 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 /**
@@ -127,7 +128,7 @@ public class PartnerWebhookController {
         }
         try {
             return Instant.parse(node.asText());
-        } catch (java.time.format.DateTimeParseException e) {
+        } catch (DateTimeParseException e) {
             throw new IllegalArgumentException(
                     "Invalid timestamp format for field '%s': %s".formatted(fieldName, node.asText()), e);
         }
