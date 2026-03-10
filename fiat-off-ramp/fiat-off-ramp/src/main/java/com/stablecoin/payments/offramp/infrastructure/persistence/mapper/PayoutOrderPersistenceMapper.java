@@ -64,26 +64,8 @@ public interface PayoutOrderPersistenceMapper {
             offRampPartner = new PartnerIdentifier(entity.getOffRampPartnerId(), entity.getOffRampPartnerName());
         }
 
-        BankAccount bankAccount = null;
-        if (entity.getBankAccountNumber() != null && entity.getBankCode() != null
-                && entity.getBankAccountType() != null && entity.getBankCountry() != null) {
-            bankAccount = new BankAccount(
-                    entity.getBankAccountNumber(),
-                    entity.getBankCode(),
-                    AccountType.valueOf(entity.getBankAccountType()),
-                    entity.getBankCountry()
-            );
-        }
-
-        MobileMoneyAccount mobileMoneyAccount = null;
-        if (entity.getMobileMoneyProvider() != null && entity.getMobileMoneyPhone() != null
-                && entity.getMobileMoneyCountry() != null) {
-            mobileMoneyAccount = new MobileMoneyAccount(
-                    MobileMoneyProvider.valueOf(entity.getMobileMoneyProvider()),
-                    entity.getMobileMoneyPhone(),
-                    entity.getMobileMoneyCountry()
-            );
-        }
+        BankAccount bankAccount = mapBankAccount(entity);
+        MobileMoneyAccount mobileMoneyAccount = mapMobileMoneyAccount(entity);
 
         return new PayoutOrder(
                 entity.getPayoutId(),
@@ -109,6 +91,56 @@ public interface PayoutOrderPersistenceMapper {
                 entity.getErrorCode(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
+        );
+    }
+
+    private static BankAccount mapBankAccount(PayoutOrderEntity entity) {
+        boolean hasAccountNumber = entity.getBankAccountNumber() != null;
+        boolean hasCode = entity.getBankCode() != null;
+        boolean hasType = entity.getBankAccountType() != null;
+        boolean hasCountry = entity.getBankCountry() != null;
+
+        boolean hasAny = hasAccountNumber || hasCode || hasType || hasCountry;
+        boolean hasAll = hasAccountNumber && hasCode && hasType && hasCountry;
+
+        if (!hasAny) {
+            return null;
+        }
+        if (!hasAll) {
+            throw new IllegalStateException(
+                    "Corrupted payout_orders row: partial bank account columns populated — "
+                            + "accountNumber=%s, bankCode=%s, accountType=%s, country=%s".formatted(
+                            hasAccountNumber, hasCode, hasType, hasCountry));
+        }
+        return new BankAccount(
+                entity.getBankAccountNumber(),
+                entity.getBankCode(),
+                AccountType.valueOf(entity.getBankAccountType()),
+                entity.getBankCountry()
+        );
+    }
+
+    private static MobileMoneyAccount mapMobileMoneyAccount(PayoutOrderEntity entity) {
+        boolean hasProvider = entity.getMobileMoneyProvider() != null;
+        boolean hasPhone = entity.getMobileMoneyPhone() != null;
+        boolean hasCountry = entity.getMobileMoneyCountry() != null;
+
+        boolean hasAny = hasProvider || hasPhone || hasCountry;
+        boolean hasAll = hasProvider && hasPhone && hasCountry;
+
+        if (!hasAny) {
+            return null;
+        }
+        if (!hasAll) {
+            throw new IllegalStateException(
+                    "Corrupted payout_orders row: partial mobile money columns populated — "
+                            + "provider=%s, phone=%s, country=%s".formatted(
+                            hasProvider, hasPhone, hasCountry));
+        }
+        return new MobileMoneyAccount(
+                MobileMoneyProvider.valueOf(entity.getMobileMoneyProvider()),
+                entity.getMobileMoneyPhone(),
+                entity.getMobileMoneyCountry()
         );
     }
 }

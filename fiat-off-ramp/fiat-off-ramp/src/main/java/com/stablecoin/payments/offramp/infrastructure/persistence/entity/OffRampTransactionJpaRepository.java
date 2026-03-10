@@ -7,5 +7,5 @@ import java.util.UUID;
 
 public interface OffRampTransactionJpaRepository extends JpaRepository<OffRampTransactionEntity, UUID> {
 
-    List<OffRampTransactionEntity> findByPayoutId(UUID payoutId);
+    List<OffRampTransactionEntity> findByPayoutIdOrderByReceivedAtAsc(UUID payoutId);
 }

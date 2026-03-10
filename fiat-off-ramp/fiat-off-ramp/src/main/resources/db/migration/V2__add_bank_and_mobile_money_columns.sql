@@ -22,6 +22,8 @@ ALTER TABLE payout_orders ADD COLUMN mobile_money_country  VARCHAR(2);
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'sp_readonly') THEN
-        GRANT SELECT ON ALL TABLES IN SCHEMA public TO sp_readonly;
+        GRANT SELECT ON payout_orders TO sp_readonly;
+        GRANT SELECT ON stablecoin_redemptions TO sp_readonly;
+        GRANT SELECT ON off_ramp_transactions TO sp_readonly;
     END IF;
 END $$;

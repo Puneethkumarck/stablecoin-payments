@@ -4,10 +4,13 @@ import com.stablecoin.payments.offramp.AbstractIntegrationTest;
 import com.stablecoin.payments.offramp.domain.model.PayoutOrder;
 import com.stablecoin.payments.offramp.domain.model.PayoutStatus;
 import com.stablecoin.payments.offramp.domain.port.PayoutOrderRepository;
+import com.stablecoin.payments.offramp.infrastructure.persistence.entity.PayoutOrderJpaRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -30,6 +33,12 @@ class PayoutOrderPersistenceAdapterIT extends AbstractIntegrationTest {
 
     @Autowired
     private PayoutOrderRepository adapter;
+
+    @Autowired
+    private PayoutOrderJpaRepository jpa;
+
+    @Autowired
+    private EntityManager entityManager;
 
     // ── Save & Retrieve ──────────────────────────────────────────────────
 
@@ -218,5 +227,25 @@ class PayoutOrderPersistenceAdapterIT extends AbstractIntegrationTest {
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                 .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(expected);
+    }
+
+    // ── Optimistic Locking ──────────────────────────────────────────────
+
+    @Test
+    @DisplayName("should throw on stale version update (optimistic locking)")
+    void shouldThrowOnStaleUpdate() {
+        var saved = adapter.save(aPendingOrder());
+
+        var first = jpa.findById(saved.payoutId()).orElseThrow();
+        var second = jpa.findById(saved.payoutId()).orElseThrow();
+
+        first.setStatus(PayoutStatus.REDEEMING);
+        jpa.saveAndFlush(first);
+
+        entityManager.detach(second);
+        second.setStatus(PayoutStatus.REDEEMING);
+
+        assertThatThrownBy(() -> jpa.saveAndFlush(second))
+                .isInstanceOf(ObjectOptimisticLockingFailureException.class);
     }
 }

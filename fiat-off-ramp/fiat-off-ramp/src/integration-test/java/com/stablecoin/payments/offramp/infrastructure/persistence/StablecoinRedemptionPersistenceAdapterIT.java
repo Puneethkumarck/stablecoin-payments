@@ -8,6 +8,7 @@ import com.stablecoin.payments.offramp.domain.port.StablecoinRedemptionRepositor
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aPendingOrder;
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aStablecoinTicker;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("StablecoinRedemptionPersistenceAdapter IT")
 class StablecoinRedemptionPersistenceAdapterIT extends AbstractIntegrationTest {
@@ -89,6 +91,20 @@ class StablecoinRedemptionPersistenceAdapterIT extends AbstractIntegrationTest {
                 .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
                 .ignoringFieldsOfTypes(Instant.class)
                 .isEqualTo(saved);
+    }
+
+    // ── Constraint Validation ────────────────────────────────────────────
+
+    @Test
+    @DisplayName("should reject redemption with non-existent payout id (FK constraint)")
+    void shouldRejectRedemptionWithNonExistentPayoutId() {
+        var redemption = StablecoinRedemption.create(
+                UUID.randomUUID(), aStablecoinTicker(),
+                new BigDecimal("1000.00"), new BigDecimal("920.00"),
+                "EUR", "circle", "circle_ref_orphan");
+
+        assertThatThrownBy(() -> adapter.save(redemption))
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
