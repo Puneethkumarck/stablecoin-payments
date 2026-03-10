@@ -4,14 +4,15 @@ import com.stablecoin.payments.offramp.domain.event.FiatPayoutInitiatedEvent;
 import com.stablecoin.payments.offramp.domain.event.StablecoinRedeemedEvent;
 import com.stablecoin.payments.offramp.domain.exception.PayoutNotFoundException;
 import com.stablecoin.payments.offramp.domain.model.OffRampTransaction;
+import com.stablecoin.payments.offramp.domain.model.PaymentRail;
 import com.stablecoin.payments.offramp.domain.model.PayoutOrder;
-import com.stablecoin.payments.offramp.domain.model.PayoutStatus;
 import com.stablecoin.payments.offramp.domain.model.PayoutType;
 import com.stablecoin.payments.offramp.domain.model.StablecoinRedemption;
 import com.stablecoin.payments.offramp.domain.port.OffRampTransactionRepository;
 import com.stablecoin.payments.offramp.domain.port.PayoutEventPublisher;
 import com.stablecoin.payments.offramp.domain.port.PayoutOrderRepository;
 import com.stablecoin.payments.offramp.domain.port.PayoutPartnerGateway;
+import com.stablecoin.payments.offramp.domain.port.PayoutRequest;
 import com.stablecoin.payments.offramp.domain.port.PayoutResult;
 import com.stablecoin.payments.offramp.domain.port.RedemptionGateway;
 import com.stablecoin.payments.offramp.domain.port.RedemptionRequest;
@@ -87,10 +88,11 @@ class PayoutCommandHandlerTest {
         @Test
         @DisplayName("should create order, redeem stablecoin, initiate payout, and publish events")
         void shouldCreateOrderRedeemAndInitiatePayout() {
-            // Build expected final state: PENDING → REDEEMING → REDEEMED → PAYOUT_INITIATED
+            // Build expected intermediate and final states
             var pending = aPendingOrder();
-            var expectedFinal = pending.startRedemption()
-                    .completeRedemption(EXPECTED_FIAT_AMOUNT)
+            var expectedRedeemed = pending.startRedemption()
+                    .completeRedemption(EXPECTED_FIAT_AMOUNT);
+            var expectedFinal = expectedRedeemed
                     .initiatePayout(PAYOUT_PARTNER_REF);
 
             given(orderRepository.findByPaymentId(PAYMENT_ID))
@@ -100,14 +102,16 @@ class PayoutCommandHandlerTest {
                     "payoutId")))
                     .willReturn(new RedemptionResult(
                             REDEMPTION_PARTNER_REF, EXPECTED_FIAT_AMOUNT, FIAT_CURRENCY, REDEEMED_AT));
+            given(orderRepository.save(eqIgnoring(expectedRedeemed, "payoutId")))
+                    .willAnswer(inv -> inv.getArgument(0));
             given(payoutPartnerGateway.initiatePayout(eqIgnoring(
-                    new com.stablecoin.payments.offramp.domain.port.PayoutRequest(
+                    new PayoutRequest(
                             pending.payoutId(),
                             EXPECTED_FIAT_AMOUNT,
                             TARGET_CURRENCY,
                             aBankAccount(),
                             null,
-                            com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                            PaymentRail.SEPA,
                             aPartnerIdentifier()),
                     "payoutId")))
                     .willReturn(new PayoutResult(PAYOUT_PARTNER_REF, "INITIATED", null));
@@ -120,7 +124,7 @@ class PayoutCommandHandlerTest {
                     REDEEMED_AMOUNT, TARGET_CURRENCY, APPLIED_FX_RATE,
                     RECIPIENT_ID, RECIPIENT_ACCOUNT_HASH,
                     aBankAccount(), null,
-                    com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                    PaymentRail.SEPA,
                     aPartnerIdentifier());
 
             then(orderRepository).should().save(eqIgnoring(expectedFinal, "payoutId"));
@@ -176,20 +180,21 @@ class PayoutCommandHandlerTest {
         }
 
         @Test
-        @DisplayName("should return created=true for new payout")
-        void shouldReturnCreatedTrue() {
+        @DisplayName("should save order in PAYOUT_INITIATED state before child records")
+        void shouldSaveRedeemedOrderBeforeChildRecords() {
             stubFiatHappyPath();
 
-            var result = callInitiatePayout();
+            callInitiatePayout();
 
-            assertThat(result.created()).isTrue();
-            assertThat(result.order().status()).isEqualTo(PayoutStatus.PAYOUT_INITIATED);
+            var expectedRedeemed = aPendingOrder().startRedemption()
+                    .completeRedemption(EXPECTED_FIAT_AMOUNT);
+            then(orderRepository).should().save(eqIgnoring(expectedRedeemed, "payoutId"));
         }
 
         private void stubFiatHappyPath() {
-            var expectedFinal = aPendingOrder().startRedemption()
-                    .completeRedemption(EXPECTED_FIAT_AMOUNT)
-                    .initiatePayout(PAYOUT_PARTNER_REF);
+            var expectedRedeemed = aPendingOrder().startRedemption()
+                    .completeRedemption(EXPECTED_FIAT_AMOUNT);
+            var expectedFinal = expectedRedeemed.initiatePayout(PAYOUT_PARTNER_REF);
 
             given(orderRepository.findByPaymentId(PAYMENT_ID))
                     .willReturn(Optional.empty());
@@ -198,11 +203,13 @@ class PayoutCommandHandlerTest {
                     "payoutId")))
                     .willReturn(new RedemptionResult(
                             REDEMPTION_PARTNER_REF, EXPECTED_FIAT_AMOUNT, FIAT_CURRENCY, REDEEMED_AT));
+            given(orderRepository.save(eqIgnoring(expectedRedeemed, "payoutId")))
+                    .willAnswer(inv -> inv.getArgument(0));
             given(payoutPartnerGateway.initiatePayout(eqIgnoring(
-                    new com.stablecoin.payments.offramp.domain.port.PayoutRequest(
+                    new PayoutRequest(
                             UUID.randomUUID(), EXPECTED_FIAT_AMOUNT, TARGET_CURRENCY,
                             aBankAccount(), null,
-                            com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                            PaymentRail.SEPA,
                             aPartnerIdentifier()),
                     "payoutId")))
                     .willReturn(new PayoutResult(PAYOUT_PARTNER_REF, "INITIATED", null));
@@ -217,7 +224,7 @@ class PayoutCommandHandlerTest {
                     REDEEMED_AMOUNT, TARGET_CURRENCY, APPLIED_FX_RATE,
                     RECIPIENT_ID, RECIPIENT_ACCOUNT_HASH,
                     aBankAccount(), null,
-                    com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                    PaymentRail.SEPA,
                     aPartnerIdentifier());
         }
     }
@@ -227,24 +234,22 @@ class PayoutCommandHandlerTest {
     class Idempotency {
 
         @Test
-        @DisplayName("should return existing order with created=false when paymentId already exists")
-        void shouldReturnExistingOrder() {
+        @DisplayName("should skip redemption and payout when paymentId already exists")
+        void shouldSkipProcessingForExistingOrder() {
             var existing = aPendingOrder();
 
             given(orderRepository.findByPaymentId(PAYMENT_ID))
                     .willReturn(Optional.of(existing));
 
-            var result = handler.initiatePayout(
+            handler.initiatePayout(
                     PAYMENT_ID, CORRELATION_ID, TRANSFER_ID,
                     PayoutType.FIAT, aStablecoinTicker(),
                     REDEEMED_AMOUNT, TARGET_CURRENCY, APPLIED_FX_RATE,
                     RECIPIENT_ID, RECIPIENT_ACCOUNT_HASH,
                     aBankAccount(), null,
-                    com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                    PaymentRail.SEPA,
                     aPartnerIdentifier());
 
-            assertThat(result.created()).isFalse();
-            assertThat(result.order()).isEqualTo(existing);
             then(redemptionGateway).shouldHaveNoInteractions();
             then(payoutPartnerGateway).shouldHaveNoInteractions();
             then(orderRepository).should(never()).save(eqIgnoringTimestamps(existing));
@@ -264,7 +269,7 @@ class PayoutCommandHandlerTest {
                     REDEEMED_AMOUNT, TARGET_CURRENCY, APPLIED_FX_RATE,
                     RECIPIENT_ID, RECIPIENT_ACCOUNT_HASH,
                     aBankAccount(), null,
-                    com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                    PaymentRail.SEPA,
                     aPartnerIdentifier()).holdStablecoin().completeHold();
 
             given(orderRepository.findByPaymentId(PAYMENT_ID))
@@ -272,17 +277,15 @@ class PayoutCommandHandlerTest {
             given(orderRepository.save(eqIgnoring(expectedOrder, "payoutId")))
                     .willAnswer(inv -> inv.getArgument(0));
 
-            var result = handler.initiatePayout(
+            handler.initiatePayout(
                     PAYMENT_ID, CORRELATION_ID, TRANSFER_ID,
                     PayoutType.HOLD_STABLECOIN, aStablecoinTicker(),
                     REDEEMED_AMOUNT, TARGET_CURRENCY, APPLIED_FX_RATE,
                     RECIPIENT_ID, RECIPIENT_ACCOUNT_HASH,
                     aBankAccount(), null,
-                    com.stablecoin.payments.offramp.domain.model.PaymentRail.SEPA,
+                    PaymentRail.SEPA,
                     aPartnerIdentifier());
 
-            assertThat(result.created()).isTrue();
-            assertThat(result.order().status()).isEqualTo(PayoutStatus.COMPLETED);
             then(orderRepository).should().save(eqIgnoring(expectedOrder, "payoutId"));
             then(redemptionGateway).shouldHaveNoInteractions();
             then(payoutPartnerGateway).shouldHaveNoInteractions();

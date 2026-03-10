@@ -1,5 +1,6 @@
 package com.stablecoin.payments.offramp.fixtures;
 
+import com.stablecoin.payments.offramp.api.PayoutRequest;
 import com.stablecoin.payments.offramp.domain.model.AccountType;
 import com.stablecoin.payments.offramp.domain.model.BankAccount;
 import com.stablecoin.payments.offramp.domain.model.MobileMoneyAccount;
@@ -52,6 +53,34 @@ public final class PayoutOrderFixtures {
 
     public static Money aMoney() {
         return new Money(new BigDecimal("1000.00"), "USD");
+    }
+
+    // -- API Request Factories --------------------------------------------
+
+    public static PayoutRequest aPayoutRequest() {
+        return new PayoutRequest(
+                PAYMENT_ID, CORRELATION_ID, TRANSFER_ID,
+                "FIAT", "USDC",
+                REDEEMED_AMOUNT, TARGET_CURRENCY,
+                APPLIED_FX_RATE, RECIPIENT_ID,
+                RECIPIENT_ACCOUNT_HASH,
+                "SEPA", "modulr_001", "Modulr",
+                "DE89370400440532013000", "DEUTDEFF", "IBAN", "DE",
+                null, null, null
+        );
+    }
+
+    public static PayoutRequest aHoldPayoutRequest() {
+        return new PayoutRequest(
+                PAYMENT_ID, CORRELATION_ID, TRANSFER_ID,
+                "HOLD_STABLECOIN", "USDC",
+                REDEEMED_AMOUNT, TARGET_CURRENCY,
+                APPLIED_FX_RATE, RECIPIENT_ID,
+                RECIPIENT_ACCOUNT_HASH,
+                "SEPA", "modulr_001", "Modulr",
+                "DE89370400440532013000", "DEUTDEFF", "IBAN", "DE",
+                null, null, null
+        );
     }
 
     // -- PayoutOrder State Factories --------------------------------------
