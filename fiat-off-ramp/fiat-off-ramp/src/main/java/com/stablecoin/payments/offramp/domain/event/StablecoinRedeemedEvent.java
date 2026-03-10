@@ -14,4 +14,7 @@ public record StablecoinRedeemedEvent(
         BigDecimal fiatReceived,
         String fiatCurrency,
         Instant redeemedAt
-) {}
+) {
+
+    public static final String TOPIC = "stablecoin.redeemed";
+}

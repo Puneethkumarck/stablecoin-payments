@@ -10,4 +10,7 @@ public record FiatPayoutFailedEvent(
         String reason,
         String errorCode,
         Instant failedAt
-) {}
+) {
+
+    public static final String TOPIC = "fiat.payout.failed";
+}

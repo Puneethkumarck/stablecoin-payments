@@ -13,4 +13,7 @@ public record FiatPayoutInitiatedEvent(
         String paymentRail,
         String partner,
         Instant initiatedAt
-) {}
+) {
+
+    public static final String TOPIC = "fiat.payout.initiated";
+}

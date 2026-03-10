@@ -3,6 +3,7 @@ package com.stablecoin.payments.offramp.infrastructure.provider.circle;
 import com.stablecoin.payments.offramp.domain.port.RedemptionGateway;
 import com.stablecoin.payments.offramp.domain.port.RedemptionRequest;
 import com.stablecoin.payments.offramp.domain.port.RedemptionResult;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -66,6 +67,10 @@ public class CircleRedemptionAdapter implements RedemptionGateway {
                 .retrieve()
                 .body(CirclePayoutResponse.class);
 
+        if (response == null || response.data() == null || response.data().amount() == null) {
+            throw new IllegalStateException("Circle payout response missing required fields");
+        }
+
         var payoutData = response.data();
 
         log.info("[CIRCLE] Redemption initiated payoutId={} circleRef={} status={} fiatAmount={} currency={}",
@@ -76,12 +81,12 @@ public class CircleRedemptionAdapter implements RedemptionGateway {
                 payoutData.id(),
                 new BigDecimal(payoutData.amount().amount()),
                 payoutData.amount().currency(),
-                Instant.now()
+                Instant.parse(payoutData.createDate())
         );
     }
 
     @SuppressWarnings("unused")
-    private RedemptionResult redeemFallback(RedemptionRequest request, Exception ex) {
+    private RedemptionResult redeemFallback(RedemptionRequest request, CallNotPermittedException ex) {
         log.error("[CIRCLE] Circuit breaker open — redemption failed payoutId={}",
                 request.payoutId(), ex);
         throw new IllegalStateException("Circle redemption unavailable", ex);

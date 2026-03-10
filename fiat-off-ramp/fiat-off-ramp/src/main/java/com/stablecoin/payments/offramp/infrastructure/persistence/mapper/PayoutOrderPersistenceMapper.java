@@ -38,6 +38,7 @@ public interface PayoutOrderPersistenceMapper {
                 .partnerSettledAt(order.partnerSettledAt())
                 .failureReason(order.failureReason())
                 .errorCode(order.errorCode())
+                .version(order.version())
                 .bankAccountNumber(order.bankAccount() != null ? order.bankAccount().accountNumber() : null)
                 .bankCode(order.bankAccount() != null ? order.bankAccount().bankCode() : null)
                 .bankAccountType(order.bankAccount() != null ? order.bankAccount().accountType().name() : null)
@@ -89,6 +90,7 @@ public interface PayoutOrderPersistenceMapper {
                 entity.getPartnerSettledAt(),
                 entity.getFailureReason(),
                 entity.getErrorCode(),
+                entity.getVersion(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

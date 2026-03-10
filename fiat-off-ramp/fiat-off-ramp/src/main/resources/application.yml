@@ -123,6 +123,11 @@ app:
       api-key: ${CIRCLE_API_KEY:SAND_API_KEY_DEFAULT}
       destination-id: ${CIRCLE_DESTINATION_ID:default-wire-id}
       timeout-seconds: 10
+  payout:
+    modulr:
+      webhook:
+        webhook-secret: ${MODULR_WEBHOOK_SECRET:}
+        tolerance-seconds: 300
 
 logging:
   level:

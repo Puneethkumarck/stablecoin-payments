@@ -4,6 +4,8 @@ import com.stablecoin.payments.offramp.domain.model.OffRampTransaction;
 import com.stablecoin.payments.offramp.infrastructure.persistence.entity.OffRampTransactionEntity;
 import org.mapstruct.Mapper;
 
+import java.util.Objects;
+
 @Mapper
 public interface OffRampTransactionPersistenceMapper {
 
@@ -19,7 +21,7 @@ public interface OffRampTransactionPersistenceMapper {
                 .amount(transaction.amount())
                 .currency(transaction.currency())
                 .status(transaction.status())
-                .rawResponse(transaction.rawResponse())
+                .rawResponse(Objects.requireNonNullElse(transaction.rawResponse(), "{}"))
                 .receivedAt(transaction.receivedAt())
                 .build();
     }
