@@ -21,10 +21,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static com.stablecoin.payments.offramp.domain.model.PayoutOrderTestHelper.withUpdatedAt;
 import static com.stablecoin.payments.offramp.domain.model.PayoutStatus.PAYOUT_INITIATED;
 import static com.stablecoin.payments.offramp.domain.model.PayoutStatus.PAYOUT_PROCESSING;
+import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aCompletedOrder;
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aPayoutInitiatedOrder;
 import static com.stablecoin.payments.offramp.fixtures.PayoutOrderFixtures.aPayoutProcessingOrder;
 import static com.stablecoin.payments.offramp.fixtures.TestUtils.eqIgnoringTimestamps;
@@ -75,6 +77,8 @@ class PayoutMonitorCommandHandlerTest {
                     .willReturn(List.of(stuckOrder));
             given(orderRepository.findByStatus(PAYOUT_PROCESSING))
                     .willReturn(List.of());
+            given(orderRepository.findById(stuckOrder.payoutId()))
+                    .willReturn(Optional.of(stuckOrder));
 
             handler.detectAndEscalateStuckPayouts();
 
@@ -98,6 +102,8 @@ class PayoutMonitorCommandHandlerTest {
                     .willReturn(List.of(stuckOrder));
             given(orderRepository.findByStatus(PAYOUT_PROCESSING))
                     .willReturn(List.of());
+            given(orderRepository.findById(stuckOrder.payoutId()))
+                    .willReturn(Optional.of(stuckOrder));
 
             handler.detectAndEscalateStuckPayouts();
 
@@ -139,6 +145,8 @@ class PayoutMonitorCommandHandlerTest {
                     .willReturn(List.of());
             given(orderRepository.findByStatus(PAYOUT_PROCESSING))
                     .willReturn(List.of(stuckOrder));
+            given(orderRepository.findById(stuckOrder.payoutId()))
+                    .willReturn(Optional.of(stuckOrder));
 
             handler.detectAndEscalateStuckPayouts();
 
@@ -162,10 +170,39 @@ class PayoutMonitorCommandHandlerTest {
                     .willReturn(List.of());
             given(orderRepository.findByStatus(PAYOUT_PROCESSING))
                     .willReturn(List.of(stuckOrder));
+            given(orderRepository.findById(stuckOrder.payoutId()))
+                    .willReturn(Optional.of(stuckOrder));
 
             handler.detectAndEscalateStuckPayouts();
 
             then(eventPublisher).should().publish(eqIgnoringTimestamps(expectedEvent));
+        }
+    }
+
+    @Nested
+    @DisplayName("TOCTOU guard")
+    class ToctouGuard {
+
+        @Test
+        void shouldSkipWhenOrderAlreadyTransitionedBetweenQueryAndEscalation() {
+            var stuckOrder = withUpdatedAt(
+                    aPayoutInitiatedOrder(), NOW.minus(Duration.ofMinutes(121)));
+            var completedOrder = aCompletedOrder();
+
+            given(orderRepository.findByStatus(PAYOUT_INITIATED))
+                    .willReturn(List.of(stuckOrder));
+            given(orderRepository.findByStatus(PAYOUT_PROCESSING))
+                    .willReturn(List.of());
+            given(orderRepository.findById(stuckOrder.payoutId()))
+                    .willReturn(Optional.of(completedOrder));
+
+            handler.detectAndEscalateStuckPayouts();
+
+            then(orderRepository).should().findByStatus(PAYOUT_INITIATED);
+            then(orderRepository).should().findByStatus(PAYOUT_PROCESSING);
+            then(orderRepository).should().findById(stuckOrder.payoutId());
+            then(orderRepository).shouldHaveNoMoreInteractions();
+            then(eventPublisher).shouldHaveNoInteractions();
         }
     }
 
