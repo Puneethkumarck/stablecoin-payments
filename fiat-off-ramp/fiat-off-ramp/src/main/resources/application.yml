@@ -126,6 +126,10 @@ app:
       destination-id: ${CIRCLE_DESTINATION_ID:default-wire-id}
       timeout-seconds: 10
   payout:
+    monitor:
+      enabled: true
+      interval-ms: 300000
+      stuck-threshold-minutes: 120
     modulr:
       webhook:
         webhook-secret: ${MODULR_WEBHOOK_SECRET:}

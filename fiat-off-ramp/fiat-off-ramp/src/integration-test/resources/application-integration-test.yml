@@ -31,6 +31,9 @@ app:
     enabled: false
   fallback-adapters:
     enabled: true
+  payout:
+    monitor:
+      enabled: false
 
 logging:
   level:
