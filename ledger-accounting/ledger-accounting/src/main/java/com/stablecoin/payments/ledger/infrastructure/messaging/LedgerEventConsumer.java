@@ -213,6 +213,9 @@ public class LedgerEventConsumer {
                             event.paymentId(), event.correlationId(), revenueEventId,
                             feeAmount, fxLeg.currency()));
                 });
+
+        // Finalize reconciliation — checks all 5 legs present and amounts within tolerance
+        reconciliationCommandHandler.finalizeReconciliation(event.paymentId());
     }
 
     // --- payment.failed ---

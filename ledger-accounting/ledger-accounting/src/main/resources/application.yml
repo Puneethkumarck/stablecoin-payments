@@ -122,6 +122,9 @@ app:
       retry-interval-ms: 600000
       retry-enabled: true
       audit-archive-enabled: false
+    audit-archive:
+      retention-days: 90
+      cron: "0 0 3 * * ?"
 
 logging:
   level:
