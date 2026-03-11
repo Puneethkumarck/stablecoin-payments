@@ -1,5 +1,6 @@
 package com.stablecoin.payments.ledger.infrastructure.config;
 
+import com.stablecoin.payments.ledger.domain.port.ReconciliationProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.math.BigDecimal;
@@ -10,7 +11,7 @@ public record ReconciliationConfig(
         long retryIntervalMs,
         boolean retryEnabled,
         boolean auditArchiveEnabled
-) {
+) implements ReconciliationProperties {
 
     public ReconciliationConfig {
         if (tolerance == null) {
