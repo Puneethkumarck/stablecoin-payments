@@ -110,7 +110,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     // Outbox (namastack)
-    implementation("io.namastack:namastack-outbox-starter-jdbc:1.0.0")
+    implementation("io.namastack:namastack-outbox-starter-jdbc:1.1.0")
 
     // Test fixtures
     testFixturesImplementation("org.assertj:assertj-core")
