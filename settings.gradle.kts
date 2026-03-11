@@ -43,3 +43,7 @@ include("blockchain-custody:blockchain-custody")
 include("fiat-off-ramp:fiat-off-ramp-api")
 include("fiat-off-ramp:fiat-off-ramp-client")
 include("fiat-off-ramp:fiat-off-ramp")
+
+include("ledger-accounting:ledger-accounting-api")
+include("ledger-accounting:ledger-accounting-client")
+include("ledger-accounting:ledger-accounting")
