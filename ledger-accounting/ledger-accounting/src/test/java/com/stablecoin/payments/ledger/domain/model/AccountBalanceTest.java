@@ -209,6 +209,33 @@ class AccountBalanceTest {
     }
 
     @Nested
+    @DisplayName("applyEntry() — guards")
+    class ApplyEntryGuards {
+
+        @Test
+        @DisplayName("rejects entry with mismatched account code")
+        void rejectsEntryWithMismatchedAccountCode() {
+            var balance = aZeroBalance("1000", "USD");
+            var entry = aDebitEntry("2010", new BigDecimal("100.00"), "USD");
+
+            assertThatThrownBy(() -> balance.applyEntry(entry, DEBIT))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("account code");
+        }
+
+        @Test
+        @DisplayName("rejects entry with mismatched currency")
+        void rejectsEntryWithMismatchedCurrency() {
+            var balance = aZeroBalance("1000", "USD");
+            var entry = aDebitEntry("1000", new BigDecimal("100.00"), "EUR");
+
+            assertThatThrownBy(() -> balance.applyEntry(entry, DEBIT))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("currency");
+        }
+    }
+
+    @Nested
     @DisplayName("validation")
     class Validation {
 

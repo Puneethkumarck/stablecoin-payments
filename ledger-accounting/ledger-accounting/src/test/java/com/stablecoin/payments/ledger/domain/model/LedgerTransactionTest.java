@@ -128,6 +128,23 @@ class LedgerTransactionTest {
         }
 
         @Test
+        @DisplayName("rejects cross-currency entries that appear balanced by amount")
+        void rejectsCrossCurrencyEntries() {
+            var entries = List.of(
+                    aDebitEntry("1000", new BigDecimal("10000.00"), "USD"),
+                    aCreditEntry("2010", new BigDecimal("10000.00"), "EUR")
+            );
+
+            assertThatThrownBy(() -> new LedgerTransaction(
+                    TRANSACTION_ID, PAYMENT_ID, CORRELATION_ID,
+                    "payment.initiated", SOURCE_EVENT_ID,
+                    "Cross-currency", entries, NOW
+            ))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("not balanced");
+        }
+
+        @Test
         @DisplayName("rejects null transactionId")
         void rejectsNullTransactionId() {
             assertThatThrownBy(() -> new LedgerTransaction(

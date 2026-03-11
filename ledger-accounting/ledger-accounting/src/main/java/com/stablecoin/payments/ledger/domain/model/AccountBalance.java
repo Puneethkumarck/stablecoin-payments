@@ -47,6 +47,14 @@ public record AccountBalance(
     public AccountBalance applyEntry(JournalEntry entry, EntryType normalBalance) {
         Objects.requireNonNull(entry, "entry must not be null");
         Objects.requireNonNull(normalBalance, "normalBalance must not be null");
+        if (!this.accountCode.equals(entry.accountCode())) {
+            throw new IllegalArgumentException(
+                    "Entry account code " + entry.accountCode() + " does not match balance account code " + this.accountCode);
+        }
+        if (!this.currency.equals(entry.currency())) {
+            throw new IllegalArgumentException(
+                    "Entry currency " + entry.currency() + " does not match balance currency " + this.currency);
+        }
 
         BigDecimal newBalance;
         if (entry.entryType() == normalBalance) {

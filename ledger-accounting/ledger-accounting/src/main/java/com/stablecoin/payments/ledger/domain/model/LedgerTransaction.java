@@ -3,8 +3,10 @@ package com.stablecoin.payments.ledger.domain.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Aggregate root for the three-object model.
@@ -38,19 +40,25 @@ public record LedgerTransaction(
     }
 
     private static void validateBalance(List<JournalEntry> entries) {
-        BigDecimal totalDebits = BigDecimal.ZERO;
-        BigDecimal totalCredits = BigDecimal.ZERO;
-        for (JournalEntry entry : entries) {
-            if (entry.entryType() == EntryType.DEBIT) {
-                totalDebits = totalDebits.add(entry.amount());
-            } else {
-                totalCredits = totalCredits.add(entry.amount());
+        Map<String, List<JournalEntry>> byCurrency = entries.stream()
+                .collect(Collectors.groupingBy(JournalEntry::currency));
+
+        for (Map.Entry<String, List<JournalEntry>> group : byCurrency.entrySet()) {
+            BigDecimal totalDebits = BigDecimal.ZERO;
+            BigDecimal totalCredits = BigDecimal.ZERO;
+            for (JournalEntry entry : group.getValue()) {
+                if (entry.entryType() == EntryType.DEBIT) {
+                    totalDebits = totalDebits.add(entry.amount());
+                } else {
+                    totalCredits = totalCredits.add(entry.amount());
+                }
             }
-        }
-        if (totalDebits.compareTo(totalCredits) != 0) {
-            throw new IllegalArgumentException(
-                    "Transaction is not balanced: debits=" + totalDebits + " credits=" + totalCredits
-            );
+            if (totalDebits.compareTo(totalCredits) != 0) {
+                throw new IllegalArgumentException(
+                        "Transaction is not balanced for currency " + group.getKey()
+                                + ": debits=" + totalDebits + " credits=" + totalCredits
+                );
+            }
         }
     }
 

@@ -109,7 +109,7 @@ springdoc:
 
 app:
   security:
-    enabled: false
+    enabled: true
   fallback-adapters:
     enabled: true
   ledger:
