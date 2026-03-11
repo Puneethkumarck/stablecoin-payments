@@ -42,8 +42,8 @@ public class GlobalExceptionHandler {
     @ResponseStatus(BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
     public ApiError handleIllegalArgument(IllegalArgumentException ex) {
-        log.info("Illegal argument: {}", ex.getMessage());
-        return ApiError.of("LD-0001", BAD_REQUEST.getReasonPhrase(), ex.getMessage());
+        log.warn("Illegal argument: {}", ex.getMessage());
+        return ApiError.of("LD-0001", BAD_REQUEST.getReasonPhrase(), "Invalid request parameter");
     }
 
     @ResponseStatus(INTERNAL_SERVER_ERROR)

@@ -16,6 +16,10 @@ public record ReconciliationConfig(
         if (tolerance == null) {
             tolerance = new BigDecimal("0.01");
         }
+        if (tolerance.signum() < 0) {
+            throw new IllegalArgumentException(
+                    "app.ledger.reconciliation.tolerance must be >= 0");
+        }
         if (retryIntervalMs <= 0) {
             retryIntervalMs = 600_000;
         }

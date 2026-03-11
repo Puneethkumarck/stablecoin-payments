@@ -51,7 +51,7 @@ INSERT INTO accounts (account_code, account_name, account_type, normal_balance) 
 CREATE TABLE account_balances (
     account_code    VARCHAR(10)     NOT NULL,
     currency        VARCHAR(10)     NOT NULL REFERENCES currencies(code),
-    balance         NUMERIC(20, 8)  NOT NULL DEFAULT 0,
+    balance         NUMERIC(38, 18) NOT NULL DEFAULT 0,
     version         BIGINT          NOT NULL DEFAULT 0,
     last_entry_id   UUID            NULL,
     updated_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
@@ -98,9 +98,9 @@ CREATE TABLE journal_entries (
     sequence_no      INT             NOT NULL,
     entry_type       VARCHAR(6)      NOT NULL,
     account_code     VARCHAR(10)     NOT NULL REFERENCES accounts(account_code),
-    amount           NUMERIC(20, 8)  NOT NULL CHECK (amount > 0),
+    amount           NUMERIC(38, 18) NOT NULL CHECK (amount > 0),
     currency         VARCHAR(10)     NOT NULL REFERENCES currencies(code),
-    balance_after    NUMERIC(20, 8)  NOT NULL,
+    balance_after    NUMERIC(38, 18) NOT NULL,
     account_version  BIGINT          NOT NULL,
     source_event     VARCHAR(100)    NOT NULL,
     source_event_id  UUID            NOT NULL,
@@ -110,8 +110,9 @@ CREATE TABLE journal_entries (
 ) PARTITION BY RANGE (created_at);
 
 -- Idempotency: prevent duplicate entries from Kafka retries
+-- Includes partition key (created_at) for global uniqueness across partitions
 CREATE UNIQUE INDEX journal_entries_idempotency_idx
-    ON journal_entries (source_event_id, entry_type, account_code);
+    ON journal_entries (source_event_id, entry_type, account_code, created_at);
 
 CREATE INDEX journal_entries_payment_id_idx
     ON journal_entries (payment_id, sequence_no ASC);
@@ -162,8 +163,8 @@ CREATE TABLE reconciliation_legs (
     leg_id           UUID            NOT NULL DEFAULT gen_random_uuid(),
     rec_id           UUID            NOT NULL REFERENCES reconciliation_records(rec_id),
     leg_type         VARCHAR(30)     NOT NULL,
-    amount           NUMERIC(20, 8)  NULL,
-    currency         VARCHAR(10)     NULL,
+    amount           NUMERIC(38, 18) NULL,
+    currency         VARCHAR(10)     NULL REFERENCES currencies(code),
     source_event_id  UUID            NULL,
     received_at      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     CONSTRAINT reconciliation_legs_pkey PRIMARY KEY (leg_id),
@@ -222,7 +223,7 @@ CREATE TABLE ledger_outbox_record (
     CONSTRAINT ledger_outbox_record_pkey PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_ledger_outbox_record_status
+CREATE INDEX ledger_outbox_record_status_idx
     ON ledger_outbox_record (status, next_retry_at);
 
 CREATE TABLE ledger_outbox_instance (

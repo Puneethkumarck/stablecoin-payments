@@ -34,6 +34,7 @@ public class IdempotencyKeyFilter extends OncePerRequestFilter {
                 log.info("Missing Idempotency-Key header for {} {}", request.getMethod(), request.getRequestURI());
                 response.setStatus(HttpStatus.BAD_REQUEST.value());
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                response.setCharacterEncoding("UTF-8");
                 response.getWriter().write(
                         "{\"code\":\"LD-0001\",\"status\":\"Bad Request\"," +
                         "\"message\":\"Idempotency-Key header is required for mutating requests\",\"errors\":{}}");
