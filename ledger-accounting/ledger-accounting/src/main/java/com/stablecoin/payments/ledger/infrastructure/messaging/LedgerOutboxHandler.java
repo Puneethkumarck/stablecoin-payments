@@ -26,9 +26,6 @@ public class LedgerOutboxHandler {
             kafkaTemplate.send(topic, key, event).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.debug("Published outbox event type={} topic={} key={}",
                     event.getClass().getSimpleName(), topic, key);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Kafka send interrupted for " + event.getClass().getSimpleName(), e);
         } catch (Exception e) {
             log.error("Failed to publish event type={} topic={}: {}",
                     event.getClass().getSimpleName(), topic, e.getMessage());

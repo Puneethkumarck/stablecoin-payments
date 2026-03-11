@@ -215,6 +215,8 @@ class LedgerEventConsumerTest {
 
             given(reconciliationCommandHandler.findLeg(PAYMENT_ID, ReconciliationLegType.FX_RATE))
                     .willReturn(Optional.empty());
+            given(reconciliationCommandHandler.finalizeReconciliation(PAYMENT_ID))
+                    .willReturn(Optional.empty());
 
             consumer.onPaymentCompleted(paymentCompletedEvent());
 
@@ -231,6 +233,8 @@ class LedgerEventConsumerTest {
                     ReconciliationLegType.FX_RATE, feeAmount, "USD", LOCK_ID, NOW);
             given(reconciliationCommandHandler.findLeg(PAYMENT_ID, ReconciliationLegType.FX_RATE))
                     .willReturn(Optional.of(fxLeg));
+            given(reconciliationCommandHandler.finalizeReconciliation(PAYMENT_ID))
+                    .willReturn(Optional.empty());
 
             var revenueEventId = deriveSourceEventId(PAYMENT_ID, "payment.completed.revenue");
             var expectedRevenue = AccountingRules.paymentCompletedRevenue(
@@ -250,6 +254,8 @@ class LedgerEventConsumerTest {
                     ReconciliationLegType.FX_RATE, BigDecimal.ZERO, "USD", LOCK_ID, NOW);
             given(reconciliationCommandHandler.findLeg(PAYMENT_ID, ReconciliationLegType.FX_RATE))
                     .willReturn(Optional.of(zeroFeeLeg));
+            given(reconciliationCommandHandler.finalizeReconciliation(PAYMENT_ID))
+                    .willReturn(Optional.empty());
 
             consumer.onPaymentCompleted(paymentCompletedEvent());
 
@@ -258,6 +264,21 @@ class LedgerEventConsumerTest {
             var expectedClearing = AccountingRules.paymentCompletedClearing(
                     PAYMENT_ID, CORRELATION_ID, clearingEventId, USDC_AMOUNT, "USDC");
             then(journalCommandHandler).should().postTransaction(expectedClearing);
+        }
+
+        @Test
+        @DisplayName("should call finalizeReconciliation after posting entries")
+        void callsFinalizeReconciliation() {
+            stubPriorSubmittedTransaction();
+
+            given(reconciliationCommandHandler.findLeg(PAYMENT_ID, ReconciliationLegType.FX_RATE))
+                    .willReturn(Optional.empty());
+            given(reconciliationCommandHandler.finalizeReconciliation(PAYMENT_ID))
+                    .willReturn(Optional.empty());
+
+            consumer.onPaymentCompleted(paymentCompletedEvent());
+
+            then(reconciliationCommandHandler).should().finalizeReconciliation(PAYMENT_ID);
         }
     }
 
