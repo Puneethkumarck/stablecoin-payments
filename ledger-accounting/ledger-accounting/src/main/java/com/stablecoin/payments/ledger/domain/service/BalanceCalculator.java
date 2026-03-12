@@ -49,23 +49,33 @@ public class BalanceCalculator {
         Map<String, BalanceUpdate> result = new LinkedHashMap<>();
         for (JournalEntryRequest req : sorted) {
             String key = balanceKey(req.accountCode(), req.currency());
-            result.put(key, computeSingleBalance(req));
+            BalanceUpdate previous = result.get(key);
+            result.put(key, computeSingleBalance(req, previous));
         }
         return result;
     }
 
-    private BalanceUpdate computeSingleBalance(JournalEntryRequest entryRequest) {
+    private BalanceUpdate computeSingleBalance(JournalEntryRequest entryRequest, BalanceUpdate previous) {
         Account account = accountRepository.findByAccountCode(entryRequest.accountCode())
                 .orElseThrow(() -> new AccountNotFoundException(entryRequest.accountCode()));
 
-        AccountBalance current = balanceRepository
-                .findForUpdate(entryRequest.accountCode(), entryRequest.currency())
-                .orElse(AccountBalance.zero(entryRequest.accountCode(), entryRequest.currency()));
+        BigDecimal currentBalance;
+        long newVersion;
+        if (previous != null) {
+            currentBalance = previous.balanceAfter();
+            newVersion = previous.accountVersion();
+        } else {
+            AccountBalance current = balanceRepository
+                    .findForUpdate(entryRequest.accountCode(), entryRequest.currency())
+                    .orElse(AccountBalance.zero(entryRequest.accountCode(), entryRequest.currency()));
+            currentBalance = current.balance();
+            newVersion = current.version() + 1;
+        }
 
         BigDecimal newBalance = computeNewBalance(
-                current.balance(), entryRequest.entryType(), account.normalBalance(), entryRequest.amount());
+                currentBalance, entryRequest.entryType(), account.normalBalance(), entryRequest.amount());
 
-        return new BalanceUpdate(newBalance, current.version() + 1);
+        return new BalanceUpdate(newBalance, newVersion);
     }
 
     static BigDecimal computeNewBalance(

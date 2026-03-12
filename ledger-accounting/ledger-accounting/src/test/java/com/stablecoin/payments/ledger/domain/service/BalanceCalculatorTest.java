@@ -299,6 +299,31 @@ class BalanceCalculatorTest {
     }
 
     @Nested
+    @DisplayName("same-account accumulation")
+    class SameAccountAccumulation {
+
+        @Test
+        @DisplayName("accumulates multiple entries for same account and currency")
+        void accumulatesMultipleEntries() {
+            stubAccount(ASSET_FIAT_RECEIVABLE, "USD");
+            stubAccount(LIABILITY_CLIENT_FUNDS, "USD");
+
+            var result = balanceCalculator.computeBalances(List.of(
+                    new JournalEntryRequest(DEBIT, FIAT_RECEIVABLE, new BigDecimal("5000.00"), "USD"),
+                    new JournalEntryRequest(DEBIT, FIAT_RECEIVABLE, new BigDecimal("3000.00"), "USD"),
+                    new JournalEntryRequest(CREDIT, CLIENT_FUNDS_HELD, new BigDecimal("8000.00"), "USD")
+            ));
+
+            // Two DEBITs to same ASSET account: 0 + 5000 + 3000 = 8000, version bumps once
+            var expected = new BalanceUpdate(new BigDecimal("8000.00"), 1L);
+            assertThat(result.get(BalanceCalculator.balanceKey(FIAT_RECEIVABLE, "USD")))
+                    .usingRecursiveComparison()
+                    .withComparatorForType(BigDecimal::compareTo, BigDecimal.class)
+                    .isEqualTo(expected);
+        }
+    }
+
+    @Nested
     @DisplayName("deterministic lock ordering")
     class DeterministicLockOrdering {
 
