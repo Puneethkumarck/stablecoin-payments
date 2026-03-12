@@ -178,6 +178,17 @@ class ReconciliationCommandHandlerTest {
 
             assertThat(result).isEmpty();
         }
+
+        @Test
+        @DisplayName("should return empty when no record exists")
+        void returnsEmptyWhenNoRecord() {
+            given(reconciliationRepository.findByPaymentId(PAYMENT_ID))
+                    .willReturn(Optional.empty());
+
+            var result = handler.findLeg(PAYMENT_ID, ReconciliationLegType.FX_RATE);
+
+            assertThat(result).isEmpty();
+        }
     }
 
     @Nested
