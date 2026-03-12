@@ -17,5 +17,9 @@ public interface JournalEntryRepository {
 
     List<JournalEntry> findByAccountCodeAndCurrency(String accountCode, String currency);
 
+    List<JournalEntry> findByAccountCodeAndCurrency(String accountCode, String currency, int offset, int limit);
+
+    long countByAccountCodeAndCurrency(String accountCode, String currency);
+
     int countByPaymentId(UUID paymentId);
 }

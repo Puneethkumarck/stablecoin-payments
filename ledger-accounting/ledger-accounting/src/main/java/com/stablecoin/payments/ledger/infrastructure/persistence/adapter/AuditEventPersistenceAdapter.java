@@ -7,6 +7,7 @@ import com.stablecoin.payments.ledger.infrastructure.persistence.repository.Audi
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,5 +35,10 @@ public class AuditEventPersistenceAdapter implements AuditEventRepository {
         return jpa.findByCorrelationId(correlationId).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public int deleteByOccurredAtBefore(Instant cutoff) {
+        return jpa.deleteByOccurredAtBefore(cutoff);
     }
 }
