@@ -5,6 +5,7 @@ import com.stablecoin.payments.ledger.domain.port.JournalEntryRepository;
 import com.stablecoin.payments.ledger.infrastructure.persistence.mapper.JournalEntryPersistenceMapper;
 import com.stablecoin.payments.ledger.infrastructure.persistence.repository.JournalEntryJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -51,6 +52,21 @@ public class JournalEntryPersistenceAdapter implements JournalEntryRepository {
         return jpa.findByAccountCodeAndCurrencyOrderByCreatedAtDesc(accountCode, currency).stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<JournalEntry> findByAccountCodeAndCurrency(String accountCode, String currency,
+                                                            int offset, int limit) {
+        int page = offset / Math.max(limit, 1);
+        return jpa.findByAccountCodeAndCurrencyOrderByCreatedAtDesc(
+                        accountCode, currency, PageRequest.of(page, limit))
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countByAccountCodeAndCurrency(String accountCode, String currency) {
+        return jpa.countByAccountCodeAndCurrency(accountCode, currency);
     }
 
     @Override
