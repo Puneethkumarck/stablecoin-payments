@@ -94,4 +94,4 @@ S11 runs on port `8081`.
 
 ## License
 
-Proprietary. All rights reserved.
+This project is licensed under the [MIT License](LICENSE).
