@@ -430,28 +430,6 @@ make test-merchant-iam-all        # All tiers for one service
 
 ---
 
-## CI/CD
-
-GitHub Actions runs on every push and PR:
-
-```mermaid
-graph LR
-    PR["Push / PR"] --> SPOT["Spotless Check"]
-    PR --> FILTER["Path Filter"]
-    FILTER --> TEST["Test Matrix\n(per service)"]
-    TEST --> UNIT["Unit Tests"]
-    TEST --> INT["Integration Tests"]
-    TEST --> BIZ["Business Tests"]
-    UNIT --> COV["JaCoCo Coverage"]
-    TEST --> SONAR["SonarCloud\n(push only)"]
-
-    style PR fill:#2196F3,color:#fff
-    style SPOT fill:#4CAF50,color:#fff
-    style SONAR fill:#FF9800,color:#fff
-```
-
----
-
 ## Roadmap
 
 | Phase | Name | Services | Status |
