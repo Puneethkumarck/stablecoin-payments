@@ -31,6 +31,8 @@ app:
     enabled: false
   custody:
     provider: fallback
+  fallback-adapters:
+    enabled: true
 
 logging:
   level:

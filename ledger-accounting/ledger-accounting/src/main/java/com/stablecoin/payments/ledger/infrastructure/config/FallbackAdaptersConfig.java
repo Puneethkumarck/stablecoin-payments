@@ -4,7 +4,6 @@ import com.stablecoin.payments.ledger.domain.event.ReconciliationCompletedDomain
 import com.stablecoin.payments.ledger.domain.event.ReconciliationDiscrepancyDomainEvent;
 import com.stablecoin.payments.ledger.domain.port.LedgerEventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +14,6 @@ import org.springframework.context.annotation.Configuration;
 public class FallbackAdaptersConfig {
 
     @Bean
-    @ConditionalOnMissingBean
     public LedgerEventPublisher ledgerEventPublisher() {
         return new LedgerEventPublisher() {
             @Override

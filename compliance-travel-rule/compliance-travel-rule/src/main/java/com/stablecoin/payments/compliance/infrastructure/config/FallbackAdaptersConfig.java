@@ -10,7 +10,7 @@ import com.stablecoin.payments.compliance.domain.port.KycProvider;
 import com.stablecoin.payments.compliance.domain.port.SanctionsProvider;
 import com.stablecoin.payments.compliance.domain.port.TravelRuleProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -20,11 +20,10 @@ import java.util.UUID;
 
 @Slf4j
 @Configuration
-public class
-FallbackAdaptersConfig {
+@ConditionalOnProperty(name = "app.fallback-adapters.enabled", havingValue = "true")
+public class FallbackAdaptersConfig {
 
     @Bean
-    @ConditionalOnMissingBean
     public KycProvider fallbackKycProvider() {
         log.warn("Using fallback KYC provider — all verifications will return VERIFIED");
         return (senderId, recipientId) -> KycResult.builder()
@@ -39,7 +38,6 @@ FallbackAdaptersConfig {
     }
 
     @Bean
-    @ConditionalOnMissingBean
     public SanctionsProvider fallbackSanctionsProvider() {
         log.warn("Using fallback sanctions provider — no hits will be returned");
         return (senderId, recipientId) -> SanctionsResult.builder()
@@ -56,7 +54,6 @@ FallbackAdaptersConfig {
     }
 
     @Bean
-    @ConditionalOnMissingBean
     public AmlProvider fallbackAmlProvider() {
         log.warn("Using fallback AML provider — no flags will be returned");
         return (senderId, recipientId) -> AmlResult.builder()
@@ -69,7 +66,6 @@ FallbackAdaptersConfig {
     }
 
     @Bean
-    @ConditionalOnMissingBean
     public TravelRuleProvider fallbackTravelRuleProvider() {
         log.warn("Using fallback travel rule provider — transmissions will be simulated");
         return travelRulePackage -> "fallback-tr-ref-" + UUID.randomUUID();

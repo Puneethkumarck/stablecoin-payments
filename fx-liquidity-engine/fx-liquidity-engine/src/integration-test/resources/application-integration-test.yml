@@ -27,6 +27,8 @@ server:
   port: 0
 
 app:
+  fallback-adapters:
+    enabled: true
   security:
     enabled: false
   fx:

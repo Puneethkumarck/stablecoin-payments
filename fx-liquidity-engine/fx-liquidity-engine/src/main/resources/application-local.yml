@@ -1,4 +1,6 @@
 app:
+  fallback-adapters:
+    enabled: true
   security:
     enabled: false
 

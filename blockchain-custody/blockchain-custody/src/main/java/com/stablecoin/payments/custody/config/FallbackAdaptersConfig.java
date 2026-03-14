@@ -13,7 +13,6 @@ import com.stablecoin.payments.custody.domain.port.TransactionReceipt;
 import com.stablecoin.payments.custody.domain.port.TransactionStatus;
 import com.stablecoin.payments.custody.domain.port.TransferEventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,11 +26,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Provides fallback (dev/test) implementations for external provider ports.
- * Each bean uses {@code @ConditionalOnMissingBean} so that production adapters
- * (activated via {@code @ConditionalOnProperty}) take precedence.
+ * Activated only when {@code app.fallback-adapters.enabled=true}.
+ * Production adapters (activated via their own {@code @ConditionalOnProperty})
+ * are used when this config is disabled.
  */
 @Slf4j
 @Configuration
+@ConditionalOnProperty(name = "app.fallback-adapters.enabled", havingValue = "true")
 public class FallbackAdaptersConfig {
 
     private static final Map<String, Double> DEFAULT_FEES = Map.of(
@@ -44,7 +45,6 @@ public class FallbackAdaptersConfig {
      * Fallback health provider that returns 1.0 (healthy) for all chains.
      */
     @Bean
-    @ConditionalOnMissingBean
     public ChainHealthProvider fallbackChainHealthProvider() {
         log.info("Using fallback ChainHealthProvider (all chains healthy)");
         return (ChainId chainId) -> 1.0;
@@ -55,7 +55,6 @@ public class FallbackAdaptersConfig {
      * Base=0.01, Ethereum=2.50, Solana=0.005 USD.
      */
     @Bean
-    @ConditionalOnMissingBean
     public ChainFeeProvider fallbackChainFeeProvider() {
         log.info("Using fallback ChainFeeProvider (static fee estimates)");
         return (ChainId chainId, StablecoinTicker stablecoin) ->
@@ -67,7 +66,6 @@ public class FallbackAdaptersConfig {
      * Uses a simple ConcurrentHashMap — no advisory locks (not needed without concurrency).
      */
     @Bean
-    @ConditionalOnMissingBean
     public NonceRepository fallbackNonceRepository() {
         log.info("Using fallback NonceRepository (in-memory, no advisory locks)");
         return new InMemoryNonceRepository();
@@ -78,7 +76,6 @@ public class FallbackAdaptersConfig {
      * Returns deterministic dev results.
      */
     @Bean
-    @ConditionalOnMissingBean
     public CustodyEngine fallbackCustodyEngine() {
         log.info("Using fallback CustodyEngine (dev mode)");
         return new CustodyEngine() {
@@ -108,7 +105,6 @@ public class FallbackAdaptersConfig {
      * Returns deterministic mock data.
      */
     @Bean
-    @ConditionalOnMissingBean
     public ChainRpcProvider fallbackChainRpcProvider() {
         log.info("Using fallback ChainRpcProvider (returns mock receipts)");
         return new ChainRpcProvider() {
@@ -140,7 +136,6 @@ public class FallbackAdaptersConfig {
      * Gated by property to prevent silent event loss in production.
      */
     @Bean
-    @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "app.transfer.event-publisher.fallback-enabled",
             havingValue = "true", matchIfMissing = true)
     public TransferEventPublisher fallbackTransferEventPublisher() {
