@@ -107,6 +107,124 @@ StableBridge eliminates the latency and cost of traditional correspondent bankin
       +--------------+  +-----------+  +--------------+
 ```
 
+### Sandwich Flow &mdash; Service-to-Service Communication
+
+The payment lifecycle uses three communication patterns:
+
+| Pattern | Usage | Example |
+|---------|-------|---------|
+| **Temporal Activity** (sync REST) | Critical-path orchestration with retries & timeouts | S1 &rarr; S2 compliance check |
+| **Kafka Event** (async outbox) | State propagation, audit trail, fan-out | S3 &rarr; S7 ledger entry |
+| **Temporal Signal** (async webhook relay) | External confirmations routed back to workflow | Stripe webhook &rarr; S1 |
+
+<details>
+<summary><b>Happy Path Sequence (USD &rarr; EUR)</b></summary>
+
+```
+ Client              S1 Orchestrator       S2 Compliance      S6 FX Engine
+   |                 (Temporal Saga)             |                  |
+   | POST /payments        |                    |                  |
+   |---------------------->|                    |                  |
+   |                       |                    |                  |
+   |   201 {payment_id}    |  [1] REST -------->|                  |
+   |<----------------------|  checkCompliance() |                  |
+   |                       |<-- PASSED ---------|                  |
+   |                       |                    |                  |
+   |                       |  [2] REST -------------------------------->|
+   |                       |  lockFxRate()      |                  |
+   |                       |<-- LOCKED --------------------------------|
+   :                       :                    :                  :
+
+ S3 Fiat On-Ramp     S1 Orchestrator       S4 Blockchain      S5 Fiat Off-Ramp
+   |                       |                    |                  |
+   |  [3] Stripe webhook   |                    |                  |
+   |  fiat.collected ~~~~> |                    |                  |
+   |  (Kafka + Signal)     |                    |                  |
+   |                       |  [4] REST -------->|                  |
+   |                       |  initiateTransfer()|                  |
+   |                       |                    |                  |
+   |                       |  [5] Chain confirm |                  |
+   |                       | <~~~~ (Signal)     |                  |
+   |                       |                    |                  |
+   |                       |  [6] REST -------------------------------->|
+   |                       |  initiatePayout()  |                  |
+   |                       |                    |                  |
+   |                       |  [7] Settlement    |                  |
+   |                       | <~~~~ (Signal) --------------------------------|
+   |                       |                    |                  |
+   :                       : STATE = COMPLETED  :                  :
+
+ Legend:   ------>  Synchronous REST (Temporal Activity)
+           ~~~~~~>  Asynchronous (Kafka event + Temporal Signal)
+```
+
+</details>
+
+<details>
+<summary><b>Kafka Event Map</b></summary>
+
+Every event is published via the **transactional outbox** pattern (Namastack) &mdash; guaranteed at-least-once delivery.
+
+```
+  S1 Orchestrator ──publish──> payment.initiated ──────> S7 Ledger (audit)
+        |                      payment.completed ──────> S6 (consume lock), S7, S9, S12
+        |                      payment.failed ─────────> S6 (release lock), S7, S9
+        |
+  S2 Compliance ───publish──> compliance.result ───────> S1 (workflow), S7
+        |
+  S3 On-Ramp ──────publish──> fiat.collected ──────────> S1 (signal), S7 (debit leg)
+        |
+  S4 Blockchain ───publish──> chain.transfer.submitted > S7 (mint leg), S9
+        |                     chain.transfer.confirmed > S1 (signal), S7, S9
+        |
+  S5 Off-Ramp ─────publish──> fiat.payout.completed ──> S1 (signal), S7 (payout leg), S9
+        |
+  S6 FX Engine ────publish──> fx.rate.locked ──────────> S7 (FX fee leg)
+        |
+  S7 Ledger ───────publish──> reconciliation.discrepancy > Ops alerting
+```
+
+| Topic | Producer | Key Consumers | Partition Key |
+|-------|----------|---------------|---------------|
+| `payment.initiated` | S1 | S7 (audit) | `payment_id` |
+| `compliance.result` | S2 | S1, S7 | `payment_id` |
+| `fx.rate.locked` | S6 | S7 | `payment_id` |
+| `fiat.collected` | S3 | S1 (signal), S7 | `payment_id` |
+| `chain.transfer.submitted` | S4 | S7, S9 | `payment_id` |
+| `chain.transfer.confirmed` | S4 | S1 (signal), S7, S9 | `payment_id` |
+| `fiat.payout.completed` | S5 | S1 (signal), S7, S9 | `payment_id` |
+| `payment.completed` | S1 | S6, S7, S9, S12 | `payment_id` |
+| `payment.failed` | S1 | S6, S7, S9 | `payment_id` |
+| `audit.event` | All | S7 (append-only journal) | `correlation_id` |
+
+</details>
+
+<details>
+<summary><b>Compensation &amp; Saga Rollback</b></summary>
+
+The Temporal workflow maintains a LIFO compensation stack. On failure at any step, compensations unwind in reverse order:
+
+```
+  Step failed at S4 (blockchain transfer)
+        |
+        v
+  +----------------------------------------------------------+
+  | Compensation Stack (LIFO)                                 |
+  |                                                           |
+  |  [3] Refund fiat collection ──> S3 POST /refund           |
+  |  [2] Release FX lock ─────────> S6 DELETE /fx/lock/{id}   |
+  |  [1] Void compliance result ──> S2 (event: voided)        |
+  +----------------------------------------------------------+
+        |
+        v
+  S1 publishes: payment.failed (error_code, failed_step)
+        |
+        +──> S7 Ledger: reversal journal entries
+        +──> S9 Notify: failure webhook to merchant
+```
+
+</details>
+
 ---
 
 ## Services
