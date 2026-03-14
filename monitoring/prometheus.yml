@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 's11-merchant-onboarding'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['sp-s11-merchant-onboarding:8081']
+
+  - job_name: 's13-merchant-iam'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['sp-s13-merchant-iam:8083']
+
+  - job_name: 's10-api-gateway-iam'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['sp-s10-api-gateway-iam:8080']

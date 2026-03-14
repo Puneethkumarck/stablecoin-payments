@@ -1,0 +1,97 @@
+{
+  "uid": "sp-service-logs",
+  "title": "Service Logs",
+  "tags": ["logs", "stablecoin-payments"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": "Loki",
+        "query": "label_values(service)",
+        "multi": true,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "level",
+        "type": "custom",
+        "query": "ERROR,WARN,INFO,DEBUG",
+        "multi": false,
+        "current": { "text": "ERROR", "value": "ERROR" }
+      },
+      {
+        "name": "search",
+        "type": "textbox",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Error Rate by Service",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 0 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "sum(rate({service=~\"$service\"} |= \"ERROR\" [5m])) by (service)", "legendFormat": "{{service}}" }
+      ]
+    },
+    {
+      "title": "Error + Warn Count (5m)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "sum(count_over_time({service=~\"$service\"} |~ \"ERROR|WARN\" [5m]))", "legendFormat": "errors+warns" }
+      ],
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "yellow" }, { "value": 10, "color": "orange" }, { "value": 50, "color": "red" }] } } }
+    },
+    {
+      "title": "Log Volume by Level",
+      "type": "barchart",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "sum(count_over_time({service=~\"$service\"} |= \"ERROR\" [5m]))", "legendFormat": "ERROR" },
+        { "expr": "sum(count_over_time({service=~\"$service\"} |= \"WARN\" [5m]))", "legendFormat": "WARN" },
+        { "expr": "sum(count_over_time({service=~\"$service\"} |= \"INFO\" [5m]))", "legendFormat": "INFO" }
+      ]
+    },
+    {
+      "title": "S11 Merchant Onboarding Logs",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "{service=\"sp-s11-merchant-onboarding\"} |~ \"$level\" |~ \"$search\"" }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "title": "S13 Merchant IAM Logs",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "{service=\"sp-s13-merchant-iam\"} |~ \"$level\" |~ \"$search\"" }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true }
+    },
+    {
+      "title": "S10 API Gateway IAM Logs",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 26 },
+      "datasource": "Loki",
+      "targets": [
+        { "expr": "{service=\"sp-s10-api-gateway-iam\"} |~ \"$level\" |~ \"$search\"" }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "enableLogDetails": true }
+    }
+  ],
+  "schemaVersion": 39
+}

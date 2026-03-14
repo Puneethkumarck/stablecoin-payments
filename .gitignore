@@ -35,9 +35,6 @@ credentials.json
 *.tfvars
 .terraform.lock.hcl
 
-# Monitoring (Grafana/Prometheus local data)
-monitoring/
-
 # Docs (generated / local only)
 docs/
 
