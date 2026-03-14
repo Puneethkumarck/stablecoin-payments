@@ -64,8 +64,11 @@ public class FallbackAdaptersConfig {
     /**
      * Fallback in-memory nonce repository for dev/test environments without PostgreSQL.
      * Uses a simple ConcurrentHashMap — no advisory locks (not needed without concurrency).
+     * Gated by its own property since the real NonceManagerPersistenceAdapter is always
+     * available when a database is present (e.g., integration tests with TestContainers).
      */
     @Bean
+    @ConditionalOnProperty(name = "app.custody.nonce-repository.in-memory", havingValue = "true")
     public NonceRepository fallbackNonceRepository() {
         log.info("Using fallback NonceRepository (in-memory, no advisory locks)");
         return new InMemoryNonceRepository();
