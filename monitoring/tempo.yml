@@ -21,4 +21,10 @@ storage:
 metrics_generator:
   storage:
     path: /var/tempo/generator/wal
-    remote_write: []
+    remote_write:
+      - url: http://sp-prometheus:9090/api/v1/write
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]

@@ -783,6 +783,11 @@ resource "docker_container" "prometheus" {
     external = 9091
   }
 
+  command = [
+    "--config.file=/etc/prometheus/prometheus.yml",
+    "--web.enable-remote-write-receiver"
+  ]
+
   volumes {
     host_path      = "${var.project_root}/monitoring/prometheus.yml"
     container_path = "/etc/prometheus/prometheus.yml"
