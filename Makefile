@@ -1,8 +1,9 @@
 .PHONY: help build clean test test-unit test-integration test-business \
        format lint check \
-       infra-up infra-down infra-status infra-logs \
-       run-% db-reset topics \
-       deps outdated
+       infra-up infra-down infra-destroy infra-status infra-logs infra-logs-% \
+       run-% db-reset db-psql topics \
+       deps outdated \
+       assemble sonar fresh ci
 
 # ─────────────────────────────────────────────
 # Variables
@@ -109,19 +110,17 @@ infra-logs-%: ## Tail logs for a specific container (e.g., make infra-logs-postg
 # ─────────────────────────────────────────────
 db-reset: ## Drop and recreate all databases (destructive)
 	$(COMPOSE) down -v postgres
-	$(COMPOSE) up -d postgres
-	@echo "Waiting for PostgreSQL to be ready..."
-	@sleep 5
+	$(COMPOSE) up -d --wait postgres
 	@echo "Databases recreated from init.sql"
 
 db-psql: ## Open psql shell to local PostgreSQL
-	docker exec -it sp-postgres psql -U dev -d postgres
+	$(COMPOSE) exec postgres psql -U dev -d postgres
 
 # ─────────────────────────────────────────────
 # Kafka (Redpanda)
 # ─────────────────────────────────────────────
 topics: ## List all Kafka topics
-	docker exec sp-redpanda rpk topic list
+	$(COMPOSE) exec redpanda rpk topic list
 
 # ─────────────────────────────────────────────
 # Run a service locally

@@ -49,7 +49,7 @@
 
 StableBridge eliminates the latency and cost of traditional correspondent banking by using stablecoins as the settlement rail. It converts sender fiat to USDC on-chain, transfers via Base L2, and converts back to recipient fiat.
 
-```
+```text
   Sender (USD)                                              Recipient (EUR)
       |                                                          ^
       v                                                          |
@@ -80,7 +80,7 @@ StableBridge eliminates the latency and cost of traditional correspondent bankin
 
 ### Payment Flow
 
-```
+```text
                           +---------------------+
                           |    S10 API Gateway   |
                           +----------+----------+
@@ -94,10 +94,10 @@ StableBridge eliminates the latency and cost of traditional correspondent bankin
               +----------+    +-----+-----+    +----------+
               |               |           |               |
               v               v           v               v
-      +--------------+  +-----------+  +--------+  +------------+
-      | S2 Compliance|  | S6 FX     |  | S7     |  | S9 Notify  |
-      | & Travel Rule|  | Engine    |  | Ledger |  |            |
-      +--------------+  +-----------+  +--------+  +------------+
+      +--------------+  +-----------+  +--------+  +-------------+
+      | S2 Compliance|  | S6 FX     |  | S7     |  | S9 Notify * |
+      | & Travel Rule|  | Engine    |  | Ledger |  |  (Planned)  |
+      +--------------+  +-----------+  +--------+  +-------------+
               |               |
               v               v
       +--------------+  +-----------+  +--------------+
@@ -120,7 +120,7 @@ The payment lifecycle uses three communication patterns:
 <details>
 <summary><b>Happy Path Sequence (USD &rarr; EUR)</b></summary>
 
-```
+```text
  Client              S1 Orchestrator       S2 Compliance      S6 FX Engine
    |                 (Temporal Saga)             |                  |
    | POST /payments        |                    |                  |
@@ -165,19 +165,19 @@ The payment lifecycle uses three communication patterns:
 
 Every event is published via the **transactional outbox** pattern (Namastack) &mdash; guaranteed at-least-once delivery.
 
-```
+```text
   S1 Orchestrator ──publish──> payment.initiated ──────> S7 Ledger (audit)
-        |                      payment.completed ──────> S6 (consume lock), S7, S9, S12
-        |                      payment.failed ─────────> S6 (release lock), S7, S9
+        |                      payment.completed ──────> S6 (consume lock), S7, S9*, S12
+        |                      payment.failed ─────────> S6 (release lock), S7, S9*
         |
   S2 Compliance ───publish──> compliance.result ───────> S1 (workflow), S7
         |
   S3 On-Ramp ──────publish──> fiat.collected ──────────> S1 (signal), S7 (debit leg)
         |
-  S4 Blockchain ───publish──> chain.transfer.submitted > S7 (mint leg), S9
-        |                     chain.transfer.confirmed > S1 (signal), S7, S9
+  S4 Blockchain ───publish──> chain.transfer.submitted > S7 (mint leg), S9*
+        |                     chain.transfer.confirmed > S1 (signal), S7, S9*
         |
-  S5 Off-Ramp ─────publish──> fiat.payout.completed ──> S1 (signal), S7 (payout leg), S9
+  S5 Off-Ramp ─────publish──> fiat.payout.completed ──> S1 (signal), S7 (payout leg), S9*
         |
   S6 FX Engine ────publish──> fx.rate.locked ──────────> S7 (FX fee leg)
         |
@@ -190,11 +190,13 @@ Every event is published via the **transactional outbox** pattern (Namastack) &m
 | `compliance.result` | S2 | S1, S7 | `payment_id` |
 | `fx.rate.locked` | S6 | S7 | `payment_id` |
 | `fiat.collected` | S3 | S1 (signal), S7 | `payment_id` |
-| `chain.transfer.submitted` | S4 | S7, S9 | `payment_id` |
-| `chain.transfer.confirmed` | S4 | S1 (signal), S7, S9 | `payment_id` |
-| `fiat.payout.completed` | S5 | S1 (signal), S7, S9 | `payment_id` |
-| `payment.completed` | S1 | S6, S7, S9, S12 | `payment_id` |
-| `payment.failed` | S1 | S6, S7, S9 | `payment_id` |
+| `chain.transfer.submitted` | S4 | S7, S9* | `payment_id` |
+| `chain.transfer.confirmed` | S4 | S1 (signal), S7, S9* | `payment_id` |
+| `fiat.payout.completed` | S5 | S1 (signal), S7, S9* | `payment_id` |
+| `payment.completed` | S1 | S6, S7, S9*, S12 | `payment_id` |
+| `payment.failed` | S1 | S6, S7, S9* | `payment_id` |
+
+> *\*S9 (Notification Service) is planned &mdash; consumers will be added in Phase 4.*
 | `audit.event` | All | S7 (append-only journal) | `correlation_id` |
 
 </details>
@@ -204,7 +206,7 @@ Every event is published via the **transactional outbox** pattern (Namastack) &m
 
 The Temporal workflow maintains a LIFO compensation stack. On failure at any step, compensations unwind in reverse order:
 
-```
+```text
   Step failed at S4 (blockchain transfer)
         |
         v
@@ -220,7 +222,7 @@ The Temporal workflow maintains a LIFO compensation stack. On failure at any ste
   S1 publishes: payment.failed (error_code, failed_step)
         |
         +──> S7 Ledger: reversal journal entries
-        +──> S9 Notify: failure webhook to merchant
+        +──> S9 Notify: failure webhook to merchant (Phase 4)
 ```
 
 </details>
@@ -333,7 +335,7 @@ make infra-destroy                                 # Full reset
 
 ## Project Structure
 
-```
+```text
 stablebridge-platform/
 ├── api-gateway-iam/              # S10 - API Gateway & IAM
 ├── blockchain-custody/           # S4  - Blockchain & Custody
@@ -364,7 +366,7 @@ stablebridge-platform/
 
 Each service follows a tri-module structure:
 
-```
+```text
 <service>/
 ├── <service>-api/        # Request/response DTOs (shared contract)
 ├── <service>-client/     # Feign client for inter-service calls
@@ -390,7 +392,7 @@ Each service follows a tri-module structure:
 
 The project uses a three-tier testing approach with **2,700+ tests**:
 
-```
+```text
 ┌──────────────────────────────────────────────────┐
 │               Business Tests                     │  End-to-end user scenarios
 │              (Testcontainers)                    │  src/business-test/
@@ -418,7 +420,7 @@ make test-merchant-iam-all        # All tiers for one service
 
 GitHub Actions runs on every push and PR:
 
-```
+```text
 Push / PR
     │
     ├── Spotless Check ─────── Code formatting validation
@@ -454,15 +456,19 @@ Contributions are welcome! Please follow these steps:
 
 1. **Fork** the repository
 2. **Create a feature branch** from `main`
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
+
 3. **Follow the coding standards** in [`playbook/01-coding-standards.md`](playbook/01-coding-standards.md)
 4. **Write tests** &mdash; all three tiers where applicable
 5. **Ensure CI passes**
+
    ```bash
    make ci
    ```
+
 6. **Open a Pull Request** against `main`
 
 <details>
@@ -480,7 +486,7 @@ Contributions are welcome! Please follow these steps:
 
 ## Security
 
-If you discover a security vulnerability, please **do not** open a public issue. Instead, email the maintainer directly.
+If you discover a security vulnerability, please **do not** open a public issue. Instead, report it privately via [GitHub Security Advisories](https://github.com/Puneethkumarck/stablebridge-platform/security/advisories/new).
 
 ---
 
