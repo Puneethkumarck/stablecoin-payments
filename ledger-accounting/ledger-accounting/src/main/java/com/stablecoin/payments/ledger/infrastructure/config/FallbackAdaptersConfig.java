@@ -1,32 +1,18 @@
 package com.stablecoin.payments.ledger.infrastructure.config;
 
-import com.stablecoin.payments.ledger.domain.event.ReconciliationCompletedDomainEvent;
-import com.stablecoin.payments.ledger.domain.event.ReconciliationDiscrepancyDomainEvent;
-import com.stablecoin.payments.ledger.domain.port.LedgerEventPublisher;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Provides fallback (dev/test) implementations of external provider ports.
+ * Activated only when {@code app.fallback-adapters.enabled=true}.
+ * <p>
+ * Note: Outbox-based event publishers are infrastructure adapters (DB-dependent)
+ * and are NOT included here — they are always active when a database is present.
+ */
 @Slf4j
 @Configuration
 @ConditionalOnProperty(name = "app.fallback-adapters.enabled", havingValue = "true")
 public class FallbackAdaptersConfig {
-
-    @Bean
-    @ConditionalOnMissingBean
-    public LedgerEventPublisher ledgerEventPublisher() {
-        return new LedgerEventPublisher() {
-            @Override
-            public void publishReconciliationCompleted(ReconciliationCompletedDomainEvent event) {
-                log.debug("[FALLBACK] No-op reconciliation completed paymentId={}", event.paymentId());
-            }
-
-            @Override
-            public void publishReconciliationDiscrepancy(ReconciliationDiscrepancyDomainEvent event) {
-                log.debug("[FALLBACK] No-op reconciliation discrepancy paymentId={}", event.paymentId());
-            }
-        };
-    }
 }

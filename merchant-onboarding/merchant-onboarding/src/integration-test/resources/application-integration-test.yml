@@ -34,6 +34,10 @@ outbox:
   relay:
     fixed-delay-ms: 50
 
+app:
+  fallback-adapters:
+    enabled: true
+
 server:
   port: 0
 

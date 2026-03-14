@@ -1,6 +1,8 @@
 app:
   security:
     enabled: false
+  fallback-adapters:
+    enabled: true
 
 spring:
   datasource:

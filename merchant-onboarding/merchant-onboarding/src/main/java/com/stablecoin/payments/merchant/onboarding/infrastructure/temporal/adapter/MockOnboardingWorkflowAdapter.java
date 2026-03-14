@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * No-op workflow adapter used when Temporal is unavailable (local, test, integration-test profiles). Registered via
- * {@code FallbackAdaptersConfig} with {@code @ConditionalOnMissingBean}.
+ * {@code FallbackAdaptersConfig} when {@code app.fallback-adapters.enabled=true}.
  */
 @Slf4j
 public class MockOnboardingWorkflowAdapter implements OnboardingWorkflowPort {
