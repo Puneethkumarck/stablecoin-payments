@@ -4,7 +4,6 @@ import com.stablecoin.payments.onramp.domain.port.CollectionEventPublisher;
 import io.namastack.outbox.Outbox;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "app.fallback-adapters.enabled", havingValue = "false", matchIfMissing = true)
 @RequiredArgsConstructor
 public class OnRampOutboxEventPublisher implements CollectionEventPublisher {
 

@@ -1,6 +1,5 @@
 package com.stablecoin.payments.onramp.config;
 
-import com.stablecoin.payments.onramp.domain.port.CollectionEventPublisher;
 import com.stablecoin.payments.onramp.domain.port.PspGateway;
 import com.stablecoin.payments.onramp.domain.port.PspPaymentResult;
 import com.stablecoin.payments.onramp.domain.port.PspRefundResult;
@@ -51,12 +50,6 @@ public class FallbackAdaptersConfig {
             log.warn("[FALLBACK-WEBHOOK] Using dev webhook signature validator — always valid");
             return true;
         };
-    }
-
-    @Bean
-    public CollectionEventPublisher fallbackCollectionEventPublisher() {
-        return event -> log.warn("[FALLBACK-EVENT] Using dev event publisher — event={}",
-                event.getClass().getSimpleName());
     }
 
     @Bean
