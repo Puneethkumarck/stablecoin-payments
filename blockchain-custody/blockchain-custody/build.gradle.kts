@@ -111,7 +111,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:$lombokMapstructBindingVersion")
 
     // Outbox (namastack)
-    implementation("io.namastack:namastack-outbox-starter-jdbc:1.1.0")
+    implementation("io.namastack:namastack-outbox-starter-jdbc:1.1.1")
 
     // Database
     runtimeOnly("org.postgresql:postgresql")
