@@ -49,18 +49,18 @@
 
 StableBridge eliminates the latency and cost of traditional correspondent banking by using stablecoins as the settlement rail. It converts sender fiat to USDC on-chain, transfers via Base L2, and converts back to recipient fiat.
 
-```text
-  Sender (USD)                                              Recipient (EUR)
-      |                                                          ^
-      v                                                          |
- +-----------+     +----------------+     +-----------+     +-----------+
- |  Fiat     |     |  Blockchain    |     |  Fiat     |     |  Local    |
- |  On-Ramp  | --> |  Transfer      | --> |  Off-Ramp | --> |  Payout   |
- | (Stripe)  |     |  (Base L2)     |     | (Modulr)  |     |  (SEPA)   |
- +-----------+     +----------------+     +-----------+     +-----------+
-       |                  |                     |
-       v                  v                     v
-   USD -> USDC     USDC Transfer          USDC -> EUR
+```mermaid
+graph LR
+    A["Sender (USD)"] --> B["Fiat On-Ramp\n(Stripe ACH)"]
+    B -- "USD → USDC" --> C["Blockchain Transfer\n(Base L2)"]
+    C -- "USDC Transfer" --> D["Fiat Off-Ramp\n(Modulr)"]
+    D -- "USDC → EUR" --> E["Recipient (EUR)"]
+
+    style A fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+    style C fill:#FF9800,color:#fff
+    style D fill:#2196F3,color:#fff
+    style E fill:#4CAF50,color:#fff
 ```
 
 > **MVP Corridor:** US &rarr; DE (USD &rarr; EUR) via Stripe ACH + Base/USDC + Modulr SEPA
@@ -80,31 +80,29 @@ StableBridge eliminates the latency and cost of traditional correspondent bankin
 
 ### Payment Flow
 
-```text
-                          +---------------------+
-                          |    S10 API Gateway   |
-                          +----------+----------+
-                                     |
-                                     v
-                     +-------------------------------+
-                     |    S1 Payment Orchestrator     |
-                     |        (Temporal Saga)         |
-                     +---+----------+----------+-----+
-                         |          |          |
-              +----------+    +-----+-----+    +----------+
-              |               |           |               |
-              v               v           v               v
-      +--------------+  +-----------+  +--------+  +-------------+
-      | S2 Compliance|  | S6 FX     |  | S7     |  | S9 Notify * |
-      | & Travel Rule|  | Engine    |  | Ledger |  |  (Planned)  |
-      +--------------+  +-----------+  +--------+  +-------------+
-              |               |
-              v               v
-      +--------------+  +-----------+  +--------------+
-      | S3 Fiat      |  | S4 Block- |  | S5 Fiat      |
-      | On-Ramp      +->| chain &   +->| Off-Ramp     |
-      | (Stripe ACH) |  | Custody   |  | (Modulr SEPA)|
-      +--------------+  +-----------+  +--------------+
+```mermaid
+graph TD
+    GW["S10 API Gateway"] --> ORCH["S1 Payment Orchestrator\n(Temporal Saga)"]
+
+    ORCH --> COMP["S2 Compliance\n& Travel Rule"]
+    ORCH --> FX["S6 FX Engine"]
+    ORCH --> LEDGER["S7 Ledger"]
+    ORCH -.-> NOTIFY["S9 Notifications\n(Planned)"]
+
+    COMP --> ONRAMP["S3 Fiat On-Ramp\n(Stripe ACH)"]
+    FX --> ONRAMP
+    ONRAMP --> CHAIN["S4 Blockchain\n& Custody"]
+    CHAIN --> OFFRAMP["S5 Fiat Off-Ramp\n(Modulr SEPA)"]
+
+    style GW fill:#607D8B,color:#fff
+    style ORCH fill:#FF5722,color:#fff
+    style COMP fill:#9C27B0,color:#fff
+    style FX fill:#2196F3,color:#fff
+    style LEDGER fill:#4CAF50,color:#fff
+    style NOTIFY fill:#9E9E9E,color:#fff,stroke-dasharray: 5 5
+    style ONRAMP fill:#00BCD4,color:#fff
+    style CHAIN fill:#FF9800,color:#fff
+    style OFFRAMP fill:#00BCD4,color:#fff
 ```
 
 ### Sandwich Flow &mdash; Service-to-Service Communication
@@ -120,42 +118,37 @@ The payment lifecycle uses three communication patterns:
 <details>
 <summary><b>Happy Path Sequence (USD &rarr; EUR)</b></summary>
 
-```text
- Client              S1 Orchestrator       S2 Compliance      S6 FX Engine
-   |                 (Temporal Saga)             |                  |
-   | POST /payments        |                    |                  |
-   |---------------------->|                    |                  |
-   |                       |                    |                  |
-   |   201 {payment_id}    |  [1] REST -------->|                  |
-   |<----------------------|  checkCompliance() |                  |
-   |                       |<-- PASSED ---------|                  |
-   |                       |                    |                  |
-   |                       |  [2] REST -------------------------------->|
-   |                       |  lockFxRate()      |                  |
-   |                       |<-- LOCKED --------------------------------|
-   :                       :                    :                  :
+```mermaid
+sequenceDiagram
+    participant Client
+    participant S1 as S1 Orchestrator<br/>(Temporal Saga)
+    participant S2 as S2 Compliance
+    participant S6 as S6 FX Engine
+    participant S3 as S3 Fiat On-Ramp
+    participant S4 as S4 Blockchain
+    participant S5 as S5 Fiat Off-Ramp
 
- S3 Fiat On-Ramp     S1 Orchestrator       S4 Blockchain      S5 Fiat Off-Ramp
-   |                       |                    |                  |
-   |  [3] Stripe webhook   |                    |                  |
-   |  fiat.collected ~~~~> |                    |                  |
-   |  (Kafka + Signal)     |                    |                  |
-   |                       |  [4] REST -------->|                  |
-   |                       |  initiateTransfer()|                  |
-   |                       |                    |                  |
-   |                       |  [5] Chain confirm |                  |
-   |                       | <~~~~ (Signal)     |                  |
-   |                       |                    |                  |
-   |                       |  [6] REST -------------------------------->|
-   |                       |  initiatePayout()  |                  |
-   |                       |                    |                  |
-   |                       |  [7] Settlement    |                  |
-   |                       | <~~~~ (Signal) --------------------------------|
-   |                       |                    |                  |
-   :                       : STATE = COMPLETED  :                  :
+    Client->>S1: POST /payments
+    S1-->>Client: 201 {payment_id}
 
- Legend:   ------>  Synchronous REST (Temporal Activity)
-           ~~~~~~>  Asynchronous (Kafka event + Temporal Signal)
+    rect rgb(232, 245, 233)
+        Note over S1,S6: Synchronous REST (Temporal Activities)
+        S1->>S2: [1] checkCompliance()
+        S2-->>S1: PASSED
+        S1->>S6: [2] lockFxRate()
+        S6-->>S1: LOCKED (rate, lockId)
+    end
+
+    rect rgb(227, 242, 253)
+        Note over S3,S5: Asynchronous (Kafka + Temporal Signals)
+        S3-)S1: [3] fiat.collected (Stripe webhook)
+        S1->>S4: [4] initiateTransfer()
+        S4-)S1: [5] chain.transfer.confirmed (Signal)
+        S1->>S5: [6] initiatePayout()
+        S5-)S1: [7] fiat.payout.completed (Signal)
+    end
+
+    Note over S1: STATE = COMPLETED
 ```
 
 </details>
@@ -165,23 +158,43 @@ The payment lifecycle uses three communication patterns:
 
 Every event is published via the **transactional outbox** pattern (Namastack) &mdash; guaranteed at-least-once delivery.
 
-```text
-  S1 Orchestrator ──publish──> payment.initiated ──────> S7 Ledger (audit)
-        |                      payment.completed ──────> S6 (consume lock), S7, S9*, S12
-        |                      payment.failed ─────────> S6 (release lock), S7, S9*
-        |
-  S2 Compliance ───publish──> compliance.result ───────> S1 (workflow), S7
-        |
-  S3 On-Ramp ──────publish──> fiat.collected ──────────> S1 (signal), S7 (debit leg)
-        |
-  S4 Blockchain ───publish──> chain.transfer.submitted > S7 (mint leg), S9*
-        |                     chain.transfer.confirmed > S1 (signal), S7, S9*
-        |
-  S5 Off-Ramp ─────publish──> fiat.payout.completed ──> S1 (signal), S7 (payout leg), S9*
-        |
-  S6 FX Engine ────publish──> fx.rate.locked ──────────> S7 (FX fee leg)
-        |
-  S7 Ledger ───────publish──> reconciliation.discrepancy > Ops alerting
+```mermaid
+graph LR
+    subgraph Producers
+        S1["S1 Orchestrator"]
+        S2["S2 Compliance"]
+        S3["S3 On-Ramp"]
+        S4["S4 Blockchain"]
+        S5["S5 Off-Ramp"]
+        S6["S6 FX Engine"]
+        S7L["S7 Ledger"]
+    end
+
+    subgraph Kafka Topics
+        T1(["payment.initiated"])
+        T2(["compliance.result"])
+        T3(["fx.rate.locked"])
+        T4(["fiat.collected"])
+        T5(["chain.transfer.*"])
+        T6(["fiat.payout.completed"])
+        T7(["payment.completed"])
+        T8(["payment.failed"])
+    end
+
+    subgraph Consumers
+        S7["S7 Ledger"]
+        S1C["S1 (signal relay)"]
+        S6C["S6 (lock lifecycle)"]
+    end
+
+    S1 --> T1 --> S7
+    S2 --> T2 --> S1C & S7
+    S6 --> T3 --> S7
+    S3 --> T4 --> S1C & S7
+    S4 --> T5 --> S1C & S7
+    S5 --> T6 --> S1C & S7
+    S1 --> T7 --> S6C & S7
+    S1 --> T8 --> S6C & S7
 ```
 
 | Topic | Producer | Key Consumers | Partition Key |
@@ -206,23 +219,24 @@ Every event is published via the **transactional outbox** pattern (Namastack) &m
 
 The Temporal workflow maintains a LIFO compensation stack. On failure at any step, compensations unwind in reverse order:
 
-```text
-  Step failed at S4 (blockchain transfer)
-        |
-        v
-  +----------------------------------------------------------+
-  | Compensation Stack (LIFO)                                 |
-  |                                                           |
-  |  [3] Refund fiat collection ──> S3 POST /refund           |
-  |  [2] Release FX lock ─────────> S6 DELETE /fx/lock/{id}   |
-  |  [1] Void compliance result ──> S2 (event: voided)        |
-  +----------------------------------------------------------+
-        |
-        v
-  S1 publishes: payment.failed (error_code, failed_step)
-        |
-        +──> S7 Ledger: reversal journal entries
-        +──> S9 Notify: failure webhook to merchant (Phase 4)
+```mermaid
+graph TD
+    FAIL["Failure at S4\n(blockchain transfer)"] --> STACK
+
+    subgraph STACK ["Compensation Stack (LIFO)"]
+        C3["[3] Refund fiat collection\nS3 POST /refund"]
+        C2["[2] Release FX lock\nS6 DELETE /fx/lock/{id}"]
+        C1["[1] Void compliance result\nS2 event: voided"]
+        C3 --> C2 --> C1
+    end
+
+    C1 --> PF["S1 publishes:\npayment.failed"]
+    PF --> S7["S7 Ledger:\nreversal journal entries"]
+    PF -.-> S9["S9 Notify:\nfailure webhook (Phase 4)"]
+
+    style FAIL fill:#f44336,color:#fff
+    style PF fill:#FF5722,color:#fff
+    style S9 fill:#9E9E9E,color:#fff,stroke-dasharray: 5 5
 ```
 
 </details>
@@ -420,18 +434,20 @@ make test-merchant-iam-all        # All tiers for one service
 
 GitHub Actions runs on every push and PR:
 
-```text
-Push / PR
-    │
-    ├── Spotless Check ─────── Code formatting validation
-    │
-    ├── Path Filter ────────── Detect changed services
-    │
-    ├── Test Matrix ────────── Per-service: unit + integration + business
-    │       │
-    │       └── JaCoCo ─────── Coverage report
-    │
-    └── SonarCloud ─────────── Static analysis (push only)
+```mermaid
+graph LR
+    PR["Push / PR"] --> SPOT["Spotless Check"]
+    PR --> FILTER["Path Filter"]
+    FILTER --> TEST["Test Matrix\n(per service)"]
+    TEST --> UNIT["Unit Tests"]
+    TEST --> INT["Integration Tests"]
+    TEST --> BIZ["Business Tests"]
+    UNIT --> COV["JaCoCo Coverage"]
+    TEST --> SONAR["SonarCloud\n(push only)"]
+
+    style PR fill:#2196F3,color:#fff
+    style SPOT fill:#4CAF50,color:#fff
+    style SONAR fill:#FF9800,color:#fff
 ```
 
 ---
