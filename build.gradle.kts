@@ -6,7 +6,7 @@ plugins {
     id("io.spring.dependency-management") apply false
     id("com.diffplug.spotless") apply false
     id("com.google.cloud.tools.jib") apply false
-    id("org.sonarqube") version "7.2.3.7755"
+    id("org.sonarqube") version "7.5.0.8588"
     id("org.owasp.dependencycheck") version "12.2.0"
     java
 }
